@@ -131,7 +131,15 @@ st.markdown(
         letter-spacing: -0.01em;
     }
 
+    div[data-testid="stTextInput"] div[data-baseweb="input"] {
+        min-height: 4rem;
+        align-items: center;
+        overflow: visible;
+    }
+
     div[data-testid="stTextInput"] input {
+        box-sizing: border-box;
+        height: 4rem;
         min-height: 4rem;
         border: 1.5px solid #E2D3B7;
         border-radius: 20px;
@@ -139,7 +147,8 @@ st.markdown(
         color: var(--pb-navy);
         font-size: 1.08rem;
         font-weight: 600;
-        padding: 0.9rem 1.12rem;
+        line-height: 1.45;
+        padding: 1rem 1.12rem;
         box-shadow: 0 16px 38px rgba(7, 20, 38, 0.07);
         transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
     }
