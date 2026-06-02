@@ -123,15 +123,23 @@ def check_password() -> bool:
     if st.session_state.get("authenticated"):
         return True
 
+    try:
+        expected_password = st.secrets.get("app_password", "")
+    except Exception:
+        expected_password = ""
+
     st.markdown(
         '<div class="tool-header"><h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
         '<div class="tool-subtitle">Internal tool - sign in to continue</div></div>',
         unsafe_allow_html=True,
     )
     password = st.text_input("Password", type="password", key="password_input")
+    if not expected_password:
+        st.warning("Set `app_password` in Streamlit Cloud secrets to enable sign-in.")
+        return False
+
     if password:
-        expected_password = st.secrets.get("app_password", "")
-        if expected_password and password == expected_password:
+        if password == expected_password:
             st.session_state["authenticated"] = True
             st.rerun()
         else:
