@@ -55,6 +55,7 @@ class MatcherReasonTest(unittest.TestCase):
         self.original_cache = matcher._DATAFRAME_CACHE
         employer_norm = matcher.canonicalize_employer("Acme Inc")
         amazon_norm = matcher.canonicalize_employer("Amazon.com Services, LLC")
+        bofa_norm = matcher.canonicalize_employer("Bank of America Corporation")
         matcher._DATAFRAME_CACHE = pd.DataFrame(
             [
                 {
@@ -86,6 +87,22 @@ class MatcherReasonTest(unittest.TestCase):
                     "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
                     "TOT_PARTCP_BOY_CNT": "1214063",
                     "SPONS_DFE_EIN": "91-1986545",
+                },
+                {
+                    "EMPLOYER": "BANK OF AMERICA CORPORATION",
+                    "EMPLOYER_NORM": bofa_norm,
+                    "EMPLOYER_COLLAPSED": bofa_norm.replace(" ", ""),
+                    "RK_RAW": "FIDELITY INVESTMENTS INST. OPS. CO.",
+                    "RK_CANON": "Fidelity Investments",
+                    "TIER": "TIER1",
+                    "YEAR": "2023",
+                    "_n": 200581,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "THE BANK OF AMERICA PENSION PLAN",
+                    "TYPE_PENSION_BNFT_CODE": "1A1C1I3H",
+                    "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                    "TOT_PARTCP_BOY_CNT": "200581",
+                    "SPONS_DFE_EIN": "560906609",
                 }
             ]
         )
@@ -107,6 +124,16 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(results[0].matched_employer_name, "AMAZON.COM SERVICES, LLC")
         self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
         self.assertEqual(results[0].match_method, "word_boundary")
+
+    def test_match_overrides_bank_of_america_pension_row_to_merrill(self):
+        results = self.matcher.match("bank of america", top_n=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "BANK OF AMERICA CORPORATION")
+        self.assertEqual(results[0].recordkeeper, "Merrill Lynch")
+        self.assertEqual(results[0].plan_name, "THE BANK OF AMERICA 401(K) PLAN")
+        self.assertEqual(results[0].ein, "560906609")
+        self.assertEqual(results[0].match_method, "curated_override")
 
 
 class MatcherBuildTest(unittest.TestCase):
@@ -163,6 +190,81 @@ class MatcherBuildTest(unittest.TestCase):
         self.assertEqual(len(master), 1)
         self.assertEqual(master.loc[0, "EMPLOYER_NORM"], "AMAZON COM SERVICES")
         self.assertEqual(master.loc[0, "TIER"], "TIER1")
+
+    def test_build_master_excludes_defined_benefit_pension_rows(self):
+        from src import matcher
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_data_dir = matcher.DATA_DIR
+            matcher.DATA_DIR = Path(temp_dir)
+            try:
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "DB-ACK",
+                            "SPONSOR_DFE_NAME": "BANK OF AMERICA CORPORATION",
+                            "SPONS_DFE_EIN": "560906609",
+                            "PLAN_NAME": "THE BANK OF AMERICA PENSION PLAN",
+                            "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                            "TYPE_PENSION_BNFT_CODE": "1A1C1I3H",
+                            "TOT_PARTCP_BOY_CNT": "200581",
+                        },
+                        {
+                            "ACK_ID": "DC-ACK",
+                            "SPONSOR_DFE_NAME": "BANK OF AMERICA CORPORATION",
+                            "SPONS_DFE_EIN": "560906609",
+                            "PLAN_NAME": "THE BANK OF AMERICA 401(K) PLAN",
+                            "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                            "TYPE_PENSION_BNFT_CODE": "2E2F2G2J",
+                            "TOT_PARTCP_BOY_CNT": "263860",
+                        },
+                    ]
+                ).to_csv(Path(temp_dir) / "F_5500_2023_Latest.csv", index=False)
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "DB-ACK",
+                            "ROW_ORDER": "1",
+                            "PROVIDER_OTHER_NAME": "FIDELITY INVESTMENTS INSTITUTIONAL",
+                            "PROVIDER_OTHER_RELATION": "RECORDKEEPER",
+                        },
+                        {
+                            "ACK_ID": "DC-ACK",
+                            "ROW_ORDER": "1",
+                            "PROVIDER_OTHER_NAME": "MERRILL LYNCH",
+                            "PROVIDER_OTHER_RELATION": "RECORDKEEPER",
+                        },
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_2023_Latest.csv",
+                    index=False,
+                )
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "DB-ACK",
+                            "ROW_ORDER": "1",
+                            "SERVICE_CODE": "64",
+                        },
+                        {
+                            "ACK_ID": "DC-ACK",
+                            "ROW_ORDER": "1",
+                            "SERVICE_CODE": "64",
+                        },
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_CODES_2023_Latest.csv",
+                    index=False,
+                )
+
+                master = matcher._build_year_master(2023)
+            finally:
+                matcher.DATA_DIR = original_data_dir
+
+        self.assertEqual(len(master), 1)
+        self.assertEqual(master.loc[0, "ACK_ID"], "DC-ACK")
+        self.assertEqual(master.loc[0, "PLAN_NAME"], "THE BANK OF AMERICA 401(K) PLAN")
+        self.assertEqual(master.loc[0, "RK_CANON"], "Merrill Lynch")
 
 
 if __name__ == "__main__":
