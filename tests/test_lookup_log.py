@@ -184,10 +184,27 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(suggestions[0].employer_name, "ALPHA RETAIL LLC")
         self.assertEqual(suggestions[1].employer_name, "OMEGA ALPHA LLC")
 
+    def test_suggest_employers_skips_short_queries(self):
+        suggestions = self.matcher.suggest_employers("am", limit=3)
+
+        self.assertEqual(suggestions, [])
+
     def test_suggest_employers_skips_single_character_queries(self):
         suggestions = self.matcher.suggest_employers("a", limit=3)
 
         self.assertEqual(suggestions, [])
+
+    def test_suggest_employers_skips_generic_business_terms(self):
+        suggestions = self.matcher.suggest_employers("services", limit=3)
+
+        self.assertEqual(suggestions, [])
+
+    def test_suggest_employers_returns_related_token_matches(self):
+        suggestions = self.matcher.suggest_employers("america", limit=3)
+
+        self.assertGreaterEqual(len(suggestions), 1)
+        self.assertEqual(suggestions[0].employer_name, "BANK OF AMERICA CORPORATION")
+        self.assertEqual(suggestions[0].match_method, "contains")
 
     def test_match_overrides_bank_of_america_pension_row_to_merrill(self):
         results = self.matcher.match("bank of america", top_n=1)

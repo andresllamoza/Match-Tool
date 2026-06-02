@@ -91,6 +91,24 @@ LEGAL_SUFFIXES = {
     "US",
 }
 STOPWORDS = {"THE", "AND", "OF", "&"}
+SUGGESTION_GENERIC_TOKENS = {
+    "ADMINISTRATION",
+    "ASSOCIATES",
+    "BENEFIT",
+    "BENEFITS",
+    "BUSINESS",
+    "CENTER",
+    "CENTERS",
+    "ENTERPRISE",
+    "ENTERPRISES",
+    "GLOBAL",
+    "MANAGEMENT",
+    "NATIONAL",
+    "SERVICE",
+    "SERVICES",
+    "SYSTEM",
+    "SYSTEMS",
+}
 
 CANONICAL_MAP = [
     (r"TEMPO HOLDING", "Alight Solutions"),
@@ -471,6 +489,12 @@ def canonicalize_employer(name: str) -> str:
     return _normalize_name(name)
 
 
+def _is_meaningful_suggestion_token(token: str) -> bool:
+    return token not in SUGGESTION_GENERIC_TOKENS and (
+        len(token) >= 3 or any(char.isdigit() for char in token)
+    )
+
+
 def _candidate_result(
     employer_query: str,
     row: pd.Series,
@@ -640,11 +664,11 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
 
 def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSuggestion]:
     """
-    Suggest employer names that exist in the lookup data.
+    Suggest related employer names that exist in the lookup data.
 
-    This powers the lightweight UI suggestions below the search box. It uses the
-    same normalized employer names as the matcher, but keeps a lower fuzzy bar so
-    partial user input can still surface useful candidates.
+    This powers the lightweight UI suggestions below the search box. Suggestions
+    ignore too-short or generic queries, then rank exact/prefix/substring/token
+    matches before fuzzy fallback so the list stays related and typo-tolerant.
     """
     return suggest_employers_from_index(employer_query, load_dol_data(), limit=limit)
 
@@ -659,7 +683,14 @@ def suggest_employers_from_index(
         return []
 
     canonical_query = canonicalize_employer(employer_query)
-    if len(canonical_query) < 2:
+    if len(canonical_query) < 3:
+        return []
+    query_tokens = [
+        token
+        for token in canonical_query.split()
+        if _is_meaningful_suggestion_token(token)
+    ]
+    if not query_tokens:
         return []
 
     candidates: dict[str, tuple[int, float, pd.Series, str]] = {}
@@ -689,6 +720,21 @@ def suggest_employers_from_index(
     ]
     if not contains_rows.empty:
         add_rows(contains_rows, 2, 0.90, "contains")
+
+    def is_related_by_token(employer_norm: object) -> bool:
+        if not query_tokens or pd.isna(employer_norm):
+            return False
+        employer_tokens = str(employer_norm).split()
+        return any(
+            employer_token.startswith(query_token) or query_token.startswith(employer_token)
+            for query_token in query_tokens
+            for employer_token in employer_tokens
+            if _is_meaningful_suggestion_token(employer_token)
+        )
+
+    token_rows = index[index["EMPLOYER_NORM"].apply(is_related_by_token)]
+    if not token_rows.empty:
+        add_rows(token_rows, 2, 0.85, "token_related")
 
     collapsed_query = _collapsed(canonical_query)
     if collapsed_query != canonical_query and len(collapsed_query) >= 4:
