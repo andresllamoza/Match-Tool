@@ -105,18 +105,6 @@ st.markdown(
         color: #5B6173;
         font-size: 0.85rem;
     }
-    .suggestions-header {
-        margin-top: 0.6rem;
-        margin-bottom: 0.25rem;
-        font-size: 0.86rem;
-        font-weight: 700;
-        color: #0C0F1A;
-    }
-    .suggestions-caption {
-        margin-bottom: 0.4rem;
-        font-size: 0.8rem;
-        color: #5B6173;
-    }
     .footer-note {
         margin-top: 3rem;
         padding-top: 1rem;
@@ -172,9 +160,11 @@ def confidence_class(label: str) -> str:
     }.get(label, "confidence-low")
 
 
-def select_employer_suggestion(employer_name: str) -> None:
-    st.session_state["employer_input"] = employer_name
-    st.session_state.pop("last_logged_lookup_signature", None)
+def queue_employer_suggestion() -> None:
+    selected_employer = st.session_state.get("employer_suggestion_select", "")
+    if selected_employer:
+        st.session_state["pending_employer_suggestion"] = selected_employer
+        st.session_state.pop("last_logged_lookup_signature", None)
 
 
 def render_employer_suggestions(
@@ -189,20 +179,21 @@ def render_employer_suggestions(
     if not visible_suggestions:
         return
 
-    st.markdown(
-        '<div class="suggestions-header">Suggestions in our 5500 data</div>'
-        '<div class="suggestions-caption">Pick one to search the exact employer name we have on file.</div>',
-        unsafe_allow_html=True,
+    select_key = "employer_suggestion_select"
+    query_key = "employer_suggestion_query"
+    if st.session_state.get(query_key) != employer_query:
+        st.session_state.pop(select_key, None)
+        st.session_state[query_key] = employer_query
+
+    option_names = [suggestion.employer_name for suggestion in visible_suggestions]
+    st.selectbox(
+        "Related employer names",
+        options=[""] + option_names,
+        format_func=lambda employer_name: employer_name or "Select a related name...",
+        key=select_key,
+        on_change=queue_employer_suggestion,
+        help="Optional: search using a related employer name found in the 5500 data.",
     )
-    for index, suggestion in enumerate(visible_suggestions):
-        label = f"{suggestion.employer_name} - {suggestion.recordkeeper}"
-        st.button(
-            label,
-            key=f"employer_suggestion_{index}_{suggestion.employer_name}",
-            on_click=select_employer_suggestion,
-            args=(suggestion.employer_name,),
-            use_container_width=True,
-        )
 
 
 st.markdown(
@@ -212,6 +203,12 @@ st.markdown(
     '</div>',
     unsafe_allow_html=True,
 )
+
+pending_employer_suggestion = st.session_state.pop("pending_employer_suggestion", "")
+if pending_employer_suggestion:
+    st.session_state["employer_input"] = pending_employer_suggestion
+    st.session_state.pop("employer_suggestion_select", None)
+    st.session_state.pop("employer_suggestion_query", None)
 
 employer_query = st.text_input(
     "Employer name",

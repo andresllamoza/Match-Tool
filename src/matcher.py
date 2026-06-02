@@ -59,7 +59,6 @@ TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
 TIER1_CODES = {"15", "64"}
 TIER2_CODES = {"13"}
 FUZZY_THRESHOLD = 92
-SUGGESTION_FUZZY_THRESHOLD = 70
 PLAN_CHARACTERISTIC_RE = re.compile(r"\d[A-Z0-9]")
 
 LEGAL_SUFFIXES = {
@@ -619,19 +618,20 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
 
 def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSuggestion]:
     """
-    Suggest employer names that exist in the lookup data.
+    Suggest related employer names that exist in the lookup data.
 
-    This powers the lightweight UI suggestions below the search box. It uses the
-    same normalized employer names as the matcher, but keeps a lower fuzzy bar so
-    partial user input can still surface useful candidates.
+    This powers the lightweight UI suggestions below the search box. Suggestions
+    are intentionally stricter than lookup matching: they must share visible text
+    with the user's query so the dropdown feels like related names, not guesses.
     """
     if limit <= 0 or not employer_query or not employer_query.strip():
         return []
 
     df = load_dol_data()
     canonical_query = canonicalize_employer(employer_query)
-    if len(canonical_query) < 2:
+    if len(canonical_query) < 3:
         return []
+    query_tokens = [token for token in canonical_query.split() if len(token) >= 3]
 
     candidates: dict[str, tuple[float, pd.Series, str]] = {}
 
@@ -656,6 +656,21 @@ def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSugge
     if not contains_rows.empty:
         add_rows(contains_rows, 0.90, "contains")
 
+    def is_related_by_token(employer_norm: object) -> bool:
+        if not query_tokens or pd.isna(employer_norm):
+            return False
+        employer_tokens = str(employer_norm).split()
+        return any(
+            employer_token.startswith(query_token) or query_token.startswith(employer_token)
+            for query_token in query_tokens
+            for employer_token in employer_tokens
+            if len(employer_token) >= 3
+        )
+
+    token_rows = df[df["EMPLOYER_NORM"].apply(is_related_by_token)]
+    if not token_rows.empty:
+        add_rows(token_rows, 0.85, "token_related")
+
     collapsed_query = _collapsed(canonical_query)
     if collapsed_query != canonical_query and len(collapsed_query) >= 4:
         collapsed_rows = df[
@@ -667,23 +682,6 @@ def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSugge
         ]
         if not collapsed_rows.empty:
             add_rows(collapsed_rows, 0.88, "spacing_insensitive")
-
-    if len(canonical_query) >= 3:
-        all_names = df["EMPLOYER_NORM"].dropna().tolist()
-        fuzzy_matches = process.extract(
-            canonical_query,
-            all_names,
-            scorer=fuzz.WRatio,
-            limit=max(limit * 6, 20),
-        )
-        for matched_name, score, _ in fuzzy_matches:
-            if score < SUGGESTION_FUZZY_THRESHOLD:
-                continue
-            add_rows(
-                df[df["EMPLOYER_NORM"] == matched_name],
-                score / 100.0,
-                "fuzzy",
-            )
 
     ranked_candidates = sorted(
         candidates.values(),
