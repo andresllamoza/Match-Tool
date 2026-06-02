@@ -51,11 +51,11 @@ class EmployerSuggestion:
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
-MASTER_CACHE_VERSION = "4"
+MASTER_CACHE_VERSION = "6"
 
-# 2023 is the latest complete year from the original MVP. Set DOL_YEARS to a
-# comma-separated list (for example, "2024,2023") if you want broader coverage.
-DEFAULT_YEARS = (2023,)
+# Prefer the newest complete DOL filing year and keep 2023 as a fallback for
+# plans that have not yet filed or were only present in the original MVP data.
+DEFAULT_YEARS = (2024, 2023)
 TIER_RANK = {"TIER1": 1, "TIER2": 2}
 TIER1_RELATION = r"RECORDKEEPER|RECORD KEEPER|RECORDKEEPING|RECORD KEEPING|PLAN RECORDKEEPER"
 TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
@@ -446,7 +446,6 @@ def _build_master() -> pd.DataFrame:
         ["EMPLOYER_NORM", "_tier_rank", "YEAR", "_n"],
         ascending=[True, True, False, False],
     )
-    master = master.drop_duplicates(subset=["EMPLOYER_NORM"], keep="first")
     master = master[master["EMPLOYER_NORM"] != ""].copy()
 
     output_columns = [
