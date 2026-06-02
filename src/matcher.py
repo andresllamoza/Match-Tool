@@ -43,6 +43,8 @@ class EmployerSuggestion:
     recordkeeper: str
     confidence: float
     match_method: str
+    ein: Optional[str] = None
+    plan_participants: Optional[int] = None
 
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -445,6 +447,25 @@ def load_dol_data() -> pd.DataFrame:
     return _DATAFRAME_CACHE
 
 
+def employer_search_index() -> pd.DataFrame:
+    """Return the canonical employer rows needed by the typeahead UI."""
+    df = load_dol_data()
+    columns = [
+        "EMPLOYER",
+        "EMPLOYER_NORM",
+        "EMPLOYER_COLLAPSED",
+        "RK_RAW",
+        "RK_CANON",
+        "SPONS_DFE_EIN",
+        "TOT_PARTCP_BOY_CNT",
+        "_n",
+        "_tier_rank",
+        "YEAR",
+    ]
+    available_columns = [column for column in columns if column in df.columns]
+    return df[available_columns].copy()
+
+
 def canonicalize_employer(name: str) -> str:
     """Normalize an employer name using the Colab matcher rules."""
     return _normalize_name(name)
@@ -625,62 +646,76 @@ def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSugge
     same normalized employer names as the matcher, but keeps a lower fuzzy bar so
     partial user input can still surface useful candidates.
     """
+    return suggest_employers_from_index(employer_query, load_dol_data(), limit=limit)
+
+
+def suggest_employers_from_index(
+    employer_query: str,
+    index: pd.DataFrame,
+    limit: int = 5,
+) -> list[EmployerSuggestion]:
+    """Suggest employer names from a preloaded canonical employer index."""
     if limit <= 0 or not employer_query or not employer_query.strip():
         return []
 
-    df = load_dol_data()
     canonical_query = canonicalize_employer(employer_query)
     if len(canonical_query) < 2:
         return []
 
-    candidates: dict[str, tuple[float, pd.Series, str]] = {}
+    candidates: dict[str, tuple[int, float, pd.Series, str]] = {}
 
-    def add_rows(rows: pd.DataFrame, confidence: float, match_method: str) -> None:
+    def add_rows(
+        rows: pd.DataFrame,
+        priority: int,
+        confidence: float,
+        match_method: str,
+    ) -> None:
         for _, row in _rank_rows(rows).iterrows():
             key = str(row["EMPLOYER_NORM"])
             existing = candidates.get(key)
-            if existing is None or confidence > existing[0]:
-                candidates[key] = (confidence, row, match_method)
+            if existing is None or (priority, confidence) > (existing[0], existing[1]):
+                candidates[key] = (priority, confidence, row, match_method)
 
-    exact_rows = df[df["EMPLOYER_NORM"] == canonical_query]
+    exact_rows = index[index["EMPLOYER_NORM"] == canonical_query]
     if not exact_rows.empty:
-        add_rows(exact_rows, 1.0, "exact_normalized")
+        add_rows(exact_rows, 4, 1.0, "exact_normalized")
 
-    prefix_rows = df[df["EMPLOYER_NORM"].fillna("").str.startswith(canonical_query)]
+    prefix_rows = index[index["EMPLOYER_NORM"].fillna("").str.startswith(canonical_query)]
     if not prefix_rows.empty:
-        add_rows(prefix_rows, 0.95, "prefix")
+        add_rows(prefix_rows, 3, 0.95, "prefix")
 
-    contains_rows = df[
-        df["EMPLOYER_NORM"].fillna("").str.contains(canonical_query, na=False, regex=False)
+    contains_rows = index[
+        index["EMPLOYER_NORM"].fillna("").str.contains(canonical_query, na=False, regex=False)
     ]
     if not contains_rows.empty:
-        add_rows(contains_rows, 0.90, "contains")
+        add_rows(contains_rows, 2, 0.90, "contains")
 
     collapsed_query = _collapsed(canonical_query)
     if collapsed_query != canonical_query and len(collapsed_query) >= 4:
-        collapsed_rows = df[
-            df["EMPLOYER_COLLAPSED"].fillna("").str.contains(
+        collapsed_rows = index[
+            index["EMPLOYER_COLLAPSED"].fillna("").str.contains(
                 collapsed_query,
                 na=False,
                 regex=False,
             )
         ]
         if not collapsed_rows.empty:
-            add_rows(collapsed_rows, 0.88, "spacing_insensitive")
+            add_rows(collapsed_rows, 2, 0.88, "spacing_insensitive")
 
     if len(canonical_query) >= 3:
-        all_names = df["EMPLOYER_NORM"].dropna().tolist()
+        all_names = index["EMPLOYER_NORM"].dropna().tolist()
         fuzzy_matches = process.extract(
             canonical_query,
             all_names,
-            scorer=fuzz.WRatio,
+            scorer=fuzz.token_sort_ratio,
             limit=max(limit * 6, 20),
         )
         for matched_name, score, _ in fuzzy_matches:
             if score < SUGGESTION_FUZZY_THRESHOLD:
                 continue
             add_rows(
-                df[df["EMPLOYER_NORM"] == matched_name],
+                index[index["EMPLOYER_NORM"] == matched_name],
+                1,
                 score / 100.0,
                 "fuzzy",
             )
@@ -689,18 +724,27 @@ def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSugge
         candidates.values(),
         key=lambda item: (
             item[0],
-            -int(item[1].get("_tier_rank") or 99),
-            float(item[1].get("_n") or 0),
-            int(float(item[1].get("YEAR") or 0)),
+            item[1],
+            -int(item[2].get("_tier_rank") or 99),
+            float(item[2].get("_n") or 0),
+            int(float(item[2].get("YEAR") or 0)),
         ),
         reverse=True,
     )
-    return [
-        EmployerSuggestion(
-            employer_name=str(row.get("EMPLOYER") or ""),
-            recordkeeper=str(row.get("RK_CANON") or row.get("RK_RAW") or ""),
-            confidence=max(0.0, min(1.0, confidence)),
-            match_method=match_method,
+    suggestions = []
+    for _, confidence, row, match_method in ranked_candidates[:limit]:
+        participants = pd.to_numeric(
+            row.get("TOT_PARTCP_BOY_CNT") or row.get("_n"),
+            errors="coerce",
         )
-        for confidence, row, match_method in ranked_candidates[:limit]
-    ]
+        suggestions.append(
+            EmployerSuggestion(
+                employer_name=str(row.get("EMPLOYER") or ""),
+                recordkeeper=str(row.get("RK_CANON") or row.get("RK_RAW") or ""),
+                confidence=max(0.0, min(1.0, confidence)),
+                match_method=match_method,
+                ein=row.get("SPONS_DFE_EIN"),
+                plan_participants=None if pd.isna(participants) else int(participants),
+            )
+        )
+    return suggestions
