@@ -41,8 +41,8 @@ FILE_URLS = {
 # Expected CSV filenames after extraction
 CSV_FILES = {
     "main": f"f_5500_{YEAR}_latest.csv",
-    "providers": f"F_SCH_C_PART1_ITEM2_{YEAR}_Latest.csv",
-    "codes": f"F_SCH_C_PART1_ITEM2_CODES_{YEAR}_Latest.csv",
+    "providers": f"F_SCH_C_PART1_ITEM2_{YEAR}_latest.csv",
+    "codes": f"F_SCH_C_PART1_ITEM2_CODES_{YEAR}_latest.csv",
 }
 
 # Schedule C service codes for recordkeeping services.
