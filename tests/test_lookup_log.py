@@ -204,6 +204,27 @@ class MatcherBuildTest(unittest.TestCase):
         self.assertEqual(loaded.loc[0, "EMPLOYER"], "AMAZON.COM SERVICES,LLC")
         self.assertTrue(version_file_exists)
 
+    def test_match_finds_literal_amazon_after_building_data_files(self):
+        from src import matcher
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_data_dir = matcher.DATA_DIR
+            original_cache = matcher._DATAFRAME_CACHE
+            matcher.DATA_DIR = Path(temp_dir)
+            matcher._DATAFRAME_CACHE = None
+            try:
+                write_amazon_dol_fixture(Path(temp_dir))
+
+                results = matcher.match("amazon", top_n=1)
+            finally:
+                matcher.DATA_DIR = original_data_dir
+                matcher._DATAFRAME_CACHE = original_cache
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "AMAZON.COM SERVICES,LLC")
+        self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
+        self.assertEqual(results[0].match_method, "word_boundary")
+
 
 if __name__ == "__main__":
     unittest.main()
