@@ -22,6 +22,7 @@ class MatchResult:
     plan_year: Optional[int] = None
     plan_participants: Optional[int] = None
     ein: Optional[str] = None
+    plan_type_code: Optional[str] = None
 
     @property
     def confidence_label(self) -> str:
@@ -44,6 +45,7 @@ TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
 TIER1_CODES = {"15", "64"}
 TIER2_CODES = {"13"}
 FUZZY_THRESHOLD = 92
+PLAN_CHARACTERISTIC_RE = re.compile(r"\d[A-Z0-9]")
 
 LEGAL_SUFFIXES = {
     "INCORPORATED",
@@ -228,6 +230,17 @@ def _first_non_null(*values: Optional[str]) -> Optional[str]:
     return None
 
 
+def _plan_characteristic_codes(value: object) -> set[str]:
+    if pd.isna(value):
+        return set()
+    return set(PLAN_CHARACTERISTIC_RE.findall(str(value).upper()))
+
+
+def _has_defined_contribution_pension_code(value: object) -> bool:
+    """Return true for Form 5500 pension feature codes that indicate DC plans."""
+    return any(code.startswith("2") for code in _plan_characteristic_codes(value))
+
+
 def _build_year_master(year: int) -> pd.DataFrame:
     main_path = _ensure_dol_csv(year, f"F_5500_{year}_Latest")
     provider_path = _ensure_dol_csv(year, f"F_SCH_C_PART1_ITEM2_{year}_Latest")
@@ -247,9 +260,11 @@ def _build_year_master(year: int) -> pd.DataFrame:
         ["ACK_ID", "SPONSOR_DFE_NAME"],
     )
     if "TYPE_PENSION_BNFT_CODE" in filings.columns:
+        filings["TYPE_PENSION_BNFT_CODE"] = (
+            filings["TYPE_PENSION_BNFT_CODE"].fillna("").str.strip().str.upper()
+        )
         filings = filings[
-            filings["TYPE_PENSION_BNFT_CODE"].notna()
-            & (filings["TYPE_PENSION_BNFT_CODE"].str.strip() != "")
+            filings["TYPE_PENSION_BNFT_CODE"].apply(_has_defined_contribution_pension_code)
         ].copy()
     filings["EMPLOYER_NORM"] = filings["SPONSOR_DFE_NAME"].apply(_normalize_name)
     if "TOT_PARTCP_BOY_CNT" in filings.columns:
@@ -343,6 +358,7 @@ def _build_master() -> pd.DataFrame:
         "_n",
         "_tier_rank",
         "PLAN_NAME",
+        "TYPE_PENSION_BNFT_CODE",
         "PLAN_YEAR_BEGIN_DATE",
         "TOT_PARTCP_BOY_CNT",
         "SPONS_DFE_EIN",
@@ -361,13 +377,21 @@ def load_dol_data() -> pd.DataFrame:
         return _DATAFRAME_CACHE
 
     if MASTER_CACHE_PATH.exists():
-        _DATAFRAME_CACHE = pd.read_csv(MASTER_CACHE_PATH, dtype=str, low_memory=False)
-        _DATAFRAME_CACHE["_n"] = pd.to_numeric(_DATAFRAME_CACHE["_n"], errors="coerce").fillna(0)
-        _DATAFRAME_CACHE["_tier_rank"] = pd.to_numeric(
-            _DATAFRAME_CACHE["_tier_rank"],
-            errors="coerce",
-        ).fillna(99)
-        return _DATAFRAME_CACHE
+        master_cache = pd.read_csv(MASTER_CACHE_PATH, dtype=str, low_memory=False)
+        if "TYPE_PENSION_BNFT_CODE" in master_cache.columns and master_cache[
+            "TYPE_PENSION_BNFT_CODE"
+        ].apply(_has_defined_contribution_pension_code).all():
+            _DATAFRAME_CACHE = master_cache
+            _DATAFRAME_CACHE["_n"] = pd.to_numeric(
+                _DATAFRAME_CACHE["_n"],
+                errors="coerce",
+            ).fillna(0)
+            _DATAFRAME_CACHE["_tier_rank"] = pd.to_numeric(
+                _DATAFRAME_CACHE["_tier_rank"],
+                errors="coerce",
+            ).fillna(99)
+            return _DATAFRAME_CACHE
+        MASTER_CACHE_PATH.unlink(missing_ok=True)
 
     _DATAFRAME_CACHE = _build_master()
     return _DATAFRAME_CACHE
@@ -398,6 +422,7 @@ def _candidate_result(
         plan_year=row.get("PLAN_YEAR_BEGIN_DATE") or row.get("YEAR"),
         plan_participants=participant_count,
         ein=row.get("SPONS_DFE_EIN"),
+        plan_type_code=row.get("TYPE_PENSION_BNFT_CODE"),
     )
 
 

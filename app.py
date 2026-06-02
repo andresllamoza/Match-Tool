@@ -228,6 +228,8 @@ if employer_query:
                 st.write(top.plan_year or "-")
                 st.markdown("**Participants**")
                 st.write(f"{top.plan_participants:,}" if top.plan_participants else "-")
+                st.markdown("**Pension feature code**")
+                st.write(top.plan_type_code or "-")
 
         if near_misses:
             st.markdown("##### Other candidates")
