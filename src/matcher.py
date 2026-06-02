@@ -38,7 +38,6 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
 MASTER_CACHE_VERSION = "2"
-MASTER_CACHE_PATH = DATA_DIR / MASTER_CACHE_FILENAME
 
 # 2023 is the latest complete year from the original MVP. Set DOL_YEARS to a
 # comma-separated list (for example, "2024,2023") if you want broader coverage.
