@@ -126,10 +126,17 @@ def _master_cache_version_path() -> Path:
     return DATA_DIR / MASTER_CACHE_VERSION_FILENAME
 
 
+def _master_cache_version_payload() -> str:
+    years = ",".join(str(year) for year in _configured_years())
+    return f"{MASTER_CACHE_VERSION}:{years}"
+
+
 def _master_cache_is_current() -> bool:
-    version_path = _master_cache_version_path()
     try:
-        return version_path.read_text(encoding="utf-8").strip() == MASTER_CACHE_VERSION
+        return (
+            _master_cache_version_path().read_text(encoding="utf-8").strip()
+            == _master_cache_version_payload()
+        )
     except FileNotFoundError:
         return False
 
@@ -375,7 +382,10 @@ def _build_master() -> pd.DataFrame:
             master[column] = None
     master = master[output_columns]
     master.to_csv(_master_cache_path(), index=False)
-    _master_cache_version_path().write_text(MASTER_CACHE_VERSION, encoding="utf-8")
+    _master_cache_version_path().write_text(
+        _master_cache_version_payload(),
+        encoding="utf-8",
+    )
     return master
 
 

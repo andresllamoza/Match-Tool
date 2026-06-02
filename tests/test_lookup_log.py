@@ -8,6 +8,41 @@ from src.lookup_log import append_lookup_attempt, read_lookup_attempts
 from src.matcher import MatchResult
 
 
+def write_amazon_dol_fixture(data_dir: Path) -> None:
+    pd.DataFrame(
+        [
+            {
+                "ACK_ID": "20250101203230NAL0000631587001",
+                "SPONSOR_DFE_NAME": "AMAZON.COM SERVICES,LLC",
+                "SPONS_DFE_EIN": "911986545",
+                "PLAN_NAME": "A SINGLE-EMPLOYER PLAN",
+                "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                "TYPE_PENSION_BNFT_CODE": "2G",
+                "TOT_PARTCP_BOY_CNT": "1214063",
+            }
+        ]
+    ).to_csv(data_dir / "F_5500_2023_Latest.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "ACK_ID": "20250101203230NAL0000631587001",
+                "ROW_ORDER": "1",
+                "PROVIDER_OTHER_NAME": "FIDELITY INVESTMENTS INSTITUTIONAL",
+                "PROVIDER_OTHER_RELATION": "RECORDKEEPER",
+            }
+        ]
+    ).to_csv(data_dir / "F_SCH_C_PART1_ITEM2_2023_Latest.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "ACK_ID": "20250101203230NAL0000631587001",
+                "ROW_ORDER": "1",
+                "SERVICE_CODE": "37",
+            }
+        ]
+    ).to_csv(data_dir / "F_SCH_C_PART1_ITEM2_CODES_2023_Latest.csv", index=False)
+
+
 class LookupLogTest(unittest.TestCase):
     def test_append_lookup_attempt_records_top_result_reason(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -117,44 +152,7 @@ class MatcherBuildTest(unittest.TestCase):
             original_data_dir = matcher.DATA_DIR
             matcher.DATA_DIR = Path(temp_dir)
             try:
-                pd.DataFrame(
-                    [
-                        {
-                            "ACK_ID": "20250101203230NAL0000631587001",
-                            "SPONSOR_DFE_NAME": "AMAZON.COM SERVICES,LLC",
-                            "SPONS_DFE_EIN": "911986545",
-                            "PLAN_NAME": "A SINGLE-EMPLOYER PLAN",
-                            "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
-                            "TYPE_PENSION_BNFT_CODE": "2G",
-                            "TOT_PARTCP_BOY_CNT": "1214063",
-                        }
-                    ]
-                ).to_csv(Path(temp_dir) / "F_5500_2023_Latest.csv", index=False)
-                pd.DataFrame(
-                    [
-                        {
-                            "ACK_ID": "20250101203230NAL0000631587001",
-                            "ROW_ORDER": "1",
-                            "PROVIDER_OTHER_NAME": "FIDELITY INVESTMENTS INSTITUTIONAL",
-                            "PROVIDER_OTHER_RELATION": "RECORDKEEPER",
-                        }
-                    ]
-                ).to_csv(
-                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_2023_Latest.csv",
-                    index=False,
-                )
-                pd.DataFrame(
-                    [
-                        {
-                            "ACK_ID": "20250101203230NAL0000631587001",
-                            "ROW_ORDER": "1",
-                            "SERVICE_CODE": "37",
-                        }
-                    ]
-                ).to_csv(
-                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_CODES_2023_Latest.csv",
-                    index=False,
-                )
+                write_amazon_dol_fixture(Path(temp_dir))
 
                 master = matcher._build_year_master(2023)
             finally:
@@ -163,6 +161,69 @@ class MatcherBuildTest(unittest.TestCase):
         self.assertEqual(len(master), 1)
         self.assertEqual(master.loc[0, "EMPLOYER_NORM"], "AMAZON COM SERVICES")
         self.assertEqual(master.loc[0, "TIER"], "TIER1")
+
+    def test_load_dol_data_rebuilds_stale_unversioned_cache(self):
+        from src import matcher
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            data_dir = Path(temp_dir)
+            original_data_dir = matcher.DATA_DIR
+            original_cache = matcher._DATAFRAME_CACHE
+            matcher.DATA_DIR = data_dir
+            matcher._DATAFRAME_CACHE = None
+            try:
+                pd.DataFrame(
+                    [
+                        {
+                            "EMPLOYER": "STALE INC",
+                            "EMPLOYER_NORM": "STALE",
+                            "EMPLOYER_COLLAPSED": "STALE",
+                            "RK_RAW": "OLD RECORDKEEPER",
+                            "RK_CANON": "Old Recordkeeper",
+                            "TIER": "TIER1",
+                            "YEAR": "2023",
+                            "_n": 1,
+                            "_tier_rank": 1,
+                            "PLAN_NAME": "STALE PLAN",
+                            "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                            "TOT_PARTCP_BOY_CNT": "1",
+                            "SPONS_DFE_EIN": "00-0000000",
+                        }
+                    ]
+                ).to_csv(data_dir / matcher.MASTER_CACHE_FILENAME, index=False)
+                write_amazon_dol_fixture(data_dir)
+
+                loaded = matcher.load_dol_data()
+                version_file_exists = (
+                    data_dir / matcher.MASTER_CACHE_VERSION_FILENAME
+                ).exists()
+            finally:
+                matcher.DATA_DIR = original_data_dir
+                matcher._DATAFRAME_CACHE = original_cache
+
+        self.assertEqual(loaded.loc[0, "EMPLOYER"], "AMAZON.COM SERVICES,LLC")
+        self.assertTrue(version_file_exists)
+
+    def test_match_finds_literal_amazon_after_building_data_files(self):
+        from src import matcher
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_data_dir = matcher.DATA_DIR
+            original_cache = matcher._DATAFRAME_CACHE
+            matcher.DATA_DIR = Path(temp_dir)
+            matcher._DATAFRAME_CACHE = None
+            try:
+                write_amazon_dol_fixture(Path(temp_dir))
+
+                results = matcher.match("amazon", top_n=1)
+            finally:
+                matcher.DATA_DIR = original_data_dir
+                matcher._DATAFRAME_CACHE = original_cache
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "AMAZON.COM SERVICES,LLC")
+        self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
+        self.assertEqual(results[0].match_method, "word_boundary")
 
 
 if __name__ == "__main__":
