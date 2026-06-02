@@ -22,6 +22,8 @@ class MatchResult:
     plan_year: Optional[int] = None
     plan_participants: Optional[int] = None
     ein: Optional[str] = None
+    match_method: str = "unknown"
+    match_reason: str = ""
 
     @property
     def confidence_label(self) -> str:
@@ -382,6 +384,8 @@ def _candidate_result(
     employer_query: str,
     row: pd.Series,
     confidence: float,
+    match_method: str,
+    match_reason: str,
 ) -> MatchResult:
     participants = pd.to_numeric(row.get("TOT_PARTCP_BOY_CNT") or row.get("_n"), errors="coerce")
     if pd.isna(participants):
@@ -398,6 +402,8 @@ def _candidate_result(
         plan_year=row.get("PLAN_YEAR_BEGIN_DATE") or row.get("YEAR"),
         plan_participants=participant_count,
         ein=row.get("SPONS_DFE_EIN"),
+        match_method=match_method,
+        match_reason=match_reason,
     )
 
 
@@ -425,23 +431,38 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
     if not canonical_query:
         return []
 
-    candidates: dict[str, tuple[float, pd.Series]] = {}
+    candidates: dict[str, tuple[float, pd.Series, str, str]] = {}
 
-    def add_rows(rows: pd.DataFrame, confidence: float) -> None:
+    def add_rows(
+        rows: pd.DataFrame,
+        confidence: float,
+        match_method: str,
+        match_reason: str,
+    ) -> None:
         for _, row in _rank_rows(rows).iterrows():
             key = str(row["EMPLOYER_NORM"])
             existing = candidates.get(key)
             if existing is None or confidence > existing[0]:
-                candidates[key] = (confidence, row)
+                candidates[key] = (confidence, row, match_method, match_reason)
 
     exact_rows = df[df["EMPLOYER_NORM"] == canonical_query]
     if not exact_rows.empty:
-        add_rows(exact_rows, 1.0)
+        add_rows(
+            exact_rows,
+            1.0,
+            "exact_normalized",
+            "The normalized input exactly matched the normalized DOL employer name.",
+        )
 
     query_pattern = r"\b" + re.escape(canonical_query) + r"\b"
     boundary_rows = df[df["EMPLOYER_NORM"].str.contains(query_pattern, na=False, regex=True)]
     if not boundary_rows.empty:
-        add_rows(boundary_rows, 0.96)
+        add_rows(
+            boundary_rows,
+            0.96,
+            "word_boundary",
+            "The normalized input appeared as a full-word phrase inside the DOL employer name.",
+        )
 
     collapsed_query = _collapsed(canonical_query)
     if collapsed_query != canonical_query and len(collapsed_query) >= 4:
@@ -453,7 +474,12 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
             )
         ]
         if not collapsed_rows.empty:
-            add_rows(collapsed_rows, 0.93)
+            add_rows(
+                collapsed_rows,
+                0.93,
+                "spacing_insensitive",
+                "The normalized input matched after removing spaces from both names.",
+            )
 
     all_names = df["EMPLOYER_NORM"].dropna().tolist()
     fuzzy_matches = process.extract(
@@ -465,7 +491,12 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
     for matched_name, score, _ in fuzzy_matches:
         if score < FUZZY_THRESHOLD:
             continue
-        add_rows(df[df["EMPLOYER_NORM"] == matched_name], score / 100.0)
+        add_rows(
+            df[df["EMPLOYER_NORM"] == matched_name],
+            score / 100.0,
+            "fuzzy",
+            f"RapidFuzz WRatio scored {score:.0f}, meeting the {FUZZY_THRESHOLD} threshold.",
+        )
 
     ranked_candidates = sorted(
         candidates.values(),
@@ -478,6 +509,6 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         reverse=True,
     )
     return [
-        _candidate_result(employer_query, row, confidence)
-        for confidence, row in ranked_candidates[:top_n]
+        _candidate_result(employer_query, row, confidence, match_method, match_reason)
+        for confidence, row, match_method, match_reason in ranked_candidates[:top_n]
     ]
