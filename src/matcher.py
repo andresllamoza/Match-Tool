@@ -35,7 +35,10 @@ class MatchResult:
 
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-MASTER_CACHE_PATH = DATA_DIR / "recordkeeper_master.csv"
+MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
+MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
+MASTER_CACHE_VERSION = "2"
+MASTER_CACHE_PATH = DATA_DIR / MASTER_CACHE_FILENAME
 
 # 2023 is the latest complete year from the original MVP. Set DOL_YEARS to a
 # comma-separated list (for example, "2024,2023") if you want broader coverage.
@@ -114,6 +117,29 @@ CANONICAL_MAP = [
 ]
 
 _DATAFRAME_CACHE: Optional[pd.DataFrame] = None
+
+
+def _master_cache_path() -> Path:
+    return DATA_DIR / MASTER_CACHE_FILENAME
+
+
+def _master_cache_version_path() -> Path:
+    return DATA_DIR / MASTER_CACHE_VERSION_FILENAME
+
+
+def _master_cache_version_payload() -> str:
+    years = ",".join(str(year) for year in _configured_years())
+    return f"{MASTER_CACHE_VERSION}:{years}"
+
+
+def _master_cache_is_current() -> bool:
+    try:
+        return (
+            _master_cache_version_path().read_text(encoding="utf-8").strip()
+            == _master_cache_version_payload()
+        )
+    except FileNotFoundError:
+        return False
 
 
 def _configured_years() -> tuple[int, ...]:
@@ -223,10 +249,13 @@ def _relation_to_tier(relation: object) -> Optional[str]:
     return None
 
 
-def _first_non_null(*values: Optional[str]) -> Optional[str]:
+def _first_non_null(*values: object) -> Optional[str]:
     for value in values:
-        if value:
-            return value
+        if value is None or pd.isna(value):
+            continue
+        text = str(value).strip()
+        if text:
+            return text
     return None
 
 
@@ -353,7 +382,11 @@ def _build_master() -> pd.DataFrame:
         if column not in master.columns:
             master[column] = None
     master = master[output_columns]
-    master.to_csv(MASTER_CACHE_PATH, index=False)
+    master.to_csv(_master_cache_path(), index=False)
+    _master_cache_version_path().write_text(
+        _master_cache_version_payload(),
+        encoding="utf-8",
+    )
     return master
 
 
@@ -362,8 +395,9 @@ def load_dol_data() -> pd.DataFrame:
     if _DATAFRAME_CACHE is not None:
         return _DATAFRAME_CACHE
 
-    if MASTER_CACHE_PATH.exists():
-        _DATAFRAME_CACHE = pd.read_csv(MASTER_CACHE_PATH, dtype=str, low_memory=False)
+    cache_path = _master_cache_path()
+    if cache_path.exists() and _master_cache_is_current():
+        _DATAFRAME_CACHE = pd.read_csv(cache_path, dtype=str, low_memory=False)
         _DATAFRAME_CACHE["_n"] = pd.to_numeric(_DATAFRAME_CACHE["_n"], errors="coerce").fillna(0)
         _DATAFRAME_CACHE["_tier_rank"] = pd.to_numeric(
             _DATAFRAME_CACHE["_tier_rank"],
