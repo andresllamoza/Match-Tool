@@ -6,6 +6,7 @@ Run locally: streamlit run app.py
 
 import streamlit as st
 
+from src.lookup_log import append_lookup_attempt, read_lookup_attempts
 from src.matcher import match
 
 
@@ -176,17 +177,40 @@ employer_query = st.text_input(
 
 if employer_query:
     with st.spinner("Looking up..."):
+        lookup_error = ""
         try:
             results = match(employer_query, top_n=4)
         except NotImplementedError:
+            lookup_error = "Matcher logic not yet implemented."
             st.error(
                 "Matcher logic not yet implemented. "
                 "Paste your v4 Colab logic into `src/matcher.py` to enable lookups."
             )
             results = []
         except Exception as exc:
+            lookup_error = str(exc)
             st.error(f"Error running matcher: {exc}")
             results = []
+
+    lookup_signature = (
+        employer_query.strip(),
+        lookup_error,
+        tuple(
+            (
+                result.matched_employer_name,
+                result.recordkeeper,
+                round(result.confidence, 4),
+                result.match_method,
+            )
+            for result in results
+        ),
+    )
+    if st.session_state.get("last_logged_lookup_signature") != lookup_signature:
+        try:
+            append_lookup_attempt(employer_query, results, error=lookup_error)
+            st.session_state["last_logged_lookup_signature"] = lookup_signature
+        except Exception as exc:
+            st.warning(f"Lookup completed, but the attempt log could not be updated: {exc}")
 
     if not results:
         st.markdown(
@@ -217,6 +241,8 @@ if employer_query:
         )
 
         with st.expander("Match detail (for verification)"):
+            st.markdown("**Why this name was pulled**")
+            st.write(top.match_reason or top.match_method)
             detail_cols = st.columns(2)
             with detail_cols[0]:
                 st.markdown("**Plan name**")
@@ -243,6 +269,48 @@ if employer_query:
                     "</div>"
                 )
             st.markdown(near_miss_html, unsafe_allow_html=True)
+else:
+    st.session_state.pop("last_logged_lookup_signature", None)
+
+with st.expander("Master list of entered attempts"):
+    attempts = read_lookup_attempts()
+    if attempts.empty:
+        st.info("No lookup attempts have been recorded yet.")
+    else:
+        visible_columns = [
+            "timestamp_utc",
+            "input_name",
+            "matched_employer",
+            "recordkeeper",
+            "confidence",
+            "match_method",
+            "match_reason",
+            "candidate_count",
+            "ein",
+        ]
+        st.dataframe(
+            attempts[visible_columns].rename(
+                columns={
+                    "timestamp_utc": "Timestamp (UTC)",
+                    "input_name": "Entered name",
+                    "matched_employer": "Pulled employer name",
+                    "recordkeeper": "Recordkeeper",
+                    "confidence": "Confidence",
+                    "match_method": "Match method",
+                    "match_reason": "Why it pulled this name",
+                    "candidate_count": "Candidates",
+                    "ein": "EIN",
+                }
+            ),
+            hide_index=True,
+            use_container_width=True,
+        )
+        st.download_button(
+            "Download master attempts CSV",
+            attempts.to_csv(index=False).encode("utf-8"),
+            file_name="lookup_attempts_master.csv",
+            mime="text/csv",
+        )
 
 st.markdown(
     '<div class="footer-note">'
