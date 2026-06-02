@@ -23,6 +23,7 @@ class MatchResult:
     plan_participants: Optional[int] = None
     ein: Optional[str] = None
     plan_type_code: Optional[str] = None
+    relation_tier: Optional[str] = None
     match_method: str = "unknown"
     match_reason: str = ""
 
@@ -518,6 +519,7 @@ def _candidate_result(
         plan_participants=participant_count,
         ein=row.get("SPONS_DFE_EIN"),
         plan_type_code=row.get("TYPE_PENSION_BNFT_CODE"),
+        relation_tier=row.get("TIER"),
         match_method=match_method,
         match_reason=match_reason,
     )
@@ -538,6 +540,7 @@ def _curated_override_result(employer_query: str, canonical_query: str) -> Optio
         plan_participants=override["plan_participants"],
         ein=override["ein"],
         plan_type_code=override["plan_type_code"],
+        relation_tier="TIER1",
         match_method=override["match_method"],
         match_reason=override["match_reason"],
     )
