@@ -26,7 +26,7 @@ class MatcherTest(unittest.TestCase):
                     "_n": 1_214_063,
                     "_tier_rank": 1,
                     "PLAN_NAME": "A SINGLE-EMPLOYER PLAN",
-                    "PLAN_YEAR_BEGIN_DATE": "2023",
+                    "PLAN_YEAR_BEGIN_DATE": pd.NA,
                     "TOT_PARTCP_BOY_CNT": "1214063",
                     "SPONS_DFE_EIN": "911986545",
                 }
@@ -40,6 +40,7 @@ class MatcherTest(unittest.TestCase):
         self.assertEqual(results[0].matched_employer_name, "AMAZON.COM SERVICES,LLC")
         self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
         self.assertEqual(results[0].confidence, 0.96)
+        self.assertEqual(results[0].plan_year, "2023")
 
 
 if __name__ == "__main__":

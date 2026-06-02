@@ -399,13 +399,13 @@ def _candidate_result(
 
     return MatchResult(
         employer_query=employer_query,
-        matched_employer_name=str(row.get("EMPLOYER") or ""),
-        recordkeeper=str(row.get("RK_CANON") or row.get("RK_RAW") or ""),
+        matched_employer_name=str(_first_non_null(row.get("EMPLOYER")) or ""),
+        recordkeeper=str(_first_non_null(row.get("RK_CANON"), row.get("RK_RAW")) or ""),
         confidence=max(0.0, min(1.0, confidence)),
-        plan_name=row.get("PLAN_NAME"),
-        plan_year=row.get("PLAN_YEAR_BEGIN_DATE") or row.get("YEAR"),
+        plan_name=_first_non_null(row.get("PLAN_NAME")),
+        plan_year=_first_non_null(row.get("PLAN_YEAR_BEGIN_DATE"), row.get("YEAR")),
         plan_participants=participant_count,
-        ein=row.get("SPONS_DFE_EIN"),
+        ein=_first_non_null(row.get("SPONS_DFE_EIN")),
     )
 
 
