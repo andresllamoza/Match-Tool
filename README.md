@@ -1,56 +1,63 @@
-# Cursor / Claude Code Starter Prompts
+# DOL 5500 Recordkeeper Lookup
 
-Use these prompts when you sit down to work on the repo. Each is scoped to one specific task — that's how you stay in control of what the AI generates rather than letting it sprawl.
+A simple internal tool to look up the 401(k) recordkeeper for an employer using Department of Labor Form 5500 filings.
 
----
+## What it does
 
-## Prompt 1: Move v4 logic from Colab into the matcher module
+Type an employer name (e.g. `Microsoft`, `Walmart`, `JP Morgan Chase`). The tool returns the 401(k) recordkeeper based on the employer's latest Form 5500 Schedule C filing, with the EIN, plan participant count, and filing diagnostics for verification.
 
-Use this in Cursor (Cmd+L for chat) or Claude Code after you've opened the repo and have your Colab notebook open in another tab.
+## What problem it solves
 
-> I have a Streamlit app for looking up 401(k) recordkeepers using DOL Form 5500 data. The matching logic lives in `src/matcher.py` and has two function bodies that need to be filled in:
->
-> 1. `load_dol_data()` — loads and joins four DOL CSV datasets, filters to Schedule C service codes 15 and 64, and applies canonical provider name mapping. Should return a single dataframe with columns: SPONSOR_DFE_NAME, PROVIDER_OTHER_NAME, canonical_recordkeeper, PLAN_NAME, PLAN_YEAR_BEGIN_DATE, TOT_PARTCP_BOY_CNT, SPONS_DFE_EIN.
->
-> 2. `match()` — takes an employer name string and a `top_n` integer, scores it against the dataframe rows, returns the top N as `MatchResult` objects (dataclass already defined).
->
-> I have the working v4 logic in this Colab notebook: [paste the relevant Colab cells here]. Please port it into `src/matcher.py` filling in the PASTE ZONE sections. Preserve the matching behavior exactly — don't try to improve the algorithm, just restructure for the module.
->
-> Use the existing function signatures and dataclass. Keep the module-level dataframe cache so the data only loads once per session.
+When a PensionBee user mentions an employer but doesn't know their recordkeeper, the current path is: open the DOL Form 5500 data, join three datasets on ACK_ID and ROW_ORDER, filter Schedule C records to service codes 15 (Recordkeeping) and 64 (Recordkeeping & Information Mgmt fees), canonicalize the long tail of provider name variants, and match the employer name accounting for legal-entity suffixes and spelling variants. This takes 5–10 minutes per lookup and requires data familiarity.
 
----
+This tool collapses that to one text input.
 
-## Prompt 2: Add bulk lookup (only AFTER the basic version is shipped and someone has asked for it)
+## What it does NOT do
 
-> Extend the existing Streamlit app to support bulk lookup. Add a second tab or section to `app.py`:
->
-> - User uploads a CSV with an "employer_name" column, OR pastes a list of employer names (one per line) into a textarea
-> - For each name, run the existing `match()` function with top_n=1
-> - Return a downloadable CSV with columns: input_name, matched_employer, recordkeeper, confidence, ein, plan_name
->
-> Don't change anything about the single-lookup tab. Keep the password auth in place. Limit to 100 names per submission to avoid timeouts.
+- Identify Roth vs Traditional account splits
+- Confirm a user's current employment or termination status
+- Confirm the user has an active or funded balance
+- Provide rollover guidance (use the Rollover Knowledge Layer for that)
+- Provide tax advice
 
----
+It is a lookup tool, not a decision system.
 
-## Prompt 3: Improve match rate (separate later project, don't do this for v1)
+## How the matching works
 
-> The v4 matcher hits 666/1000 high-confidence matches on the Fortune 1000 reference set. I want to investigate the 334 non-matches without changing the production app yet. Help me:
->
-> 1. Create a `notebooks/match_failure_analysis.ipynb` notebook
-> 2. Load the same DOL data the production matcher uses
-> 3. For each unmatched Fortune 1000 employer, find the closest candidates and categorize the failure mode (legal-entity-name mismatch, holding-company structure, employer below 5500 threshold, etc.)
-> 4. Output a frequency table of failure modes so I can decide which to tackle
->
-> Don't modify `src/matcher.py`. This is investigation only.
+The tool wraps the **v4 matcher** validated against the Fortune 1000 reference set (~666/1000 high-confidence matches). The pipeline:
 
----
+1. **Normalize** the employer query — uppercase, strip legal suffixes (INC, CORP, LLC, HOLDINGS, etc.), strip stopwords (THE, AND, OF), collapse whitespace.
+2. **Pension-only filter** — restricts to filings where `TYPE_PENSION_BNFT_CODE` is set, excluding welfare/health plans (eliminates the Walmart-matches-grocery-plan class of error).
+3. **Word-boundary regex match** against normalized sponsor names. A space-collapse fallback catches `JP MORGAN` ↔ `JPMORGAN`.
+4. **Rank** matched plans by participant count (so the main 401(k) wins over a small executive plan).
+5. **Look up Schedule C** providers for the top plans, filtering to service codes 15 and 64.
+6. **Canonicalize** the recordkeeper names using a hand-curated regex map (so 7 Fidelity variants collapse to "Fidelity Investments").
 
-## A note on using AI tools well for this project
+## Current state
 
-The temptation will be to ask Claude Code to "build the whole thing." Resist it. The scaffold you have is structured to require you to engage with the substance — your v4 logic — explicitly. That engagement is the *learning*, and the learning is what compounds into your next three projects.
+- Year: 2023 DOL filings (the latest year with complete coverage at validation time)
+- Match rate: ~666/1000 high-confidence on the Fortune 1000 reference set
+- Known limitations:
+  - Plans below the 5500 filing threshold (~100 participants) won't appear
+  - Recordkeepers reported only at the master trust level (not on the operating plan's Schedule C) won't be matched
+  - Some employers file under a holding company name that doesn't textually match the operating company
 
-Specifically:
+## How it's hosted
 
-- After Prompt 1, read what Claude Code produced and ask "why did you structure this part this way?" for at least one decision. That five-minute conversation is the difference between "I used AI to build something" and "I have a workflow."
-- Don't ask Claude Code to deploy for you. Deploy yourself the first time. The Streamlit Cloud UI is the kind of thing you should see end-to-end once so you understand what's happening.
-- When you hit a bug in your v4 logic during the port, fix it manually before asking AI to help. Building the muscle of reading your own code under pressure is what makes the next tool faster.
+Streamlit Community Cloud, password-gated, code in a private GitHub repo. DOL data is downloaded at first run directly from `askebsa.dol.gov` (public source) and cached locally.
+
+## Productionizing path
+
+If adoption is real, the natural next steps are:
+
+1. **Bulk lookup** — paste a list of employer names, get a CSV back
+2. **Multi-year fallback** — if 2023 has no filing, try 2022, 2021
+3. **EIN-based exact lookup** — when EIN is known, removes all name-matching ambiguity
+4. **Match-rate improvement** — investigate the ~334 non-matches systematically
+5. **Migration to PensionBee infrastructure** with SSO
+
+None of these are required for v1.
+
+## Built by
+
+Andres Llamoza, PensionBee US Operations
