@@ -17,8 +17,7 @@ from src.matcher import (
 )
 
 
-TYPEAHEAD_LIMIT = 8
-SELECTBOX_MAX_OPTIONS = 1000
+SUGGESTION_LIMIT = 8
 
 
 st.set_page_config(
@@ -234,15 +233,22 @@ def load_cached_employer_index():
     return employer_search_index()
 
 
-def reset_selected_employer() -> None:
-    st.session_state.pop("selected_employer_name", None)
+def reset_lookup_feedback() -> None:
+    st.session_state.pop("show_employer_suggestions", None)
+    st.session_state.pop("suggestion_query", None)
     st.session_state.pop("last_logged_lookup_signature", None)
 
 
 def select_employer_suggestion(employer_name: str) -> None:
     st.session_state["employer_input"] = employer_name
-    st.session_state["selected_employer_name"] = employer_name
+    st.session_state.pop("show_employer_suggestions", None)
+    st.session_state.pop("suggestion_query", None)
     st.session_state.pop("last_logged_lookup_signature", None)
+
+
+def show_employer_suggestions(employer_query: str) -> None:
+    st.session_state["show_employer_suggestions"] = True
+    st.session_state["suggestion_query"] = employer_query
 
 
 def suggestion_detail(suggestion: EmployerSuggestion) -> str:
@@ -255,9 +261,15 @@ def suggestion_detail(suggestion: EmployerSuggestion) -> str:
 
 
 def render_employer_suggestions(
+    employer_query: str,
     suggestions: list[EmployerSuggestion],
 ) -> None:
-    if not suggestions:
+    visible_suggestions = [
+        suggestion
+        for suggestion in suggestions
+        if suggestion.employer_name.strip().lower() != employer_query.strip().lower()
+    ]
+    if not visible_suggestions:
         st.info("No matching employer found.")
         return
 
@@ -272,7 +284,7 @@ def render_employer_suggestions(
         "</div>",
         unsafe_allow_html=True,
     )
-    for index, suggestion in enumerate(suggestions):
+    for index, suggestion in enumerate(visible_suggestions):
         name = html.escape(suggestion.employer_name)
         details = html.escape(suggestion_detail(suggestion))
         confidence = int(round(suggestion.confidence * 100))
@@ -306,55 +318,20 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-try:
-    employer_index = load_cached_employer_index()
-    employer_count = len(employer_index)
-except Exception as exc:
-    employer_index = None
-    employer_count = 0
-    st.error(f"Error loading employer search index: {exc}")
+employer_query = st.text_input(
+    "Employer name",
+    placeholder="e.g. Microsoft, Walmart, Acme Corp",
+    label_visibility="visible",
+    key="employer_input",
+    on_change=reset_lookup_feedback,
+)
+lookup_employer = employer_query.strip()
 
-selected_employer = ""
-
-if employer_index is not None:
-    if employer_count <= SELECTBOX_MAX_OPTIONS:
-        employer_options = employer_index["EMPLOYER"].dropna().tolist()
-        selected_employer = st.selectbox(
-            "Employer name",
-            options=employer_options,
-            index=None,
-            placeholder="Start typing an employer name...",
-        ) or ""
-    else:
-        st.caption(
-            f"Searches {employer_count:,} canonical employers. "
-            "Because the list is large, this box returns the best fuzzy matches "
-            "instead of loading every employer into a dropdown."
-        )
-        employer_query = st.text_input(
-            "Employer name",
-            placeholder="Start typing an employer name...",
-            label_visibility="visible",
-            key="employer_input",
-            on_change=reset_selected_employer,
-        )
-        selected_employer = st.session_state.get("selected_employer_name", "")
-
-        if employer_query.strip() and not selected_employer:
-            suggestions = suggest_employers_from_index(
-                employer_query,
-                employer_index,
-                limit=TYPEAHEAD_LIMIT,
-            )
-            render_employer_suggestions(suggestions)
-        elif employer_query.strip() and selected_employer:
-            st.caption(f"Selected employer: {selected_employer}")
-
-if selected_employer:
+if lookup_employer:
     with st.spinner("Looking up..."):
         lookup_error = ""
         try:
-            results = match(selected_employer, top_n=4)
+            results = match(lookup_employer, top_n=4)
         except NotImplementedError:
             lookup_error = "Matcher logic not yet implemented."
             st.error(
@@ -368,7 +345,7 @@ if selected_employer:
             results = []
 
     lookup_signature = (
-        selected_employer.strip(),
+        lookup_employer,
         lookup_error,
         tuple(
             (
@@ -382,7 +359,7 @@ if selected_employer:
     )
     if st.session_state.get("last_logged_lookup_signature") != lookup_signature:
         try:
-            append_lookup_attempt(selected_employer, results, error=lookup_error)
+            append_lookup_attempt(lookup_employer, results, error=lookup_error)
             st.session_state["last_logged_lookup_signature"] = lookup_signature
         except Exception as exc:
             st.warning(f"Lookup completed, but the attempt log could not be updated: {exc}")
@@ -391,13 +368,19 @@ if selected_employer:
         st.markdown(
             '<div class="result-card no-match">'
             '<div class="result-recordkeeper">No match found</div>'
-            f'<div class="result-employer">No candidate matches for "{selected_employer}" in the 5500 dataset.</div>'
+            f'<div class="result-employer">No candidate matches for "{lookup_employer}" in the 5500 dataset.</div>'
             '<div style="font-size: 0.88rem; color: #5B6173; margin-top: 0.5rem;">'
             "This could mean the employer's plan is not in the latest DOL release, "
             "the employer name is spelled differently in filings, or the plan is below the 5500 filing threshold."
             "</div>"
             "</div>",
             unsafe_allow_html=True,
+        )
+        st.button(
+            "Show related filing names",
+            key="show_related_names_no_match",
+            on_click=show_employer_suggestions,
+            args=(lookup_employer,),
         )
     else:
         top = results[0]
@@ -413,6 +396,14 @@ if selected_employer:
             "</span>"
             "</div>",
             unsafe_allow_html=True,
+        )
+
+        st.button(
+            "No, this is not my provider",
+            key="show_related_names_wrong_provider",
+            on_click=show_employer_suggestions,
+            args=(lookup_employer,),
+            help="Show related legal filing names that may produce the right provider.",
         )
 
         with st.expander("Match detail (for verification)"):
@@ -444,6 +435,21 @@ if selected_employer:
                     "</div>"
                 )
             st.markdown(near_miss_html, unsafe_allow_html=True)
+
+    if (
+        st.session_state.get("show_employer_suggestions")
+        and st.session_state.get("suggestion_query") == lookup_employer
+    ):
+        try:
+            employer_index = load_cached_employer_index()
+            suggestions = suggest_employers_from_index(
+                lookup_employer,
+                employer_index,
+                limit=SUGGESTION_LIMIT,
+            )
+            render_employer_suggestions(lookup_employer, suggestions)
+        except Exception as exc:
+            st.error(f"Error loading related filing names: {exc}")
 else:
     st.session_state.pop("last_logged_lookup_signature", None)
 
