@@ -103,7 +103,41 @@ class MatcherReasonTest(unittest.TestCase):
                     "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
                     "TOT_PARTCP_BOY_CNT": "200581",
                     "SPONS_DFE_EIN": "560906609",
-                }
+                },
+                {
+                    "EMPLOYER": "ALPHA RETAIL LLC",
+                    "EMPLOYER_NORM": matcher.canonicalize_employer("Alpha Retail LLC"),
+                    "EMPLOYER_COLLAPSED": matcher.canonicalize_employer(
+                        "Alpha Retail LLC"
+                    ).replace(" ", ""),
+                    "RK_RAW": "VOYA",
+                    "RK_CANON": "Voya",
+                    "TIER": "TIER1",
+                    "YEAR": "2023",
+                    "_n": 500,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "ALPHA RETAIL 401K PLAN",
+                    "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                    "TOT_PARTCP_BOY_CNT": "500",
+                    "SPONS_DFE_EIN": "11-1111111",
+                },
+                {
+                    "EMPLOYER": "OMEGA ALPHA LLC",
+                    "EMPLOYER_NORM": matcher.canonicalize_employer("Omega Alpha LLC"),
+                    "EMPLOYER_COLLAPSED": matcher.canonicalize_employer(
+                        "Omega Alpha LLC"
+                    ).replace(" ", ""),
+                    "RK_RAW": "EMPOWER",
+                    "RK_CANON": "Empower Retirement",
+                    "TIER": "TIER1",
+                    "YEAR": "2023",
+                    "_n": 750,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "OMEGA ALPHA 401K PLAN",
+                    "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                    "TOT_PARTCP_BOY_CNT": "750",
+                    "SPONS_DFE_EIN": "22-2222222",
+                },
             ]
         )
 
@@ -132,6 +166,23 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(suggestions[0].employer_name, "AMAZON.COM SERVICES, LLC")
         self.assertEqual(suggestions[0].recordkeeper, "Fidelity Investments")
         self.assertEqual(suggestions[0].match_method, "prefix")
+
+    def test_suggest_employers_includes_secondary_details(self):
+        suggestions = self.matcher.suggest_employers("ama", limit=3)
+
+        self.assertGreaterEqual(len(suggestions), 1)
+        self.assertEqual(suggestions[0].ein, "91-1986545")
+        self.assertEqual(suggestions[0].plan_participants, 1214063)
+
+    def test_suggest_employers_ranks_prefix_before_substring(self):
+        suggestions = self.matcher.suggest_employers("alpha", limit=2)
+
+        self.assertEqual(
+            [suggestion.match_method for suggestion in suggestions],
+            ["prefix", "contains"],
+        )
+        self.assertEqual(suggestions[0].employer_name, "ALPHA RETAIL LLC")
+        self.assertEqual(suggestions[1].employer_name, "OMEGA ALPHA LLC")
 
     def test_suggest_employers_skips_short_queries(self):
         suggestions = self.matcher.suggest_employers("am", limit=3)
