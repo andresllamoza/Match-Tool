@@ -22,6 +22,7 @@ class MatchResult:
     plan_year: Optional[int] = None
     plan_participants: Optional[int] = None
     ein: Optional[str] = None
+    plan_type_code: Optional[str] = None
     match_method: str = "unknown"
     match_reason: str = ""
 
@@ -47,7 +48,7 @@ class EmployerSuggestion:
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
-MASTER_CACHE_VERSION = "2"
+MASTER_CACHE_VERSION = "3"
 
 # 2023 is the latest complete year from the original MVP. Set DOL_YEARS to a
 # comma-separated list (for example, "2024,2023") if you want broader coverage.
@@ -59,6 +60,7 @@ TIER1_CODES = {"15", "64"}
 TIER2_CODES = {"13"}
 FUZZY_THRESHOLD = 92
 SUGGESTION_FUZZY_THRESHOLD = 70
+PLAN_CHARACTERISTIC_RE = re.compile(r"\d[A-Z0-9]")
 
 LEGAL_SUFFIXES = {
     "INCORPORATED",
@@ -125,6 +127,26 @@ CANONICAL_MAP = [
     (r"NORTHERN TRUST", "Northern Trust"),
     (r"CONDUENT", "Conduent"),
 ]
+
+# Keep this list small: use it only where public plan materials identify the
+# 401(k) provider but the DOL Schedule C rows expose a misleading provider.
+CURATED_EMPLOYER_OVERRIDES = {
+    "BANK AMERICA": {
+        "matched_employer_name": "BANK OF AMERICA CORPORATION",
+        "recordkeeper": "Merrill Lynch",
+        "plan_name": "THE BANK OF AMERICA 401(K) PLAN",
+        "plan_year": 2023,
+        "plan_participants": 263860,
+        "ein": "560906609",
+        "plan_type_code": "2E2F2G2J2K2O2S2T3H3J",
+        "match_method": "curated_override",
+        "match_reason": (
+            "Bank of America 401(k) participant materials direct employees to "
+            "Merrill Lynch Benefits OnLine, so this curated override replaces a "
+            "misleading DOL pension-plan provider row."
+        ),
+    }
+}
 
 _DATAFRAME_CACHE: Optional[pd.DataFrame] = None
 
@@ -262,6 +284,17 @@ def _first_non_null(*values: object) -> Optional[str]:
     return None
 
 
+def _plan_characteristic_codes(value: object) -> set[str]:
+    if pd.isna(value):
+        return set()
+    return set(PLAN_CHARACTERISTIC_RE.findall(str(value).upper()))
+
+
+def _has_defined_contribution_pension_code(value: object) -> bool:
+    """Return true for Form 5500 pension feature codes that indicate DC plans."""
+    return any(code.startswith("2") for code in _plan_characteristic_codes(value))
+
+
 def _build_year_master(year: int) -> pd.DataFrame:
     main_path = _ensure_dol_csv(year, f"F_5500_{year}_Latest")
     provider_path = _ensure_dol_csv(year, f"F_SCH_C_PART1_ITEM2_{year}_Latest")
@@ -281,9 +314,11 @@ def _build_year_master(year: int) -> pd.DataFrame:
         ["ACK_ID", "SPONSOR_DFE_NAME"],
     )
     if "TYPE_PENSION_BNFT_CODE" in filings.columns:
+        filings["TYPE_PENSION_BNFT_CODE"] = (
+            filings["TYPE_PENSION_BNFT_CODE"].fillna("").str.strip().str.upper()
+        )
         filings = filings[
-            filings["TYPE_PENSION_BNFT_CODE"].notna()
-            & (filings["TYPE_PENSION_BNFT_CODE"].str.strip() != "")
+            filings["TYPE_PENSION_BNFT_CODE"].apply(_has_defined_contribution_pension_code)
         ].copy()
     filings["EMPLOYER_NORM"] = filings["SPONSOR_DFE_NAME"].apply(_normalize_name)
     if "TOT_PARTCP_BOY_CNT" in filings.columns:
@@ -377,6 +412,7 @@ def _build_master() -> pd.DataFrame:
         "_n",
         "_tier_rank",
         "PLAN_NAME",
+        "TYPE_PENSION_BNFT_CODE",
         "PLAN_YEAR_BEGIN_DATE",
         "TOT_PARTCP_BOY_CNT",
         "SPONS_DFE_EIN",
@@ -436,8 +472,29 @@ def _candidate_result(
         plan_year=row.get("PLAN_YEAR_BEGIN_DATE") or row.get("YEAR"),
         plan_participants=participant_count,
         ein=row.get("SPONS_DFE_EIN"),
+        plan_type_code=row.get("TYPE_PENSION_BNFT_CODE"),
         match_method=match_method,
         match_reason=match_reason,
+    )
+
+
+def _curated_override_result(employer_query: str, canonical_query: str) -> Optional[MatchResult]:
+    override = CURATED_EMPLOYER_OVERRIDES.get(canonical_query)
+    if override is None:
+        return None
+
+    return MatchResult(
+        employer_query=employer_query,
+        matched_employer_name=override["matched_employer_name"],
+        recordkeeper=override["recordkeeper"],
+        confidence=1.0,
+        plan_name=override["plan_name"],
+        plan_year=override["plan_year"],
+        plan_participants=override["plan_participants"],
+        ein=override["ein"],
+        plan_type_code=override["plan_type_code"],
+        match_method=override["match_method"],
+        match_reason=override["match_reason"],
     )
 
 
@@ -542,10 +599,22 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         ),
         reverse=True,
     )
-    return [
+    results = [
         _candidate_result(employer_query, row, confidence, match_method, match_reason)
         for confidence, row, match_method, match_reason in ranked_candidates[:top_n]
     ]
+
+    override_result = _curated_override_result(employer_query, canonical_query)
+    if override_result is not None:
+        override_employer_norm = canonicalize_employer(override_result.matched_employer_name)
+        results = [
+            result
+            for result in results
+            if canonicalize_employer(result.matched_employer_name) != override_employer_norm
+        ]
+        results.insert(0, override_result)
+
+    return results[:top_n]
 
 
 def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSuggestion]:
