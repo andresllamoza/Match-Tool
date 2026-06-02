@@ -105,6 +105,18 @@ st.markdown(
         color: #5B6173;
         font-size: 0.85rem;
     }
+    .suggestions-header {
+        margin-top: 0.6rem;
+        margin-bottom: 0.25rem;
+        font-size: 0.86rem;
+        font-weight: 700;
+        color: #0C0F1A;
+    }
+    .suggestions-caption {
+        margin-bottom: 0.4rem;
+        font-size: 0.8rem;
+        color: #5B6173;
+    }
     .footer-note {
         margin-top: 3rem;
         padding-top: 1rem;
