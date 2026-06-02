@@ -144,6 +144,21 @@ st.markdown(
         transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
     }
 
+    div[data-testid="stTextInput"]:has(button) input {
+        padding-right: 11rem;
+    }
+
+    div[data-testid="stTextInput"]:has(button) [data-testid="InputInstructions"] {
+        right: 3.4rem;
+        max-width: calc(100% - 4.5rem);
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    div[data-testid="stTextInput"]:has(button) button {
+        z-index: 2;
+    }
+
     div[data-testid="stTextInput"] input:focus {
         border-color: var(--pb-gold);
         background: #FFFFFF;
