@@ -112,6 +112,7 @@ CANONICAL_MAP = [
 ]
 
 _DATAFRAME_CACHE: Optional[pd.DataFrame] = None
+_EMPLOYER_NAMES_CACHE: Optional[list[str]] = None
 
 
 def _configured_years() -> tuple[int, ...]:
@@ -356,7 +357,7 @@ def _build_master() -> pd.DataFrame:
 
 
 def load_dol_data() -> pd.DataFrame:
-    global _DATAFRAME_CACHE
+    global _DATAFRAME_CACHE, _EMPLOYER_NAMES_CACHE
     if _DATAFRAME_CACHE is not None:
         return _DATAFRAME_CACHE
 
@@ -367,9 +368,11 @@ def load_dol_data() -> pd.DataFrame:
             _DATAFRAME_CACHE["_tier_rank"],
             errors="coerce",
         ).fillna(99)
+        _EMPLOYER_NAMES_CACHE = None
         return _DATAFRAME_CACHE
 
     _DATAFRAME_CACHE = _build_master()
+    _EMPLOYER_NAMES_CACHE = None
     return _DATAFRAME_CACHE
 
 
@@ -405,6 +408,13 @@ def _rank_rows(rows: pd.DataFrame) -> pd.DataFrame:
     return rows.sort_values(["_tier_rank", "_n", "YEAR"], ascending=[True, False, False])
 
 
+def _employer_names(df: pd.DataFrame) -> list[str]:
+    global _EMPLOYER_NAMES_CACHE
+    if _EMPLOYER_NAMES_CACHE is None:
+        _EMPLOYER_NAMES_CACHE = df["EMPLOYER_NORM"].dropna().astype(str).tolist()
+    return _EMPLOYER_NAMES_CACHE
+
+
 def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
     """
     Look up the recordkeeper for an employer name.
@@ -417,7 +427,7 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         A list of MatchResult, ordered by confidence descending.
         Empty list if no candidates were found above the noise threshold.
     """
-    if not employer_query or not employer_query.strip():
+    if top_n <= 0 or not employer_query or not employer_query.strip():
         return []
 
     df = load_dol_data()
@@ -437,6 +447,8 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
     exact_rows = df[df["EMPLOYER_NORM"] == canonical_query]
     if not exact_rows.empty:
         add_rows(exact_rows, 1.0)
+        if top_n == 1:
+            return [_candidate_result(employer_query, _rank_rows(exact_rows).iloc[0], 1.0)]
 
     query_pattern = r"\b" + re.escape(canonical_query) + r"\b"
     boundary_rows = df[df["EMPLOYER_NORM"].str.contains(query_pattern, na=False, regex=True)]
@@ -455,10 +467,9 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         if not collapsed_rows.empty:
             add_rows(collapsed_rows, 0.93)
 
-    all_names = df["EMPLOYER_NORM"].dropna().tolist()
     fuzzy_matches = process.extract(
         canonical_query,
-        all_names,
+        _employer_names(df),
         scorer=fuzz.WRatio,
         limit=max(top_n * 5, 20),
     )
