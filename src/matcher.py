@@ -34,6 +34,7 @@ class MatchResult:
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_PATH = DATA_DIR / "recordkeeper_master.csv"
+CACHE_VERSION = "2"
 
 # 2023 is the latest complete year from the original MVP. Set DOL_YEARS to a
 # comma-separated list (for example, "2024,2023") if you want broader coverage.
@@ -223,7 +224,7 @@ def _relation_to_tier(relation: object) -> Optional[str]:
 
 def _first_non_null(*values: Optional[str]) -> Optional[str]:
     for value in values:
-        if value:
+        if pd.notna(value) and value:
             return value
     return None
 
@@ -346,10 +347,12 @@ def _build_master() -> pd.DataFrame:
         "PLAN_YEAR_BEGIN_DATE",
         "TOT_PARTCP_BOY_CNT",
         "SPONS_DFE_EIN",
+        "CACHE_VERSION",
     ]
     for column in output_columns:
         if column not in master.columns:
             master[column] = None
+    master["CACHE_VERSION"] = CACHE_VERSION
     master = master[output_columns]
     master.to_csv(MASTER_CACHE_PATH, index=False)
     return master
@@ -361,7 +364,12 @@ def load_dol_data() -> pd.DataFrame:
         return _DATAFRAME_CACHE
 
     if MASTER_CACHE_PATH.exists():
-        _DATAFRAME_CACHE = pd.read_csv(MASTER_CACHE_PATH, dtype=str, low_memory=False)
+        cached = pd.read_csv(MASTER_CACHE_PATH, dtype=str, low_memory=False)
+        cache_versions = set(cached.get("CACHE_VERSION", pd.Series(dtype=str)).dropna().astype(str))
+        if cache_versions == {CACHE_VERSION}:
+            _DATAFRAME_CACHE = cached
+        else:
+            _DATAFRAME_CACHE = _build_master()
         _DATAFRAME_CACHE["_n"] = pd.to_numeric(_DATAFRAME_CACHE["_n"], errors="coerce").fillna(0)
         _DATAFRAME_CACHE["_tier_rank"] = pd.to_numeric(
             _DATAFRAME_CACHE["_tier_rank"],
