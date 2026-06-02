@@ -35,6 +35,16 @@ class MatchResult:
         return "Low"
 
 
+@dataclass
+class EmployerSuggestion:
+    """A lightweight employer autocomplete suggestion from the DOL master list."""
+
+    employer_name: str
+    recordkeeper: str
+    confidence: float
+    match_method: str
+
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
@@ -49,6 +59,7 @@ TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
 TIER1_CODES = {"15", "64"}
 TIER2_CODES = {"13"}
 FUZZY_THRESHOLD = 92
+SUGGESTION_FUZZY_THRESHOLD = 70
 PLAN_CHARACTERISTIC_RE = re.compile(r"\d[A-Z0-9]")
 
 LEGAL_SUFFIXES = {
@@ -604,3 +615,92 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         results.insert(0, override_result)
 
     return results[:top_n]
+
+
+def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSuggestion]:
+    """
+    Suggest employer names that exist in the lookup data.
+
+    This powers the lightweight UI suggestions below the search box. It uses the
+    same normalized employer names as the matcher, but keeps a lower fuzzy bar so
+    partial user input can still surface useful candidates.
+    """
+    if limit <= 0 or not employer_query or not employer_query.strip():
+        return []
+
+    df = load_dol_data()
+    canonical_query = canonicalize_employer(employer_query)
+    if len(canonical_query) < 2:
+        return []
+
+    candidates: dict[str, tuple[float, pd.Series, str]] = {}
+
+    def add_rows(rows: pd.DataFrame, confidence: float, match_method: str) -> None:
+        for _, row in _rank_rows(rows).iterrows():
+            key = str(row["EMPLOYER_NORM"])
+            existing = candidates.get(key)
+            if existing is None or confidence > existing[0]:
+                candidates[key] = (confidence, row, match_method)
+
+    exact_rows = df[df["EMPLOYER_NORM"] == canonical_query]
+    if not exact_rows.empty:
+        add_rows(exact_rows, 1.0, "exact_normalized")
+
+    prefix_rows = df[df["EMPLOYER_NORM"].fillna("").str.startswith(canonical_query)]
+    if not prefix_rows.empty:
+        add_rows(prefix_rows, 0.95, "prefix")
+
+    contains_rows = df[
+        df["EMPLOYER_NORM"].fillna("").str.contains(canonical_query, na=False, regex=False)
+    ]
+    if not contains_rows.empty:
+        add_rows(contains_rows, 0.90, "contains")
+
+    collapsed_query = _collapsed(canonical_query)
+    if collapsed_query != canonical_query and len(collapsed_query) >= 4:
+        collapsed_rows = df[
+            df["EMPLOYER_COLLAPSED"].fillna("").str.contains(
+                collapsed_query,
+                na=False,
+                regex=False,
+            )
+        ]
+        if not collapsed_rows.empty:
+            add_rows(collapsed_rows, 0.88, "spacing_insensitive")
+
+    if len(canonical_query) >= 3:
+        all_names = df["EMPLOYER_NORM"].dropna().tolist()
+        fuzzy_matches = process.extract(
+            canonical_query,
+            all_names,
+            scorer=fuzz.WRatio,
+            limit=max(limit * 6, 20),
+        )
+        for matched_name, score, _ in fuzzy_matches:
+            if score < SUGGESTION_FUZZY_THRESHOLD:
+                continue
+            add_rows(
+                df[df["EMPLOYER_NORM"] == matched_name],
+                score / 100.0,
+                "fuzzy",
+            )
+
+    ranked_candidates = sorted(
+        candidates.values(),
+        key=lambda item: (
+            item[0],
+            -int(item[1].get("_tier_rank") or 99),
+            float(item[1].get("_n") or 0),
+            int(float(item[1].get("YEAR") or 0)),
+        ),
+        reverse=True,
+    )
+    return [
+        EmployerSuggestion(
+            employer_name=str(row.get("EMPLOYER") or ""),
+            recordkeeper=str(row.get("RK_CANON") or row.get("RK_RAW") or ""),
+            confidence=max(0.0, min(1.0, confidence)),
+            match_method=match_method,
+        )
+        for confidence, row, match_method in ranked_candidates[:limit]
+    ]

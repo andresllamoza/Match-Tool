@@ -125,6 +125,19 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
         self.assertEqual(results[0].match_method, "word_boundary")
 
+    def test_suggest_employers_returns_existing_partial_matches(self):
+        suggestions = self.matcher.suggest_employers("ama", limit=3)
+
+        self.assertGreaterEqual(len(suggestions), 1)
+        self.assertEqual(suggestions[0].employer_name, "AMAZON.COM SERVICES, LLC")
+        self.assertEqual(suggestions[0].recordkeeper, "Fidelity Investments")
+        self.assertEqual(suggestions[0].match_method, "prefix")
+
+    def test_suggest_employers_skips_single_character_queries(self):
+        suggestions = self.matcher.suggest_employers("a", limit=3)
+
+        self.assertEqual(suggestions, [])
+
     def test_match_overrides_bank_of_america_pension_row_to_merrill(self):
         results = self.matcher.match("bank of america", top_n=1)
 
