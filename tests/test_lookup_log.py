@@ -54,6 +54,7 @@ class MatcherReasonTest(unittest.TestCase):
         self.matcher = matcher
         self.original_cache = matcher._DATAFRAME_CACHE
         employer_norm = matcher.canonicalize_employer("Acme Inc")
+        amazon_norm = matcher.canonicalize_employer("Amazon.com Services, LLC")
         matcher._DATAFRAME_CACHE = pd.DataFrame(
             [
                 {
@@ -70,6 +71,21 @@ class MatcherReasonTest(unittest.TestCase):
                     "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
                     "TOT_PARTCP_BOY_CNT": "1000",
                     "SPONS_DFE_EIN": "12-3456789",
+                },
+                {
+                    "EMPLOYER": "AMAZON.COM SERVICES, LLC",
+                    "EMPLOYER_NORM": amazon_norm,
+                    "EMPLOYER_COLLAPSED": amazon_norm.replace(" ", ""),
+                    "RK_RAW": "FIDELITY INVESTMENTS INSTITUTIONAL",
+                    "RK_CANON": "Fidelity Investments",
+                    "TIER": "TIER1",
+                    "YEAR": "2023",
+                    "_n": 1214063,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "A SINGLE-EMPLOYER PLAN",
+                    "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                    "TOT_PARTCP_BOY_CNT": "1214063",
+                    "SPONS_DFE_EIN": "91-1986545",
                 }
             ]
         )
@@ -83,6 +99,70 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].match_method, "exact_normalized")
         self.assertIn("exactly matched", results[0].match_reason)
+
+    def test_match_finds_amazon_brand_query_in_legal_employer_name(self):
+        results = self.matcher.match("amazon", top_n=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "AMAZON.COM SERVICES, LLC")
+        self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
+        self.assertEqual(results[0].match_method, "word_boundary")
+
+
+class MatcherBuildTest(unittest.TestCase):
+    def test_build_master_uses_relation_tier_when_service_code_is_not_recordkeeper_code(self):
+        from src import matcher
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_data_dir = matcher.DATA_DIR
+            matcher.DATA_DIR = Path(temp_dir)
+            try:
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "20250101203230NAL0000631587001",
+                            "SPONSOR_DFE_NAME": "AMAZON.COM SERVICES,LLC",
+                            "SPONS_DFE_EIN": "911986545",
+                            "PLAN_NAME": "A SINGLE-EMPLOYER PLAN",
+                            "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                            "TYPE_PENSION_BNFT_CODE": "2G",
+                            "TOT_PARTCP_BOY_CNT": "1214063",
+                        }
+                    ]
+                ).to_csv(Path(temp_dir) / "F_5500_2023_Latest.csv", index=False)
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "20250101203230NAL0000631587001",
+                            "ROW_ORDER": "1",
+                            "PROVIDER_OTHER_NAME": "FIDELITY INVESTMENTS INSTITUTIONAL",
+                            "PROVIDER_OTHER_RELATION": "RECORDKEEPER",
+                        }
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_2023_Latest.csv",
+                    index=False,
+                )
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "20250101203230NAL0000631587001",
+                            "ROW_ORDER": "1",
+                            "SERVICE_CODE": "37",
+                        }
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_CODES_2023_Latest.csv",
+                    index=False,
+                )
+
+                master = matcher._build_year_master(2023)
+            finally:
+                matcher.DATA_DIR = original_data_dir
+
+        self.assertEqual(len(master), 1)
+        self.assertEqual(master.loc[0, "EMPLOYER_NORM"], "AMAZON COM SERVICES")
+        self.assertEqual(master.loc[0, "TIER"], "TIER1")
 
 
 if __name__ == "__main__":
