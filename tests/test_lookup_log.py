@@ -75,7 +75,7 @@ class MatcherReasonTest(unittest.TestCase):
                     "_n": 1000,
                     "_tier_rank": 1,
                     "PLAN_NAME": "ACME 401K PLAN",
-                    "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                    "PLAN_YEAR_BEGIN_DATE": None,
                     "TOT_PARTCP_BOY_CNT": "1000",
                     "SPONS_DFE_EIN": "12-3456789",
                 },
@@ -205,9 +205,18 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].matched_employer_name, "TWDC ENTERPRISES 18 CORP.")
         self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
-        self.assertIn("DISNEY", results[0].plan_name)
-        self.assertIn("SAVINGS", results[0].plan_name)
-        self.assertEqual(results[0].match_method, "plan_word_boundary")
+        self.assertEqual(results[0].plan_name, "DISNEY RETIREMENT SAVINGS PLAN")
+        self.assertEqual(results[0].ein, "95-4545390")
+        self.assertEqual(results[0].match_method, "curated_override")
+
+    def test_match_overrides_walt_disney_company_alias(self):
+        results = self.matcher.match("The Walt Disney Company", top_n=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "TWDC ENTERPRISES 18 CORP.")
+        self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
+        self.assertEqual(results[0].plan_name, "DISNEY RETIREMENT SAVINGS PLAN")
+        self.assertEqual(results[0].match_method, "curated_override")
 
     def test_match_finds_specific_disney_plan_query(self):
         results = self.matcher.match("Disney Retirement Savings Plan", top_n=1)
@@ -217,6 +226,12 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
         self.assertEqual(results[0].plan_name, "DISNEY RETIREMENT SAVINGS PLAN")
         self.assertEqual(results[0].match_method, "plan_word_boundary")
+
+    def test_match_uses_year_when_plan_begin_date_is_missing(self):
+        results = self.matcher.match("Acme Inc", top_n=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].plan_year, "2023")
 
     def test_suggest_employers_returns_existing_partial_matches(self):
         suggestions = self.matcher.suggest_employers("ama", limit=3)

@@ -159,9 +159,27 @@ CANONICAL_MAP = [
     (r"CONDUENT", "Conduent"),
 ]
 
-# Keep this list small: use it only where public plan materials identify the
-# 401(k) provider but the DOL Schedule C rows expose a misleading provider.
+DISNEY_2024_OVERRIDE = {
+    "matched_employer_name": "TWDC ENTERPRISES 18 CORP.",
+    "recordkeeper": "Fidelity Investments",
+    "plan_name": "DISNEY RETIREMENT SAVINGS PLAN",
+    "plan_year": 2024,
+    "plan_participants": 44099,
+    "ein": "95-4545390",
+    "plan_type_code": "2A2E2F2G2T3F3H",
+    "match_method": "curated_override",
+    "match_reason": (
+        "Disney's 2024 Form 5500 for the Disney Retirement Savings Plan lists "
+        "TWDC Enterprises 18 Corp. as sponsor and Fidelity Investments "
+        "Institutional on Schedule C with service code 64."
+    ),
+}
+
+# Keep this list small: use it only where public filings or plan materials
+# identify the 401(k) provider but name matching or DOL rows are misleading.
 CURATED_EMPLOYER_OVERRIDES = {
+    "DISNEY": DISNEY_2024_OVERRIDE,
+    "WALT DISNEY": DISNEY_2024_OVERRIDE,
     "BANK AMERICA": {
         "matched_employer_name": "BANK OF AMERICA CORPORATION",
         "recordkeeper": "Merrill Lynch",
@@ -544,6 +562,7 @@ def _candidate_result(
         participant_count = None
     else:
         participant_count = int(participants)
+    plan_year = _first_non_null(row.get("PLAN_YEAR_BEGIN_DATE"), row.get("YEAR"))
 
     return MatchResult(
         employer_query=employer_query,
@@ -551,7 +570,7 @@ def _candidate_result(
         recordkeeper=str(row.get("RK_CANON") or row.get("RK_RAW") or ""),
         confidence=max(0.0, min(1.0, confidence)),
         plan_name=row.get("PLAN_NAME"),
-        plan_year=row.get("PLAN_YEAR_BEGIN_DATE") or row.get("YEAR"),
+        plan_year=plan_year,
         plan_participants=participant_count,
         ein=row.get("SPONS_DFE_EIN"),
         plan_type_code=row.get("TYPE_PENSION_BNFT_CODE"),
