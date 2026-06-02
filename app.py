@@ -9,7 +9,16 @@ import html
 import streamlit as st
 
 from src.lookup_log import append_lookup_attempt, read_lookup_attempts
-from src.matcher import EmployerSuggestion, match, suggest_employers
+from src.matcher import (
+    EmployerSuggestion,
+    employer_search_index,
+    match,
+    suggest_employers_from_index,
+)
+
+
+TYPEAHEAD_LIMIT = 8
+SELECTBOX_MAX_OPTIONS = 1000
 
 
 st.set_page_config(
@@ -220,21 +229,36 @@ def confidence_class(label: str) -> str:
     }.get(label, "confidence-low")
 
 
-def apply_employer_suggestion(employer_name: str) -> None:
-    st.session_state["employer_input"] = employer_name
+@st.cache_data(show_spinner="Loading employer search index...")
+def load_cached_employer_index():
+    return employer_search_index()
+
+
+def reset_selected_employer() -> None:
+    st.session_state.pop("selected_employer_name", None)
     st.session_state.pop("last_logged_lookup_signature", None)
 
 
+def select_employer_suggestion(employer_name: str) -> None:
+    st.session_state["employer_input"] = employer_name
+    st.session_state["selected_employer_name"] = employer_name
+    st.session_state.pop("last_logged_lookup_signature", None)
+
+
+def suggestion_detail(suggestion: EmployerSuggestion) -> str:
+    details = [suggestion.recordkeeper]
+    if suggestion.ein:
+        details.append(f"EIN {suggestion.ein}")
+    if suggestion.plan_participants:
+        details.append(f"{suggestion.plan_participants:,} participants")
+    return " | ".join(details)
+
+
 def render_employer_suggestions(
-    employer_query: str,
     suggestions: list[EmployerSuggestion],
 ) -> None:
-    visible_suggestions = [
-        suggestion
-        for suggestion in suggestions
-        if suggestion.employer_name.strip().lower() != employer_query.strip().lower()
-    ]
-    if not visible_suggestions:
+    if not suggestions:
+        st.info("No matching employer found.")
         return
 
     st.markdown(
@@ -248,10 +272,9 @@ def render_employer_suggestions(
         "</div>",
         unsafe_allow_html=True,
     )
-
-    for index, suggestion in enumerate(visible_suggestions):
+    for index, suggestion in enumerate(suggestions):
         name = html.escape(suggestion.employer_name)
-        recordkeeper = html.escape(suggestion.recordkeeper or "Recordkeeper not listed")
+        details = html.escape(suggestion_detail(suggestion))
         confidence = int(round(suggestion.confidence * 100))
 
         info_col, action_col = st.columns([0.74, 0.26], vertical_alignment="center")
@@ -259,7 +282,7 @@ def render_employer_suggestions(
             st.markdown(
                 '<div class="suggestion-row">'
                 f'<div class="suggestion-name">{name}</div>'
-                f'<div class="suggestion-meta">{recordkeeper} | {confidence}% filing-name match</div>'
+                f'<div class="suggestion-meta">{details} | {confidence}% filing-name match</div>'
                 '<div class="suggestion-note">Search this exact filing name if it is the intended legal entity.</div>'
                 "</div>",
                 unsafe_allow_html=True,
@@ -267,8 +290,8 @@ def render_employer_suggestions(
         with action_col:
             st.button(
                 "Use filing name",
-                key=f"employer_suggestion_use_{index}",
-                on_click=apply_employer_suggestion,
+                key=f"employer_suggestion_{index}_{suggestion.employer_name}",
+                on_click=select_employer_suggestion,
                 args=(suggestion.employer_name,),
                 use_container_width=True,
                 help=f"Search for {suggestion.employer_name}",
@@ -283,21 +306,55 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-employer_query = st.text_input(
-    "Employer name",
-    placeholder="e.g. Microsoft, Walmart, Acme Corp",
-    label_visibility="visible",
-    key="employer_input",
-)
-suggestions_container = st.container()
+try:
+    employer_index = load_cached_employer_index()
+    employer_count = len(employer_index)
+except Exception as exc:
+    employer_index = None
+    employer_count = 0
+    st.error(f"Error loading employer search index: {exc}")
 
-if employer_query:
+selected_employer = ""
+
+if employer_index is not None:
+    if employer_count <= SELECTBOX_MAX_OPTIONS:
+        employer_options = employer_index["EMPLOYER"].dropna().tolist()
+        selected_employer = st.selectbox(
+            "Employer name",
+            options=employer_options,
+            index=None,
+            placeholder="Start typing an employer name...",
+        ) or ""
+    else:
+        st.caption(
+            f"Searches {employer_count:,} canonical employers. "
+            "Because the list is large, this box returns the best fuzzy matches "
+            "instead of loading every employer into a dropdown."
+        )
+        employer_query = st.text_input(
+            "Employer name",
+            placeholder="Start typing an employer name...",
+            label_visibility="visible",
+            key="employer_input",
+            on_change=reset_selected_employer,
+        )
+        selected_employer = st.session_state.get("selected_employer_name", "")
+
+        if employer_query.strip() and not selected_employer:
+            suggestions = suggest_employers_from_index(
+                employer_query,
+                employer_index,
+                limit=TYPEAHEAD_LIMIT,
+            )
+            render_employer_suggestions(suggestions)
+        elif employer_query.strip() and selected_employer:
+            st.caption(f"Selected employer: {selected_employer}")
+
+if selected_employer:
     with st.spinner("Looking up..."):
         lookup_error = ""
-        suggestions = []
         try:
-            results = match(employer_query, top_n=4)
-            suggestions = suggest_employers(employer_query, limit=4)
+            results = match(selected_employer, top_n=4)
         except NotImplementedError:
             lookup_error = "Matcher logic not yet implemented."
             st.error(
@@ -310,11 +367,8 @@ if employer_query:
             st.error(f"Error running matcher: {exc}")
             results = []
 
-    with suggestions_container:
-        render_employer_suggestions(employer_query, suggestions)
-
     lookup_signature = (
-        employer_query.strip(),
+        selected_employer.strip(),
         lookup_error,
         tuple(
             (
@@ -328,7 +382,7 @@ if employer_query:
     )
     if st.session_state.get("last_logged_lookup_signature") != lookup_signature:
         try:
-            append_lookup_attempt(employer_query, results, error=lookup_error)
+            append_lookup_attempt(selected_employer, results, error=lookup_error)
             st.session_state["last_logged_lookup_signature"] = lookup_signature
         except Exception as exc:
             st.warning(f"Lookup completed, but the attempt log could not be updated: {exc}")
@@ -337,7 +391,7 @@ if employer_query:
         st.markdown(
             '<div class="result-card no-match">'
             '<div class="result-recordkeeper">No match found</div>'
-            f'<div class="result-employer">No candidate matches for "{employer_query}" in the 5500 dataset.</div>'
+            f'<div class="result-employer">No candidate matches for "{selected_employer}" in the 5500 dataset.</div>'
             '<div style="font-size: 0.88rem; color: #5B6173; margin-top: 0.5rem;">'
             "This could mean the employer's plan is not in the latest DOL release, "
             "the employer name is spelled differently in filings, or the plan is below the 5500 filing threshold."
