@@ -50,49 +50,60 @@ st.markdown(
         --pb-card: #FFFCF4;
         --pb-navy: #071426;
         --pb-muted: #667085;
+        --pb-muted-strong: #475467;
         --pb-gold: #FFB200;
         --pb-gold-dark: #9A6200;
         --pb-amber-soft: #FFF1D1;
         --pb-gray-soft: #F1F3F5;
         --pb-border: #E8DCC6;
+        --pb-border-strong: #DBC9A9;
+        --pb-focus: rgba(255, 178, 0, 0.28);
+        --pb-shadow-sm: 0 10px 28px rgba(7, 20, 38, 0.07);
         --pb-shadow: 0 24px 70px rgba(7, 20, 38, 0.10);
+        --pb-shadow-lg: 0 32px 90px rgba(7, 20, 38, 0.14);
+        --pb-radius-md: 18px;
+        --pb-radius-lg: 28px;
     }
 
     html, body, [class*="css"] {
         font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        text-rendering: geometricPrecision;
+        -webkit-font-smoothing: antialiased;
     }
 
     .stApp {
         color: var(--pb-navy);
         background:
-            radial-gradient(circle at top left, rgba(255, 178, 0, 0.16), transparent 28rem),
-            linear-gradient(180deg, #FFF8EA 0%, #FFFDF7 58%, #FFF8EA 100%);
+            radial-gradient(circle at top left, rgba(255, 178, 0, 0.18), transparent 27rem),
+            radial-gradient(circle at 82% 12%, rgba(255, 229, 168, 0.55), transparent 24rem),
+            linear-gradient(180deg, #FFF8EA 0%, #FFFDF7 54%, #FFF8EA 100%);
     }
 
     .block-container {
-        padding-top: 3.25rem;
-        padding-bottom: 3.5rem;
-        max-width: 820px;
+        padding-top: clamp(2.2rem, 5vw, 4.25rem);
+        padding-bottom: 4rem;
+        max-width: 900px;
     }
 
     .tool-header {
-        margin-bottom: 1.7rem;
+        margin-bottom: 1.9rem;
     }
 
     .tool-kicker {
         display: inline-flex;
         align-items: center;
         gap: 0.45rem;
-        margin-bottom: 0.8rem;
-        padding: 0.32rem 0.68rem;
+        margin-bottom: 1.05rem;
+        padding: 0.38rem 0.74rem;
         border: 1px solid rgba(255, 178, 0, 0.38);
         border-radius: 999px;
-        background: rgba(255, 178, 0, 0.12);
+        background: linear-gradient(180deg, rgba(255, 247, 230, 0.92), rgba(255, 234, 185, 0.58));
         color: var(--pb-gold-dark);
         font-size: 0.72rem;
         font-weight: 800;
         letter-spacing: 0.08em;
         text-transform: uppercase;
+        box-shadow: 0 10px 30px rgba(255, 178, 0, 0.13);
     }
 
     .tool-kicker-dot {
@@ -107,9 +118,9 @@ st.markdown(
         font-size: clamp(2.35rem, 5vw, 4rem);
         font-weight: 800;
         color: var(--pb-navy);
-        letter-spacing: -0.055em;
+        letter-spacing: -0.052em;
         margin: 0;
-        line-height: 0.98;
+        line-height: 0.96;
     }
 
     .tool-subtitle {
@@ -118,6 +129,21 @@ st.markdown(
         line-height: 1.7;
         color: var(--pb-muted);
         margin-top: 1rem;
+    }
+
+    .auth-panel {
+        max-width: 760px;
+        margin: 0 0 1.35rem;
+        padding: 1.55rem 1.65rem;
+        border: 1px solid rgba(232, 220, 198, 0.86);
+        border-radius: var(--pb-radius-lg);
+        background:
+            linear-gradient(135deg, rgba(255, 252, 244, 0.98), rgba(255, 245, 220, 0.76));
+        box-shadow: var(--pb-shadow);
+    }
+
+    .auth-panel .tool-header {
+        margin-bottom: 0;
     }
 
     div[data-testid="stTextInput"] {
@@ -129,12 +155,14 @@ st.markdown(
         font-size: 0.88rem;
         font-weight: 800;
         letter-spacing: -0.01em;
+        margin-bottom: 0.35rem;
     }
 
     div[data-testid="stTextInput"] div[data-baseweb="input"] {
         min-height: 4rem;
         align-items: center;
         overflow: visible;
+        border-radius: 20px;
     }
 
     div[data-testid="stTextInput"] input {
@@ -149,8 +177,18 @@ st.markdown(
         font-weight: 600;
         line-height: 1.45;
         padding: 1rem 1.12rem;
-        box-shadow: 0 16px 38px rgba(7, 20, 38, 0.07);
-        transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+        caret-color: var(--pb-gold-dark);
+        box-shadow: var(--pb-shadow-sm);
+        transition:
+            border-color 160ms ease,
+            box-shadow 160ms ease,
+            background 160ms ease,
+            transform 160ms ease;
+    }
+
+    div[data-testid="stTextInput"] input::placeholder {
+        color: #98A2B3;
+        font-weight: 500;
     }
 
     div[data-testid="stTextInput"]:has(button) input {
@@ -171,15 +209,24 @@ st.markdown(
     div[data-testid="stTextInput"] input:focus {
         border-color: var(--pb-gold);
         background: #FFFFFF;
-        box-shadow: 0 0 0 4px rgba(255, 178, 0, 0.16), 0 18px 44px rgba(7, 20, 38, 0.10);
+        box-shadow: 0 0 0 4px var(--pb-focus), 0 18px 44px rgba(7, 20, 38, 0.10);
+        transform: translateY(-1px);
+    }
+
+    div[data-testid="stTextInput"] input:focus-visible,
+    .stButton > button:focus-visible,
+    .stDownloadButton > button:focus-visible,
+    div[data-testid="stFormSubmitButton"] button:focus-visible {
+        outline: 3px solid var(--pb-focus);
+        outline-offset: 3px;
     }
 
     .empty-state {
         margin: 1.45rem 0 1.65rem;
-        padding: 1.45rem;
+        padding: 1.6rem;
         border: 1px solid rgba(232, 220, 198, 0.95);
-        border-radius: 28px;
-        background: rgba(255, 252, 244, 0.78);
+        border-radius: var(--pb-radius-lg);
+        background: linear-gradient(180deg, rgba(255, 252, 244, 0.86), rgba(255, 248, 234, 0.70));
         box-shadow: var(--pb-shadow);
         text-align: center;
     }
@@ -216,10 +263,10 @@ st.markdown(
         overflow: hidden;
         background: rgba(255, 252, 244, 0.95);
         border: 1px solid var(--pb-border);
-        border-radius: 28px;
+        border-radius: var(--pb-radius-lg);
         padding: 1.55rem 1.65rem;
         margin: 1.2rem 0 1rem;
-        box-shadow: var(--pb-shadow);
+        box-shadow: var(--pb-shadow-lg);
     }
 
     .result-card::before {
@@ -339,28 +386,37 @@ st.markdown(
     div[data-testid="stFormSubmitButton"] button {
         border: 1px solid rgba(255, 178, 0, 0.45);
         border-radius: 999px;
-        background: #FFF3CD;
+        background: linear-gradient(180deg, #FFF3CD, #FFE5A3);
         color: #3A2600;
         font-weight: 800;
         min-height: 2.75rem;
         padding: 0.55rem 1rem;
-        transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+        box-shadow: 0 8px 20px rgba(255, 178, 0, 0.10);
+        transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease;
     }
 
     .stButton > button:hover,
     .stDownloadButton > button:hover,
     div[data-testid="stFormSubmitButton"] button:hover {
         border-color: var(--pb-gold);
-        background: #FFE6A3;
+        background: linear-gradient(180deg, #FFEFC2, #FFD978);
         color: #241700;
         box-shadow: 0 10px 24px rgba(255, 178, 0, 0.20);
         transform: translateY(-1px);
+    }
+
+    .stButton > button:active,
+    .stDownloadButton > button:active,
+    div[data-testid="stFormSubmitButton"] button:active {
+        transform: translateY(0);
+        box-shadow: 0 6px 16px rgba(255, 178, 0, 0.16);
     }
 
     .near-miss {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 1rem;
         padding: 0.78rem 0.85rem;
         border-bottom: 1px solid rgba(232, 220, 198, 0.86);
         font-size: 0.92rem;
@@ -418,12 +474,14 @@ st.markdown(
         padding: 0.85rem 0.95rem;
         background: #FFFCF4;
         border: 1px solid var(--pb-border);
-        border-radius: 16px;
+        border-radius: var(--pb-radius-md);
+        transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
     }
 
     .suggestion-row:hover {
         background: #FFF7E6;
         border-color: rgba(255, 178, 0, 0.38);
+        transform: translateY(-1px);
     }
 
     .suggestion-name {
@@ -482,6 +540,51 @@ st.markdown(
         color: #7D705C;
         text-align: center;
     }
+
+    @media (max-width: 640px) {
+        .block-container {
+            padding-left: 1.1rem;
+            padding-right: 1.1rem;
+        }
+
+        .tool-title {
+            font-size: clamp(2.15rem, 12vw, 3rem);
+            letter-spacing: -0.045em;
+        }
+
+        .auth-panel,
+        .result-card,
+        .suggestions-panel,
+        .empty-state {
+            border-radius: 22px;
+            padding-left: 1.1rem;
+            padding-right: 1.1rem;
+        }
+
+        div[data-testid="stTextInput"]:has(button) input {
+            padding-right: 4.2rem;
+        }
+
+        div[data-testid="stTextInput"]:has(button) [data-testid="InputInstructions"] {
+            display: none;
+        }
+
+        .near-miss {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            scroll-behavior: auto !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -499,8 +602,13 @@ def check_password() -> bool:
         expected_password = ""
 
     st.markdown(
-        '<div class="tool-header"><h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
-        '<div class="tool-subtitle">Internal tool - sign in to continue</div></div>',
+        '<section class="auth-panel" aria-label="Sign in">'
+        '<div class="tool-header">'
+        '<div class="tool-kicker"><span class="tool-kicker-dot"></span>PensionBee internal</div>'
+        '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
+        '<div class="tool-subtitle">Internal tool - sign in to continue</div>'
+        '</div>'
+        '</section>',
         unsafe_allow_html=True,
     )
     password = st.text_input("Password", type="password", key="password_input")
