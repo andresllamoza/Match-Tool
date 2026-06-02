@@ -1,0 +1,23 @@
+# DOL data — downloaded at runtime, never committed
+data/
+!data/.gitkeep
+
+# Secrets — set via Streamlit Cloud's Secrets UI, never committed
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints

@@ -1,160 +1,252 @@
 """
-DOL 5500 matcher logic.
+DOL 5500 Recordkeeper Lookup — Streamlit app.
 
-This module wraps the v4 matching logic from the Colab notebook into a single
-callable function. Paste your existing Colab logic into the marked sections.
+Run locally:    streamlit run app.py
+Deploy:         see DEPLOYMENT.md
 """
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Optional
-import pandas as pd
+import streamlit as st
+
+from src.matcher import find_recordkeeper, load_data
 
 
-# ---------- Data structures ----------
+# ---------- Page config ----------
 
-@dataclass
-class MatchResult:
-    """One candidate match returned by the matcher."""
-    employer_query: str
-    matched_employer_name: str
-    recordkeeper: str
-    confidence: float  # 0.0 to 1.0
-    plan_name: Optional[str] = None
-    plan_year: Optional[int] = None
-    plan_participants: Optional[int] = None
-    ein: Optional[str] = None
-
-    @property
-    def confidence_label(self) -> str:
-        if self.confidence >= 0.85:
-            return "High"
-        if self.confidence >= 0.60:
-            return "Medium"
-        return "Low"
+st.set_page_config(
+    page_title="5500 Recordkeeper Lookup",
+    page_icon="🔍",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
 
 
-# ---------- Data loading ----------
+# ---------- Brand styling ----------
 
-DATA_DIR = Path(__file__).parent.parent / "data"
+st.markdown("""
+<style>
+    .block-container {
+        padding-top: 2.5rem;
+        padding-bottom: 4rem;
+        max-width: 760px;
+    }
+    .tool-header {
+        border-bottom: 2px solid #C4913A;
+        padding-bottom: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .tool-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0C0F1A;
+        margin: 0;
+        line-height: 1.2;
+    }
+    .tool-subtitle {
+        font-size: 0.95rem;
+        color: #5B6173;
+        margin-top: 0.25rem;
+    }
+    .result-card {
+        background: #FFFFFF;
+        border: 1px solid #E5E2DA;
+        border-left: 4px solid #0E8F78;
+        border-radius: 6px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .result-card.no-match {
+        border-left-color: #B53A2F;
+    }
+    .result-card.partial {
+        border-left-color: #C4913A;
+    }
+    .result-recordkeeper {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #0C0F1A;
+        margin: 0 0 0.25rem 0;
+    }
+    .result-employer {
+        font-size: 0.95rem;
+        color: #5B6173;
+        margin: 0 0 0.75rem 0;
+    }
+    .result-confidence {
+        display: inline-block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        letter-spacing: 0.02em;
+    }
+    .confidence-high {
+        background: #E6F3F0;
+        color: #0E8F78;
+    }
+    .confidence-none {
+        background: #FCE6E3;
+        color: #B53A2F;
+    }
+    .confidence-partial {
+        background: #FBF1E0;
+        color: #B5762B;
+    }
+    .footer-note {
+        margin-top: 3rem;
+        padding-top: 1rem;
+        border-top: 1px solid #E5E2DA;
+        font-size: 0.78rem;
+        color: #8A8F9C;
+        text-align: center;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# Module-level cache so we don't reload the DOL CSVs on every query.
-# Streamlit will call match() many times in a session; loading the joined
-# dataframe once at startup is essential for responsiveness.
-_DATAFRAME_CACHE: Optional[pd.DataFrame] = None
 
+# ---------- Authentication ----------
 
-def load_dol_data() -> pd.DataFrame:
-    """
-    Load and join the four DOL Form 5500 CSV datasets.
+def check_password() -> bool:
+    """Simple password gate. Stores access in session state after first success."""
+    if st.session_state.get("authenticated"):
+        return True
 
-    Returns the joined dataframe filtered to Schedule C service codes 15 and 64
-    (recordkeeping services), with canonical provider names applied.
-
-    PASTE YOUR V4 LOAD/JOIN LOGIC HERE.
-    Expected inputs (drop into data/):
-      - f_5500_YYYY_latest.csv         (main 5500 filings)
-      - f_sch_c_YYYY_latest.csv        (Schedule C service providers)
-      - f_sch_c_part1_item2_YYYY.csv   (service code detail)
-      - any other DOL datasets your v4 pipeline uses
-
-    Expected output: a single dataframe with at minimum these columns:
-      - SPONSOR_DFE_NAME           (the employer)
-      - PROVIDER_OTHER_NAME        (raw recordkeeper name from filing)
-      - canonical_recordkeeper     (your canonicalized provider name)
-      - PLAN_NAME
-      - PLAN_YEAR_BEGIN_DATE
-      - TOT_PARTCP_BOY_CNT
-      - SPONS_DFE_EIN
-    """
-    global _DATAFRAME_CACHE
-    if _DATAFRAME_CACHE is not None:
-        return _DATAFRAME_CACHE
-
-    # ---- BEGIN PASTE ZONE: v4 data loading and joins ----
-    # df = pd.read_csv(DATA_DIR / "f_5500_2024_latest.csv", ...)
-    # sch_c = pd.read_csv(DATA_DIR / "f_sch_c_2024_latest.csv", ...)
-    # joined = df.merge(sch_c, on=["ACK_ID", "ROW_ORDER"], ...)
-    # filtered = joined[joined["SERVICE_CODE"].isin(["15", "64"])]
-    # filtered["canonical_recordkeeper"] = filtered["PROVIDER_OTHER_NAME"].apply(canonicalize)
-    # ---- END PASTE ZONE ----
-
-    raise NotImplementedError(
-        "Paste the v4 data loading logic from your Colab notebook into load_dol_data()."
+    st.markdown(
+        '<div class="tool-header">'
+        '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
+        '<div class="tool-subtitle">Internal tool — sign in to continue</div>'
+        '</div>',
+        unsafe_allow_html=True,
     )
-
-    # _DATAFRAME_CACHE = filtered
-    # return _DATAFRAME_CACHE
-
-
-# ---------- Canonicalization ----------
-
-def canonicalize_employer(name: str) -> str:
-    """
-    Normalize an employer name for matching.
-
-    PASTE YOUR V4 CANONICALIZATION LOGIC HERE.
-    Typical operations: lowercase, strip punctuation, strip suffixes like
-    'INC', 'CORP', 'LLC', 'HOLDINGS', collapse whitespace.
-    """
-    # ---- BEGIN PASTE ZONE: v4 canonicalization ----
-    # cleaned = name.upper().strip()
-    # cleaned = re.sub(r"[^\w\s]", "", cleaned)
-    # cleaned = re.sub(r"\b(INC|CORP|CORPORATION|LLC|LP|HOLDINGS|COMPANY|CO)\b", "", cleaned)
-    # cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    # return cleaned
-    # ---- END PASTE ZONE ----
-    return name.upper().strip()
+    password = st.text_input("Password", type="password", key="password_input")
+    if password:
+        if password == st.secrets.get("app_password", ""):
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password.")
+    return False
 
 
-# ---------- Match function (the public API) ----------
+if not check_password():
+    st.stop()
 
-def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
-    """
-    Look up the recordkeeper for an employer name.
 
-    Args:
-        employer_query: the user-typed employer name
-        top_n: how many candidate matches to return (1 best + n-1 near-misses)
+# ---------- Data warm-up (first run only) ----------
 
-    Returns:
-        A list of MatchResult, ordered by confidence descending.
-        Empty list if no candidates were found above the noise threshold.
-    """
-    if not employer_query or not employer_query.strip():
-        return []
+@st.cache_resource(show_spinner=False)
+def _warm_data():
+    """Load data once per Streamlit process. Subsequent calls are no-ops."""
+    with st.spinner("Loading DOL data (first run only, ~30s)..."):
+        load_data()
+    return True
 
-    df = load_dol_data()
-    canonical_query = canonicalize_employer(employer_query)
 
-    # ---- BEGIN PASTE ZONE: v4 matching scoring logic ----
-    # Compute similarity between canonical_query and each row's
-    # canonicalized SPONSOR_DFE_NAME. Use whatever scorer your v4 used
-    # (rapidfuzz token_set_ratio, etc.). Sort by score descending,
-    # take top_n.
-    #
-    # candidates = []
-    # for _, row in df.iterrows():
-    #     score = fuzz.token_set_ratio(canonical_query, canonicalize_employer(row["SPONSOR_DFE_NAME"]))
-    #     candidates.append((score, row))
-    # candidates.sort(key=lambda x: x[0], reverse=True)
-    # top = candidates[:top_n]
-    # ---- END PASTE ZONE ----
+_warm_data()
 
-    raise NotImplementedError(
-        "Paste the v4 matching/scoring logic from your Colab notebook into match()."
-    )
 
-    # results = []
-    # for score, row in top:
-    #     results.append(MatchResult(
-    #         employer_query=employer_query,
-    #         matched_employer_name=row["SPONSOR_DFE_NAME"],
-    #         recordkeeper=row["canonical_recordkeeper"],
-    #         confidence=score / 100.0,
-    #         plan_name=row.get("PLAN_NAME"),
-    #         plan_year=row.get("PLAN_YEAR_BEGIN_DATE"),
-    #         plan_participants=row.get("TOT_PARTCP_BOY_CNT"),
-    #         ein=row.get("SPONS_DFE_EIN"),
-    #     ))
-    # return results
+# ---------- Header ----------
+
+st.markdown(
+    '<div class="tool-header">'
+    '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
+    '<div class="tool-subtitle">Find the 401(k) recordkeeper for an employer using DOL Form 5500 data.</div>'
+    '</div>',
+    unsafe_allow_html=True,
+)
+
+
+# ---------- Input ----------
+
+employer_query = st.text_input(
+    "Employer name",
+    placeholder="e.g. Microsoft, Walmart, JP Morgan Chase",
+    label_visibility="visible",
+    key="employer_input",
+)
+
+
+# ---------- Run match ----------
+
+if employer_query:
+    with st.spinner("Looking up..."):
+        try:
+            result = find_recordkeeper(employer_query)
+        except Exception as e:
+            st.error(f"Error running matcher: {e}")
+            result = None
+
+    if result is None:
+        pass
+
+    elif result["confidence"] == "High":
+        st.markdown(
+            f'<div class="result-card">'
+            f'<div class="result-recordkeeper">{result["recordkeeper"]}</div>'
+            f'<div class="result-employer">Matched to: <strong>{result["matched_employer"]}</strong></div>'
+            f'<span class="result-confidence confidence-high">High confidence</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        with st.expander("Match detail (for verification)"):
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("**EIN**")
+                st.write(result.get("ein") or "—")
+                st.markdown("**Top plan participants**")
+                participants = result.get("participants_top_plan")
+                st.write(f"{participants:,}" if participants else "—")
+            with c2:
+                st.markdown("**Filings matched**")
+                st.write(result.get("num_filings_found") or "—")
+                st.markdown("**Signal**")
+                st.write(result.get("signals") or "—")
+
+            raw = result.get("recordkeeper_raw")
+            canonical = result.get("recordkeeper")
+            if raw and raw != canonical:
+                st.markdown("**Raw provider name(s) on filing**")
+                st.write(raw)
+
+    elif result["matched_employer"] and result["confidence"] == "None":
+        # Found the employer but no recordkeeper code attached
+        st.markdown(
+            f'<div class="result-card partial">'
+            f'<div class="result-recordkeeper">Employer found, recordkeeper unclear</div>'
+            f'<div class="result-employer">Matched to: <strong>{result["matched_employer"]}</strong></div>'
+            f'<span class="result-confidence confidence-partial">Partial match</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            f"A pension filing for this employer was found, but no service "
+            f"providers were listed under codes 15 (Recordkeeping) or 64 "
+            f"(Recordkeeping & Information Mgmt fees). "
+            f"This can happen when the recordkeeper is reported under a "
+            f"different code or under the plan's master trust filing."
+        )
+
+    else:
+        st.markdown(
+            f'<div class="result-card no-match">'
+            f'<div class="result-recordkeeper">No match found</div>'
+            f'<div class="result-employer">No pension plan filing found for "{result["query"]}".</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "This could mean the employer's plan isn't in the latest DOL "
+            "release, the employer name is spelled differently in filings, "
+            "or the plan is below the 5500 filing threshold (100+ participants)."
+        )
+
+
+# ---------- Footer ----------
+
+st.markdown(
+    '<div class="footer-note">'
+    'Data source: DOL Form 5500 filings, 2023 (Schedule C, service codes 15 & 64). '
+    'Internal use only.'
+    '</div>',
+    unsafe_allow_html=True,
+)
