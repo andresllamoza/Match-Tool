@@ -51,11 +51,11 @@ class EmployerSuggestion:
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
-MASTER_CACHE_VERSION = "3"
+MASTER_CACHE_VERSION = "6"
 
-# 2023 is the latest complete year from the original MVP. Set DOL_YEARS to a
-# comma-separated list (for example, "2024,2023") if you want broader coverage.
-DEFAULT_YEARS = (2023,)
+# Prefer the newest complete DOL filing year and keep 2023 as a fallback for
+# plans that have not yet filed or were only present in the original MVP data.
+DEFAULT_YEARS = (2024, 2023)
 TIER_RANK = {"TIER1": 1, "TIER2": 2}
 TIER1_RELATION = r"RECORDKEEPER|RECORD KEEPER|RECORDKEEPING|RECORD KEEPING|PLAN RECORDKEEPER"
 TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
@@ -64,6 +64,16 @@ TIER2_CODES = {"13"}
 FUZZY_THRESHOLD = 92
 SUGGESTION_FUZZY_THRESHOLD = 70
 PLAN_CHARACTERISTIC_RE = re.compile(r"\d[A-Z0-9]")
+DC_PLAN_NAME_RE = re.compile(
+    r"\b("
+    r"401\s*\(?K\)?|"
+    r"403\s*\(?B\)?|"
+    r"457\s*\(?B\)?|"
+    r"PROFIT\s+SHARING|"
+    r"DEFINED\s+CONTRIBUTION"
+    r")\b",
+    re.IGNORECASE,
+)
 
 LEGAL_SUFFIXES = {
     "INCORPORATED",
@@ -316,6 +326,13 @@ def _has_defined_contribution_pension_code(value: object) -> bool:
     return any(code.startswith("2") for code in _plan_characteristic_codes(value))
 
 
+def _looks_like_defined_contribution_plan_name(value: object) -> bool:
+    """Return true when a no-code filing name clearly describes a DC plan."""
+    if pd.isna(value):
+        return False
+    return DC_PLAN_NAME_RE.search(str(value)) is not None
+
+
 def _build_year_master(year: int) -> pd.DataFrame:
     main_path = _ensure_dol_csv(year, f"F_5500_{year}_Latest")
     provider_path = _ensure_dol_csv(year, f"F_SCH_C_PART1_ITEM2_{year}_Latest")
@@ -338,10 +355,19 @@ def _build_year_master(year: int) -> pd.DataFrame:
         filings["TYPE_PENSION_BNFT_CODE"] = (
             filings["TYPE_PENSION_BNFT_CODE"].fillna("").str.strip().str.upper()
         )
-        filings = filings[
-            filings["TYPE_PENSION_BNFT_CODE"].apply(_has_defined_contribution_pension_code)
-        ].copy()
+        code_indicates_dc = filings["TYPE_PENSION_BNFT_CODE"].apply(
+            _has_defined_contribution_pension_code
+        )
+        if "PLAN_NAME" in filings.columns:
+            name_indicates_dc = filings["PLAN_NAME"].apply(_looks_like_defined_contribution_plan_name)
+        else:
+            name_indicates_dc = False
+        filings = filings[code_indicates_dc | name_indicates_dc].copy()
     filings["EMPLOYER_NORM"] = filings["SPONSOR_DFE_NAME"].apply(_normalize_name)
+    if "PLAN_NAME" in filings.columns:
+        filings["PLAN_NORM"] = filings["PLAN_NAME"].apply(_normalize_name)
+    else:
+        filings["PLAN_NORM"] = ""
     if "TOT_PARTCP_BOY_CNT" in filings.columns:
         filings["_n"] = pd.to_numeric(
             filings["TOT_PARTCP_BOY_CNT"],
@@ -393,6 +419,7 @@ def _build_year_master(year: int) -> pd.DataFrame:
     merged["YEAR"] = year
     merged["_tier_rank"] = merged["TIER"].map(TIER_RANK)
     merged["EMPLOYER_COLLAPSED"] = merged["EMPLOYER_NORM"].apply(_collapsed)
+    merged["PLAN_COLLAPSED"] = merged["PLAN_NORM"].apply(_collapsed)
     merged["RK_CANON"] = merged["PROVIDER_OTHER_NAME"].apply(_canonicalize_recordkeeper)
     return merged.rename(
         columns={
@@ -419,13 +446,14 @@ def _build_master() -> pd.DataFrame:
         ["EMPLOYER_NORM", "_tier_rank", "YEAR", "_n"],
         ascending=[True, True, False, False],
     )
-    master = master.drop_duplicates(subset=["EMPLOYER_NORM"], keep="first")
     master = master[master["EMPLOYER_NORM"] != ""].copy()
 
     output_columns = [
         "EMPLOYER",
         "EMPLOYER_NORM",
         "EMPLOYER_COLLAPSED",
+        "PLAN_NORM",
+        "PLAN_COLLAPSED",
         "RK_RAW",
         "RK_CANON",
         "TIER",
@@ -473,6 +501,8 @@ def employer_search_index() -> pd.DataFrame:
         "EMPLOYER",
         "EMPLOYER_NORM",
         "EMPLOYER_COLLAPSED",
+        "PLAN_NORM",
+        "PLAN_COLLAPSED",
         "RK_RAW",
         "RK_CANON",
         "SPONS_DFE_EIN",
@@ -488,6 +518,12 @@ def employer_search_index() -> pd.DataFrame:
 def canonicalize_employer(name: str) -> str:
     """Normalize an employer name using the Colab matcher rules."""
     return _normalize_name(name)
+
+
+def _text_column(df: pd.DataFrame, column: str) -> pd.Series:
+    if column in df.columns:
+        return df[column].fillna("").astype(str)
+    return pd.Series([""] * len(df), index=df.index, dtype=str)
 
 
 def _is_meaningful_suggestion_token(token: str) -> bool:
@@ -603,6 +639,15 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
             "The normalized input appeared as a full-word phrase inside the DOL employer name.",
         )
 
+    plan_boundary_rows = df[_text_column(df, "PLAN_NORM").str.contains(query_pattern, regex=True)]
+    if not plan_boundary_rows.empty:
+        add_rows(
+            plan_boundary_rows,
+            0.94,
+            "plan_word_boundary",
+            "The normalized input appeared as a full-word phrase inside the DOL plan name.",
+        )
+
     collapsed_query = _collapsed(canonical_query)
     if collapsed_query != canonical_query and len(collapsed_query) >= 4:
         collapsed_rows = df[
@@ -618,6 +663,21 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
                 0.93,
                 "spacing_insensitive",
                 "The normalized input matched after removing spaces from both names.",
+            )
+
+        plan_collapsed_rows = df[
+            _text_column(df, "PLAN_COLLAPSED").str.contains(
+                collapsed_query,
+                na=False,
+                regex=False,
+            )
+        ]
+        if not plan_collapsed_rows.empty:
+            add_rows(
+                plan_collapsed_rows,
+                0.91,
+                "plan_spacing_insensitive",
+                "The normalized input matched the DOL plan name after removing spaces.",
             )
 
     all_names = df["EMPLOYER_NORM"].dropna().tolist()
@@ -710,19 +770,26 @@ def suggest_employers_from_index(
             if existing is None or (priority, confidence) > (existing[0], existing[1]):
                 candidates[key] = (priority, confidence, row, match_method)
 
-    exact_rows = index[index["EMPLOYER_NORM"] == canonical_query]
+    employer_norms = _text_column(index, "EMPLOYER_NORM")
+    employer_collapsed = _text_column(index, "EMPLOYER_COLLAPSED")
+    plan_norms = _text_column(index, "PLAN_NORM")
+    plan_collapsed = _text_column(index, "PLAN_COLLAPSED")
+
+    exact_rows = index[employer_norms == canonical_query]
     if not exact_rows.empty:
         add_rows(exact_rows, 4, 1.0, "exact_normalized")
 
-    prefix_rows = index[index["EMPLOYER_NORM"].fillna("").str.startswith(canonical_query)]
+    prefix_rows = index[employer_norms.str.startswith(canonical_query)]
     if not prefix_rows.empty:
         add_rows(prefix_rows, 3, 0.95, "prefix")
 
-    contains_rows = index[
-        index["EMPLOYER_NORM"].fillna("").str.contains(canonical_query, na=False, regex=False)
-    ]
+    contains_rows = index[employer_norms.str.contains(canonical_query, na=False, regex=False)]
     if not contains_rows.empty:
         add_rows(contains_rows, 2, 0.90, "contains")
+
+    plan_contains_rows = index[plan_norms.str.contains(canonical_query, na=False, regex=False)]
+    if not plan_contains_rows.empty:
+        add_rows(plan_contains_rows, 2, 0.87, "plan_contains")
 
     def is_related_by_token(employer_norm: object) -> bool:
         if not query_tokens or pd.isna(employer_norm):
@@ -742,7 +809,7 @@ def suggest_employers_from_index(
     collapsed_query = _collapsed(canonical_query)
     if collapsed_query != canonical_query and len(collapsed_query) >= 4:
         collapsed_rows = index[
-            index["EMPLOYER_COLLAPSED"].fillna("").str.contains(
+            employer_collapsed.str.contains(
                 collapsed_query,
                 na=False,
                 regex=False,
@@ -750,6 +817,16 @@ def suggest_employers_from_index(
         ]
         if not collapsed_rows.empty:
             add_rows(collapsed_rows, 2, 0.88, "spacing_insensitive")
+
+        plan_collapsed_rows = index[
+            plan_collapsed.str.contains(
+                collapsed_query,
+                na=False,
+                regex=False,
+            )
+        ]
+        if not plan_collapsed_rows.empty:
+            add_rows(plan_collapsed_rows, 2, 0.86, "plan_spacing_insensitive")
 
     if len(canonical_query) >= 3:
         all_names = index["EMPLOYER_NORM"].dropna().tolist()

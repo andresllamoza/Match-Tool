@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -56,6 +57,11 @@ class MatcherReasonTest(unittest.TestCase):
         employer_norm = matcher.canonicalize_employer("Acme Inc")
         amazon_norm = matcher.canonicalize_employer("Amazon.com Services, LLC")
         bofa_norm = matcher.canonicalize_employer("Bank of America Corporation")
+        disney_norm = matcher.canonicalize_employer("TWDC Enterprises 18 Corp.")
+        disney_plan_norm = matcher.canonicalize_employer("Disney Retirement Savings Plan")
+        disney_hourly_plan_norm = matcher.canonicalize_employer(
+            "Disney Hourly Savings and Investment Plan"
+        )
         matcher._DATAFRAME_CACHE = pd.DataFrame(
             [
                 {
@@ -87,6 +93,40 @@ class MatcherReasonTest(unittest.TestCase):
                     "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
                     "TOT_PARTCP_BOY_CNT": "1214063",
                     "SPONS_DFE_EIN": "91-1986545",
+                },
+                {
+                    "EMPLOYER": "TWDC ENTERPRISES 18 CORP.",
+                    "EMPLOYER_NORM": disney_norm,
+                    "EMPLOYER_COLLAPSED": disney_norm.replace(" ", ""),
+                    "PLAN_NORM": disney_plan_norm,
+                    "PLAN_COLLAPSED": disney_plan_norm.replace(" ", ""),
+                    "RK_RAW": "FIDELITY INVESTMENTS INSTITUTIONAL",
+                    "RK_CANON": "Fidelity Investments",
+                    "TIER": "TIER1",
+                    "YEAR": "2024",
+                    "_n": 44099,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "DISNEY RETIREMENT SAVINGS PLAN",
+                    "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                    "TOT_PARTCP_BOY_CNT": "44099",
+                    "SPONS_DFE_EIN": "95-4545390",
+                },
+                {
+                    "EMPLOYER": "TWDC ENTERPRISES 18 CORP.",
+                    "EMPLOYER_NORM": disney_norm,
+                    "EMPLOYER_COLLAPSED": disney_norm.replace(" ", ""),
+                    "PLAN_NORM": disney_hourly_plan_norm,
+                    "PLAN_COLLAPSED": disney_hourly_plan_norm.replace(" ", ""),
+                    "RK_RAW": "FIDELITY INVESTMENTS INSTITUTIONAL",
+                    "RK_CANON": "Fidelity Investments",
+                    "TIER": "TIER1",
+                    "YEAR": "2024",
+                    "_n": 111954,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "DISNEY HOURLY SAVINGS AND INVESTMENT PLAN",
+                    "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                    "TOT_PARTCP_BOY_CNT": "111954",
+                    "SPONS_DFE_EIN": "95-4545390",
                 },
                 {
                     "EMPLOYER": "BANK OF AMERICA CORPORATION",
@@ -159,6 +199,25 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
         self.assertEqual(results[0].match_method, "word_boundary")
 
+    def test_match_finds_disney_query_in_plan_name(self):
+        results = self.matcher.match("disney", top_n=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "TWDC ENTERPRISES 18 CORP.")
+        self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
+        self.assertIn("DISNEY", results[0].plan_name)
+        self.assertIn("SAVINGS", results[0].plan_name)
+        self.assertEqual(results[0].match_method, "plan_word_boundary")
+
+    def test_match_finds_specific_disney_plan_query(self):
+        results = self.matcher.match("Disney Retirement Savings Plan", top_n=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "TWDC ENTERPRISES 18 CORP.")
+        self.assertEqual(results[0].recordkeeper, "Fidelity Investments")
+        self.assertEqual(results[0].plan_name, "DISNEY RETIREMENT SAVINGS PLAN")
+        self.assertEqual(results[0].match_method, "plan_word_boundary")
+
     def test_suggest_employers_returns_existing_partial_matches(self):
         suggestions = self.matcher.suggest_employers("ama", limit=3)
 
@@ -206,6 +265,14 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(suggestions[0].employer_name, "BANK OF AMERICA CORPORATION")
         self.assertEqual(suggestions[0].match_method, "contains")
 
+    def test_suggest_employers_returns_plan_name_matches(self):
+        suggestions = self.matcher.suggest_employers("disney", limit=3)
+
+        self.assertGreaterEqual(len(suggestions), 1)
+        self.assertEqual(suggestions[0].employer_name, "TWDC ENTERPRISES 18 CORP.")
+        self.assertEqual(suggestions[0].recordkeeper, "Fidelity Investments")
+        self.assertEqual(suggestions[0].match_method, "plan_contains")
+
     def test_match_overrides_bank_of_america_pension_row_to_merrill(self):
         results = self.matcher.match("bank of america", top_n=1)
 
@@ -218,6 +285,91 @@ class MatcherReasonTest(unittest.TestCase):
 
 
 class MatcherBuildTest(unittest.TestCase):
+    def test_build_master_preserves_plan_level_rows_for_plan_name_matching(self):
+        from src import matcher
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_data_dir = matcher.DATA_DIR
+            original_years = os.environ.get("DOL_YEARS")
+            matcher.DATA_DIR = Path(temp_dir)
+            os.environ["DOL_YEARS"] = "2023"
+            try:
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "DISNEY-RETIREMENT-ACK",
+                            "SPONSOR_DFE_NAME": "TWDC ENTERPRISES 18 CORP.",
+                            "SPONS_DFE_EIN": "954545390",
+                            "PLAN_NAME": "DISNEY RETIREMENT SAVINGS PLAN",
+                            "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                            "TYPE_PENSION_BNFT_CODE": "2A2E2F2G2T3F3H",
+                            "TOT_PARTCP_BOY_CNT": "44099",
+                        },
+                        {
+                            "ACK_ID": "DISNEY-HOURLY-ACK",
+                            "SPONSOR_DFE_NAME": "TWDC ENTERPRISES 18 CORP.",
+                            "SPONS_DFE_EIN": "954545390",
+                            "PLAN_NAME": "DISNEY HOURLY SAVINGS AND INVESTMENT PLAN",
+                            "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                            "TYPE_PENSION_BNFT_CODE": "2E2F2G2J2K2O2T3F3H",
+                            "TOT_PARTCP_BOY_CNT": "111954",
+                        },
+                    ]
+                ).to_csv(Path(temp_dir) / "F_5500_2023_Latest.csv", index=False)
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "DISNEY-RETIREMENT-ACK",
+                            "ROW_ORDER": "1",
+                            "PROVIDER_OTHER_NAME": "FIDELITY INVESTMENTS INSTITUTIONAL",
+                            "PROVIDER_OTHER_RELATION": "NONE",
+                        },
+                        {
+                            "ACK_ID": "DISNEY-HOURLY-ACK",
+                            "ROW_ORDER": "1",
+                            "PROVIDER_OTHER_NAME": "FIDELITY INVESTMENTS INSTITUTIONAL",
+                            "PROVIDER_OTHER_RELATION": "NONE",
+                        },
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_2023_Latest.csv",
+                    index=False,
+                )
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "DISNEY-RETIREMENT-ACK",
+                            "ROW_ORDER": "1",
+                            "SERVICE_CODE": "64",
+                        },
+                        {
+                            "ACK_ID": "DISNEY-HOURLY-ACK",
+                            "ROW_ORDER": "1",
+                            "SERVICE_CODE": "64",
+                        },
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_CODES_2023_Latest.csv",
+                    index=False,
+                )
+
+                master = matcher._build_master()
+            finally:
+                matcher.DATA_DIR = original_data_dir
+                if original_years is None:
+                    os.environ.pop("DOL_YEARS", None)
+                else:
+                    os.environ["DOL_YEARS"] = original_years
+
+        self.assertEqual(len(master), 2)
+        self.assertEqual(
+            sorted(master["PLAN_NORM"].tolist()),
+            [
+                "DISNEY HOURLY SAVINGS INVESTMENT PLAN",
+                "DISNEY RETIREMENT SAVINGS PLAN",
+            ],
+        )
+
     def test_build_master_uses_relation_tier_when_service_code_is_not_recordkeeper_code(self):
         from src import matcher
 
@@ -346,6 +498,61 @@ class MatcherBuildTest(unittest.TestCase):
         self.assertEqual(master.loc[0, "ACK_ID"], "DC-ACK")
         self.assertEqual(master.loc[0, "PLAN_NAME"], "THE BANK OF AMERICA 401(K) PLAN")
         self.assertEqual(master.loc[0, "RK_CANON"], "Merrill Lynch")
+
+    def test_build_master_includes_no_code_401k_master_trust_rows(self):
+        from src import matcher
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_data_dir = matcher.DATA_DIR
+            matcher.DATA_DIR = Path(temp_dir)
+            try:
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "TARGET-TRUST-ACK",
+                            "SPONSOR_DFE_NAME": "TARGET CORPORATION",
+                            "SPONS_DFE_EIN": "410215170",
+                            "PLAN_NAME": "TARGET CORPORATION 401(K) MASTER TRUST",
+                            "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
+                            "TYPE_PENSION_BNFT_CODE": "",
+                            "TOT_PARTCP_BOY_CNT": "",
+                        }
+                    ]
+                ).to_csv(Path(temp_dir) / "F_5500_2023_Latest.csv", index=False)
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "TARGET-TRUST-ACK",
+                            "ROW_ORDER": "1",
+                            "PROVIDER_OTHER_NAME": "ALIGHT SOLUTIONS LLC",
+                            "PROVIDER_OTHER_RELATION": "CONTRACT ADMINISTRATOR",
+                        }
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_2023_Latest.csv",
+                    index=False,
+                )
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "TARGET-TRUST-ACK",
+                            "ROW_ORDER": "1",
+                            "SERVICE_CODE": "13",
+                        }
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_CODES_2023_Latest.csv",
+                    index=False,
+                )
+
+                master = matcher._build_year_master(2023)
+            finally:
+                matcher.DATA_DIR = original_data_dir
+
+        self.assertEqual(len(master), 1)
+        self.assertEqual(master.loc[0, "EMPLOYER_NORM"], "TARGET")
+        self.assertEqual(master.loc[0, "PLAN_NAME"], "TARGET CORPORATION 401(K) MASTER TRUST")
+        self.assertEqual(master.loc[0, "RK_CANON"], "Alight Solutions")
 
 
 if __name__ == "__main__":
