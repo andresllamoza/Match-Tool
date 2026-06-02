@@ -117,6 +117,8 @@ CANONICAL_MAP = [
     (r"CONDUENT", "Conduent"),
 ]
 
+# Keep this list small: use it only where public plan materials identify the
+# 401(k) provider but the DOL Schedule C rows expose a misleading provider.
 CURATED_EMPLOYER_OVERRIDES = {
     "BANK AMERICA": {
         "matched_employer_name": "BANK OF AMERICA CORPORATION",
@@ -125,6 +127,7 @@ CURATED_EMPLOYER_OVERRIDES = {
         "plan_year": 2023,
         "plan_participants": 263860,
         "ein": "560906609",
+        "plan_type_code": "2E2F2G2J2K2O2S2T3H3J",
         "match_method": "curated_override",
         "match_reason": (
             "Bank of America 401(k) participant materials direct employees to "
@@ -478,6 +481,7 @@ def _curated_override_result(employer_query: str, canonical_query: str) -> Optio
         plan_year=override["plan_year"],
         plan_participants=override["plan_participants"],
         ein=override["ein"],
+        plan_type_code=override["plan_type_code"],
         match_method=override["match_method"],
         match_reason=override["match_reason"],
     )
