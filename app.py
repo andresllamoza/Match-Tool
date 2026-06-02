@@ -4,6 +4,8 @@ DOL 5500 Recordkeeper Lookup Streamlit app.
 Run locally: streamlit run app.py
 """
 
+import html
+
 import streamlit as st
 
 from src.lookup_log import append_lookup_attempt, read_lookup_attempts
@@ -106,16 +108,62 @@ st.markdown(
         font-size: 0.85rem;
     }
     .suggestions-header {
-        margin-top: 0.6rem;
-        margin-bottom: 0.25rem;
-        font-size: 0.86rem;
-        font-weight: 700;
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 750;
         color: #0C0F1A;
     }
     .suggestions-caption {
-        margin-bottom: 0.4rem;
+        margin-top: 0.3rem;
+        margin-bottom: 0.85rem;
         font-size: 0.8rem;
         color: #5B6173;
+    }
+    .suggestions-panel {
+        margin: 0.85rem 0 1.35rem 0;
+        padding: 1.1rem 1.15rem 0.85rem 1.15rem;
+        background:
+            linear-gradient(135deg, rgba(14, 143, 120, 0.08), rgba(255, 255, 255, 0) 34%),
+            #FFFFFF;
+        border: 1px solid #DDE5EF;
+        border-radius: 16px;
+        box-shadow: 0 14px 32px rgba(12, 15, 26, 0.08);
+    }
+    .suggestions-kicker {
+        color: #0E8F78;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.2rem;
+        text-transform: uppercase;
+    }
+    .suggestion-row {
+        min-height: 4.25rem;
+        margin-bottom: 0.55rem;
+        padding: 0.85rem 0.95rem;
+        background: #F8FAFC;
+        border: 1px solid #E5EAF1;
+        border-radius: 12px;
+    }
+    .suggestion-row:hover {
+        background: #F4F8FB;
+        border-color: #C9D7E5;
+    }
+    .suggestion-name {
+        color: #0C0F1A;
+        font-size: 0.92rem;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+    .suggestion-meta {
+        color: #5B6173;
+        font-size: 0.76rem;
+        margin-top: 0.28rem;
+    }
+    .suggestion-note {
+        color: #718096;
+        font-size: 0.76rem;
+        margin-top: 0.35rem;
     }
     .footer-note {
         margin-top: 3rem;
@@ -172,11 +220,9 @@ def confidence_class(label: str) -> str:
     }.get(label, "confidence-low")
 
 
-def queue_employer_suggestion() -> None:
-    selected_employer = st.session_state.get("employer_suggestion_select", "")
-    if selected_employer:
-        st.session_state["pending_employer_suggestion"] = selected_employer
-        st.session_state.pop("last_logged_lookup_signature", None)
+def apply_employer_suggestion(employer_name: str) -> None:
+    st.session_state["employer_input"] = employer_name
+    st.session_state.pop("last_logged_lookup_signature", None)
 
 
 def render_employer_suggestions(
@@ -191,24 +237,42 @@ def render_employer_suggestions(
     if not visible_suggestions:
         return
 
-    select_key = "employer_suggestion_select"
-    query_key = "employer_suggestion_query"
-    if st.session_state.get(query_key) != employer_query:
-        st.session_state.pop(select_key, None)
-        st.session_state[query_key] = employer_query
-
-    option_names = [suggestion.employer_name for suggestion in visible_suggestions]
-    st.selectbox(
-        "Related names found in filings",
-        options=[""] + option_names,
-        format_func=lambda employer_name: employer_name or "Use a filing name...",
-        key=select_key,
-        on_change=queue_employer_suggestion,
-        help=(
-            "Optional: if the employer files under a legal entity or longer name, "
-            "select it here to search that exact filing name."
-        ),
+    st.markdown(
+        '<div class="suggestions-panel">'
+        '<div class="suggestions-kicker">Filing name intelligence</div>'
+        '<div class="suggestions-header">Related names found in filings</div>'
+        '<div class="suggestions-caption">'
+        "These are possible legal filing names for the employer you entered. "
+        "Nothing is pre-selected; use one only when it matches the company you meant."
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
     )
+
+    for index, suggestion in enumerate(visible_suggestions):
+        name = html.escape(suggestion.employer_name)
+        recordkeeper = html.escape(suggestion.recordkeeper or "Recordkeeper not listed")
+        confidence = int(round(suggestion.confidence * 100))
+
+        info_col, action_col = st.columns([0.74, 0.26], vertical_alignment="center")
+        with info_col:
+            st.markdown(
+                '<div class="suggestion-row">'
+                f'<div class="suggestion-name">{name}</div>'
+                f'<div class="suggestion-meta">{recordkeeper} | {confidence}% filing-name match</div>'
+                '<div class="suggestion-note">Search this exact filing name if it is the intended legal entity.</div>'
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        with action_col:
+            st.button(
+                "Use filing name",
+                key=f"employer_suggestion_use_{index}",
+                on_click=apply_employer_suggestion,
+                args=(suggestion.employer_name,),
+                use_container_width=True,
+                help=f"Search for {suggestion.employer_name}",
+            )
 
 
 st.markdown(
@@ -218,12 +282,6 @@ st.markdown(
     '</div>',
     unsafe_allow_html=True,
 )
-
-pending_employer_suggestion = st.session_state.pop("pending_employer_suggestion", "")
-if pending_employer_suggestion:
-    st.session_state["employer_input"] = pending_employer_suggestion
-    st.session_state.pop("employer_suggestion_select", None)
-    st.session_state.pop("employer_suggestion_query", None)
 
 employer_query = st.text_input(
     "Employer name",
