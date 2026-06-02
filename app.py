@@ -7,7 +7,7 @@ Run locally: streamlit run app.py
 import streamlit as st
 
 from src.lookup_log import append_lookup_attempt, read_lookup_attempts
-from src.matcher import match
+from src.matcher import EmployerSuggestion, match, suggest_employers
 
 
 st.set_page_config(
@@ -105,6 +105,18 @@ st.markdown(
         color: #5B6173;
         font-size: 0.85rem;
     }
+    .suggestions-header {
+        margin-top: 0.6rem;
+        margin-bottom: 0.25rem;
+        font-size: 0.86rem;
+        font-weight: 700;
+        color: #0C0F1A;
+    }
+    .suggestions-caption {
+        margin-bottom: 0.4rem;
+        font-size: 0.8rem;
+        color: #5B6173;
+    }
     .footer-note {
         margin-top: 3rem;
         padding-top: 1rem;
@@ -160,6 +172,39 @@ def confidence_class(label: str) -> str:
     }.get(label, "confidence-low")
 
 
+def select_employer_suggestion(employer_name: str) -> None:
+    st.session_state["employer_input"] = employer_name
+    st.session_state.pop("last_logged_lookup_signature", None)
+
+
+def render_employer_suggestions(
+    employer_query: str,
+    suggestions: list[EmployerSuggestion],
+) -> None:
+    visible_suggestions = [
+        suggestion
+        for suggestion in suggestions
+        if suggestion.employer_name.strip().lower() != employer_query.strip().lower()
+    ]
+    if not visible_suggestions:
+        return
+
+    st.markdown(
+        '<div class="suggestions-header">Suggestions in our 5500 data</div>'
+        '<div class="suggestions-caption">Pick one to search the exact employer name we have on file.</div>',
+        unsafe_allow_html=True,
+    )
+    for index, suggestion in enumerate(visible_suggestions):
+        label = f"{suggestion.employer_name} - {suggestion.recordkeeper}"
+        st.button(
+            label,
+            key=f"employer_suggestion_{index}_{suggestion.employer_name}",
+            on_click=select_employer_suggestion,
+            args=(suggestion.employer_name,),
+            use_container_width=True,
+        )
+
+
 st.markdown(
     '<div class="tool-header">'
     '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
@@ -174,12 +219,15 @@ employer_query = st.text_input(
     label_visibility="visible",
     key="employer_input",
 )
+suggestions_container = st.container()
 
 if employer_query:
     with st.spinner("Looking up..."):
         lookup_error = ""
+        suggestions = []
         try:
             results = match(employer_query, top_n=4)
+            suggestions = suggest_employers(employer_query, limit=4)
         except NotImplementedError:
             lookup_error = "Matcher logic not yet implemented."
             st.error(
@@ -191,6 +239,9 @@ if employer_query:
             lookup_error = str(exc)
             st.error(f"Error running matcher: {exc}")
             results = []
+
+    with suggestions_container:
+        render_employer_suggestions(employer_query, suggestions)
 
     lookup_signature = (
         employer_query.strip(),
