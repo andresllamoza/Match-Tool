@@ -138,6 +138,11 @@ class MatcherReasonTest(unittest.TestCase):
 
         self.assertEqual(suggestions, [])
 
+    def test_suggest_employers_skips_generic_business_terms(self):
+        suggestions = self.matcher.suggest_employers("services", limit=3)
+
+        self.assertEqual(suggestions, [])
+
     def test_suggest_employers_returns_related_token_matches(self):
         suggestions = self.matcher.suggest_employers("america", limit=3)
 

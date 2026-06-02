@@ -187,12 +187,15 @@ def render_employer_suggestions(
 
     option_names = [suggestion.employer_name for suggestion in visible_suggestions]
     st.selectbox(
-        "Related employer names",
+        "Related names found in filings",
         options=[""] + option_names,
-        format_func=lambda employer_name: employer_name or "Select a related name...",
+        format_func=lambda employer_name: employer_name or "Use a filing name...",
         key=select_key,
         on_change=queue_employer_suggestion,
-        help="Optional: search using a related employer name found in the 5500 data.",
+        help=(
+            "Optional: if the employer files under a legal entity or longer name, "
+            "select it here to search that exact filing name."
+        ),
     )
 
 

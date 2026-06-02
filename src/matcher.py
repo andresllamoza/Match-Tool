@@ -88,6 +88,24 @@ LEGAL_SUFFIXES = {
     "US",
 }
 STOPWORDS = {"THE", "AND", "OF", "&"}
+SUGGESTION_GENERIC_TOKENS = {
+    "ADMINISTRATION",
+    "ASSOCIATES",
+    "BENEFIT",
+    "BENEFITS",
+    "BUSINESS",
+    "CENTER",
+    "CENTERS",
+    "ENTERPRISE",
+    "ENTERPRISES",
+    "GLOBAL",
+    "MANAGEMENT",
+    "NATIONAL",
+    "SERVICE",
+    "SERVICES",
+    "SYSTEM",
+    "SYSTEMS",
+}
 
 CANONICAL_MAP = [
     (r"TEMPO HOLDING", "Alight Solutions"),
@@ -449,6 +467,12 @@ def canonicalize_employer(name: str) -> str:
     return _normalize_name(name)
 
 
+def _is_meaningful_suggestion_token(token: str) -> bool:
+    return token not in SUGGESTION_GENERIC_TOKENS and (
+        len(token) >= 3 or any(char.isdigit() for char in token)
+    )
+
+
 def _candidate_result(
     employer_query: str,
     row: pd.Series,
@@ -631,7 +655,13 @@ def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSugge
     canonical_query = canonicalize_employer(employer_query)
     if len(canonical_query) < 3:
         return []
-    query_tokens = [token for token in canonical_query.split() if len(token) >= 3]
+    query_tokens = [
+        token
+        for token in canonical_query.split()
+        if _is_meaningful_suggestion_token(token)
+    ]
+    if not query_tokens:
+        return []
 
     candidates: dict[str, tuple[float, pd.Series, str]] = {}
 
@@ -664,7 +694,7 @@ def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSugge
             employer_token.startswith(query_token) or query_token.startswith(employer_token)
             for query_token in query_tokens
             for employer_token in employer_tokens
-            if len(employer_token) >= 3
+            if _is_meaningful_suggestion_token(employer_token)
         )
 
     token_rows = df[df["EMPLOYER_NORM"].apply(is_related_by_token)]
