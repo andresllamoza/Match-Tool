@@ -615,7 +615,7 @@ def render_provider_feedback_form(lookup_employer: str, result: MatchResult) -> 
 def load_command_search_csv() -> str:
     index = employer_search_index().copy()
     if index.empty:
-        return "employer_name,recordkeeper,plan_size\n"
+        return "employer_name,recordkeeper,filing_year,plan_size\n"
 
     plan_size_source = index["_n"] if "_n" in index.columns else 0
     year_source = index["YEAR"] if "YEAR" in index.columns else 0
@@ -624,11 +624,11 @@ def load_command_search_csv() -> str:
     index["recordkeeper"] = index.get("RK_CANON", "").fillna("")
     index.loc[index["recordkeeper"] == "", "recordkeeper"] = index.get("RK_RAW", "").fillna("")
     index = index[index["EMPLOYER"].fillna("").astype(str).str.strip() != ""].copy()
-    index = index.sort_values(["_plan_size", "_year_sort"], ascending=[False, False])
+    index = index.sort_values(["_year_sort", "_plan_size"], ascending=[False, False])
     index = index.drop_duplicates(subset=["EMPLOYER"], keep="first")
     search_rows = index.rename(
-        columns={"EMPLOYER": "employer_name", "_plan_size": "plan_size"}
-    )[["employer_name", "recordkeeper", "plan_size"]]
+        columns={"EMPLOYER": "employer_name", "YEAR": "filing_year", "_plan_size": "plan_size"}
+    )[["employer_name", "recordkeeper", "filing_year", "plan_size"]]
     return search_rows.to_csv(index=False)
 
 
@@ -715,9 +715,9 @@ def render_command_search(selected_employer: str) -> None:
     function highlightedName(result) {{ const text = String(result.item.employer_name || ""); const match = (result.matches || []).find((candidate) => candidate.key === "employer_name"); const ranges = mergedRanges(match?.indices || []); if (!ranges.length) return escapeHtml(text); let output = ""; let cursor = 0; ranges.forEach(([start,end]) => {{ output += escapeHtml(text.slice(cursor, start)); output += "<strong>" + escapeHtml(text.slice(start, end + 1)) + "</strong>"; cursor = end + 1; }}); output += escapeHtml(text.slice(cursor)); return output; }}
     function setPanelOpen(isOpen) {{ panel.hidden = !isOpen; input.setAttribute("aria-expanded", String(isOpen)); }}
     function selectResult(result) {{ if (!result?.item?.employer_name) return; const target = new URL(window.parent.location.href); target.searchParams.set("selected_employer", result.item.employer_name); window.parent.location.href = target.toString(); }}
-    function renderResults() {{ const query = input.value.trim(); activeIndex = 0; currentResults = []; if (query.length < 2 || !fuse) {{ list.innerHTML = ""; setPanelOpen(false); return; }} currentResults = fuse.search(query).slice(0, MAX_RESULTS); setPanelOpen(true); if (!currentResults.length) {{ list.innerHTML = '<div class="command-empty">No matches — try a shorter or different name</div>'; return; }} list.innerHTML = currentResults.map((result,index) => {{ const item = result.item; const confidence = confidenceFor(result, query); const sizeLabel = planSizeLabel(item.plan_size); const metaParts = [item.recordkeeper || "Recordkeeper unavailable", sizeLabel].filter(Boolean); return `<button type="button" class="command-item" role="option" data-index="${{index}}" data-active="${{index === activeIndex}}"><span><span class="command-name">${{highlightedName(result)}}</span><span class="command-meta">${{escapeHtml(metaParts.join(" · "))}}</span></span><span class="command-badge ${{badgeClass(confidence)}}">${{confidence}}</span></button>`; }}).join(""); }}
+    function renderResults() {{ const query = input.value.trim(); activeIndex = 0; currentResults = []; if (query.length < 2 || !fuse) {{ list.innerHTML = ""; setPanelOpen(false); return; }} currentResults = fuse.search(query).slice(0, MAX_RESULTS); setPanelOpen(true); if (!currentResults.length) {{ list.innerHTML = '<div class="command-empty">No matches — try a shorter or different name</div>'; return; }} list.innerHTML = currentResults.map((result,index) => {{ const item = result.item; const confidence = confidenceFor(result, query); const sizeLabel = planSizeLabel(item.plan_size); const yearLabel = item.filing_year ? `${{item.filing_year}} filing` : ""; const metaParts = [item.recordkeeper || "Recordkeeper unavailable", yearLabel, sizeLabel].filter(Boolean); return `<button type="button" class="command-item" role="option" data-index="${{index}}" data-active="${{index === activeIndex}}"><span><span class="command-name">${{highlightedName(result)}}</span><span class="command-meta">${{escapeHtml(metaParts.join(" · "))}}</span></span><span class="command-badge ${{badgeClass(confidence)}}">${{confidence}}</span></button>`; }}).join(""); }}
     function updateActiveItem(nextIndex) {{ if (!currentResults.length) return; activeIndex = (nextIndex + currentResults.length) % currentResults.length; document.querySelectorAll(".command-item").forEach((item,index) => {{ item.dataset.active = String(index === activeIndex); if (index === activeIndex) item.scrollIntoView({{ block:"nearest" }}); }}); }}
-    function initializeCommand() {{ if (!window.Papa || !window.Fuse) {{ window.setTimeout(initializeCommand, 40); return; }} const parsed = Papa.parse(CSV_DATA, {{ header:true, dynamicTyping:true, skipEmptyLines:true }}); const database = parsed.data.filter((row) => row.employer_name).sort((a,b) => (Number(b.plan_size) || 0) - (Number(a.plan_size) || 0)); fuse = new Fuse(database, {{ keys:[{{ name:"employer_name", weight:1.0 }}], threshold:.4, includeMatches:true, includeScore:true, minMatchCharLength:2, ignoreLocation:true, shouldSort:false }}); input.value = INITIAL_EMPLOYER || ""; input.focus(); }}
+    function initializeCommand() {{ if (!window.Papa || !window.Fuse) {{ window.setTimeout(initializeCommand, 40); return; }} const parsed = Papa.parse(CSV_DATA, {{ header:true, dynamicTyping:true, skipEmptyLines:true }}); const database = parsed.data.filter((row) => row.employer_name).sort((a,b) => ((Number(b.filing_year) || 0) - (Number(a.filing_year) || 0)) || ((Number(b.plan_size) || 0) - (Number(a.plan_size) || 0))); fuse = new Fuse(database, {{ keys:[{{ name:"employer_name", weight:1.0 }}], threshold:.4, includeMatches:true, includeScore:true, minMatchCharLength:2, ignoreLocation:true, shouldSort:false }}); input.value = INITIAL_EMPLOYER || ""; input.focus(); }}
     input.addEventListener("input", renderResults);
     input.addEventListener("focus", renderResults);
     input.addEventListener("keydown", (event) => {{ if (event.key === "Escape") {{ setPanelOpen(false); input.blur(); return; }} if (event.key === "ArrowDown") {{ event.preventDefault(); updateActiveItem(activeIndex + 1); return; }} if (event.key === "ArrowUp") {{ event.preventDefault(); updateActiveItem(activeIndex - 1); return; }} if (event.key === "Enter" && currentResults.length && !panel.hidden) {{ event.preventDefault(); selectResult(currentResults[activeIndex]); }} }});

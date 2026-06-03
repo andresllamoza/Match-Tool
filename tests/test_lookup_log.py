@@ -82,6 +82,21 @@ class MatcherReasonTest(unittest.TestCase):
                     "SPONS_DFE_EIN": "12-3456789",
                 },
                 {
+                    "EMPLOYER": "ACME INC",
+                    "EMPLOYER_NORM": employer_norm,
+                    "EMPLOYER_COLLAPSED": employer_norm.replace(" ", ""),
+                    "RK_RAW": "FIDELITY INVESTMENTS",
+                    "RK_CANON": "Fidelity Investments",
+                    "TIER": "TIER1",
+                    "YEAR": "2024",
+                    "_n": 100,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "ACME 401K PLAN",
+                    "PLAN_YEAR_BEGIN_DATE": None,
+                    "TOT_PARTCP_BOY_CNT": "100",
+                    "SPONS_DFE_EIN": "12-3456789",
+                },
+                {
                     "EMPLOYER": "AMAZON.COM SERVICES, LLC",
                     "EMPLOYER_NORM": amazon_norm,
                     "EMPLOYER_COLLAPSED": amazon_norm.replace(" ", ""),
@@ -267,11 +282,12 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(results[0].plan_name, "DISNEY RETIREMENT SAVINGS PLAN")
         self.assertEqual(results[0].match_method, "plan_word_boundary")
 
-    def test_match_uses_year_when_plan_begin_date_is_missing(self):
+    def test_match_prefers_newest_year_before_larger_prior_year_plan(self):
         results = self.matcher.match("Acme Inc", top_n=1)
 
         self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].plan_year, "2023")
+        self.assertEqual(results[0].plan_year, "2024")
+        self.assertEqual(results[0].plan_participants, 100)
 
     def test_suggest_employers_returns_existing_partial_matches(self):
         suggestions = self.matcher.suggest_employers("ama", limit=3)

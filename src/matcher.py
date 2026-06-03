@@ -617,7 +617,7 @@ def _curated_override_result(employer_query: str, canonical_query: str) -> Optio
 
 
 def _rank_rows(rows: pd.DataFrame) -> pd.DataFrame:
-    return rows.sort_values(["_tier_rank", "_n", "YEAR"], ascending=[True, False, False])
+    return rows.sort_values(["_tier_rank", "YEAR", "_n"], ascending=[True, False, False])
 
 
 def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
@@ -749,8 +749,8 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         key=lambda item: (
             item[0],
             -int(item[1].get("_tier_rank") or 99),
-            float(item[1].get("_n") or 0),
             int(float(item[1].get("YEAR") or 0)),
+            float(item[1].get("_n") or 0),
         ),
         reverse=True,
     )
@@ -904,8 +904,8 @@ def suggest_employers_from_index(
             item[0],
             item[1],
             -int(item[2].get("_tier_rank") or 99),
-            float(item[2].get("_n") or 0),
             int(float(item[2].get("YEAR") or 0)),
+            float(item[2].get("_n") or 0),
         ),
         reverse=True,
     )
