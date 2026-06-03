@@ -356,6 +356,20 @@ class MatcherReasonTest(unittest.TestCase):
 
 
 class MatcherBuildTest(unittest.TestCase):
+    def test_configured_years_defaults_to_2020_through_2024(self):
+        from src import matcher
+
+        original_years = os.environ.get("DOL_YEARS")
+        try:
+            os.environ.pop("DOL_YEARS", None)
+
+            self.assertEqual(matcher._configured_years(), (2024, 2023, 2022, 2021, 2020))
+        finally:
+            if original_years is None:
+                os.environ.pop("DOL_YEARS", None)
+            else:
+                os.environ["DOL_YEARS"] = original_years
+
     def test_build_master_preserves_plan_level_rows_for_plan_name_matching(self):
         from src import matcher
 
