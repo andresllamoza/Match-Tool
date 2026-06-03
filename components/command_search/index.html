@@ -69,6 +69,14 @@
     function highlightedName(result) { const text = String(result.item.employer_name || ""); const match = (result.matches || []).find((candidate) => candidate.key === "employer_name"); const ranges = mergedRanges(match?.indices || []); if (!ranges.length) return escapeHtml(text); let output = ""; let cursor = 0; ranges.forEach(([start,end]) => { output += escapeHtml(text.slice(cursor, start)); output += "<strong>" + escapeHtml(text.slice(start, end + 1)) + "</strong>"; cursor = end + 1; }); output += escapeHtml(text.slice(cursor)); return output; }
     function setPanelOpen(isOpen) { panel.hidden = !isOpen; input.setAttribute("aria-expanded", String(isOpen)); setFrameHeight(430); }
     function selectResult(result) { if (!result?.item?.employer_name) return; currentSelectedEmployer = result.item.employer_name; input.value = currentSelectedEmployer; setPanelOpen(false); setComponentValue(currentSelectedEmployer); }
+    function isEnterKey(event) { return event.key === "Enter" || event.key === "NumpadEnter" || event.code === "Enter" || event.code === "NumpadEnter" || event.keyCode === 13; }
+    function selectActiveResult(event) { if (!currentResults.length || panel.hidden) return false; event.preventDefault(); event.stopPropagation(); const selectedIndex = Math.max(0, Math.min(activeIndex, currentResults.length - 1)); selectResult(currentResults[selectedIndex]); return true; }
+    function handleCommandKeydown(event) {
+      if (event.key === "Escape") { setPanelOpen(false); input.blur(); return; }
+      if (event.key === "ArrowDown") { event.preventDefault(); event.stopPropagation(); updateActiveItem(activeIndex + 1); return; }
+      if (event.key === "ArrowUp") { event.preventDefault(); event.stopPropagation(); updateActiveItem(activeIndex - 1); return; }
+      if (isEnterKey(event)) selectActiveResult(event);
+    }
     function renderResults() {
       const query = input.value.trim();
       activeIndex = 0;
@@ -88,6 +96,7 @@
       }).join("");
       list.querySelectorAll(".command-item").forEach((button) => {
         button.addEventListener("click", () => selectResult(currentResults[Number(button.dataset.index)]));
+        button.addEventListener("keydown", handleCommandKeydown);
       });
     }
     function updateActiveItem(nextIndex) { if (!currentResults.length) return; activeIndex = (nextIndex + currentResults.length) % currentResults.length; document.querySelectorAll(".command-item").forEach((item,index) => { item.dataset.active = String(index === activeIndex); if (index === activeIndex) item.scrollIntoView({ block:"nearest" }); }); }
@@ -102,7 +111,12 @@
     }
     input.addEventListener("input", renderResults);
     input.addEventListener("focus", renderResults);
-    input.addEventListener("keydown", (event) => { if (event.key === "Escape") { setPanelOpen(false); input.blur(); return; } if (event.key === "ArrowDown") { event.preventDefault(); updateActiveItem(activeIndex + 1); return; } if (event.key === "ArrowUp") { event.preventDefault(); updateActiveItem(activeIndex - 1); return; } if (event.key === "Enter" && currentResults.length && !panel.hidden) { event.preventDefault(); selectResult(currentResults[activeIndex]); } });
+    input.addEventListener("keydown", handleCommandKeydown);
+    document.addEventListener("keydown", (event) => {
+      if (event.target === input) return;
+      if (!root.contains(event.target) && panel.hidden) return;
+      handleCommandKeydown(event);
+    });
     document.addEventListener("mousedown", (event) => { if (!root.contains(event.target)) setPanelOpen(false); });
     root.addEventListener("focusout", () => { window.setTimeout(() => { if (!root.contains(document.activeElement)) setPanelOpen(false); }, 80); });
     window.addEventListener("message", (event) => { if (event.data?.type !== "streamlit:render") return; initializeCommand(event.data.args || {}); });
