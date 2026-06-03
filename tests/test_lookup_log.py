@@ -62,6 +62,8 @@ class MatcherReasonTest(unittest.TestCase):
         disney_hourly_plan_norm = matcher.canonicalize_employer(
             "Disney Hourly Savings and Investment Plan"
         )
+        citigroup_norm = matcher.canonicalize_employer("Citigroup Inc")
+        citi_trends_norm = matcher.canonicalize_employer("Citi Trends Inc")
         matcher._DATAFRAME_CACHE = pd.DataFrame(
             [
                 {
@@ -143,6 +145,44 @@ class MatcherReasonTest(unittest.TestCase):
                     "PLAN_YEAR_BEGIN_DATE": "2023-01-01",
                     "TOT_PARTCP_BOY_CNT": "200581",
                     "SPONS_DFE_EIN": "560906609",
+                },
+                {
+                    "EMPLOYER": "CITIGROUP INC",
+                    "EMPLOYER_NORM": citigroup_norm,
+                    "EMPLOYER_COLLAPSED": citigroup_norm.replace(" ", ""),
+                    "RK_RAW": "EMPOWER",
+                    "RK_CANON": "Empower Retirement",
+                    "TIER": "TIER1",
+                    "YEAR": "2024",
+                    "_n": 210000,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "CITIGROUP 401(K) PLAN",
+                    "PLAN_NORM": matcher.canonicalize_employer("Citigroup 401(k) Plan"),
+                    "PLAN_COLLAPSED": matcher.canonicalize_employer(
+                        "Citigroup 401(k) Plan"
+                    ).replace(" ", ""),
+                    "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                    "TOT_PARTCP_BOY_CNT": "210000",
+                    "SPONS_DFE_EIN": "13-3214963",
+                },
+                {
+                    "EMPLOYER": "CITI TRENDS INC",
+                    "EMPLOYER_NORM": citi_trends_norm,
+                    "EMPLOYER_COLLAPSED": citi_trends_norm.replace(" ", ""),
+                    "RK_RAW": "VOYA",
+                    "RK_CANON": "Voya",
+                    "TIER": "TIER1",
+                    "YEAR": "2024",
+                    "_n": 2500,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "CITI TRENDS 401(K) PLAN",
+                    "PLAN_NORM": matcher.canonicalize_employer("Citi Trends 401(k) Plan"),
+                    "PLAN_COLLAPSED": matcher.canonicalize_employer(
+                        "Citi Trends 401(k) Plan"
+                    ).replace(" ", ""),
+                    "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                    "TOT_PARTCP_BOY_CNT": "2500",
+                    "SPONS_DFE_EIN": "52-2150697",
                 },
                 {
                     "EMPLOYER": "ALPHA RETAIL LLC",
@@ -287,6 +327,22 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(suggestions[0].employer_name, "TWDC ENTERPRISES 18 CORP.")
         self.assertEqual(suggestions[0].recordkeeper, "Fidelity Investments")
         self.assertEqual(suggestions[0].match_method, "plan_contains")
+
+    def test_match_uses_citi_brand_alias_for_citigroup(self):
+        results = self.matcher.match("Citi", top_n=2)
+
+        self.assertGreaterEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "CITIGROUP INC")
+        self.assertEqual(results[0].recordkeeper, "Empower Retirement")
+        self.assertEqual(results[0].match_method, "brand_alias")
+
+    def test_suggest_employers_ranks_citigroup_before_citi_trends_for_citi(self):
+        suggestions = self.matcher.suggest_employers("Citi", limit=2)
+
+        self.assertGreaterEqual(len(suggestions), 2)
+        self.assertEqual(suggestions[0].employer_name, "CITIGROUP INC")
+        self.assertEqual(suggestions[0].match_method, "brand_alias")
+        self.assertEqual(suggestions[1].employer_name, "CITI TRENDS INC")
 
     def test_match_overrides_bank_of_america_pension_row_to_merrill(self):
         results = self.matcher.match("bank of america", top_n=1)
