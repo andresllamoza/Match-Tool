@@ -51,11 +51,11 @@ class EmployerSuggestion:
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
-MASTER_CACHE_VERSION = "7"
+MASTER_CACHE_VERSION = "6"
 
-# Prefer the newest complete DOL filing year, then fall back through older
-# releases for plans that have not filed recently or have changed sponsors.
-DEFAULT_YEARS = (2024, 2023, 2022, 2021, 2020)
+# Prefer the newest complete DOL filing year and keep 2023 as a fallback for
+# plans that have not yet filed or were only present in the original MVP data.
+DEFAULT_YEARS = (2024, 2023)
 TIER_RANK = {"TIER1": 1, "TIER2": 2}
 TIER1_RELATION = r"RECORDKEEPER|RECORD KEEPER|RECORDKEEPING|RECORD KEEPING|PLAN RECORDKEEPER"
 TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
@@ -119,6 +119,9 @@ SUGGESTION_GENERIC_TOKENS = {
     "SERVICES",
     "SYSTEM",
     "SYSTEMS",
+}
+BRAND_ALIAS_TARGETS = {
+    "CITI": ("CITIGROUP",),
 }
 
 CANONICAL_MAP = [
@@ -550,6 +553,18 @@ def _is_meaningful_suggestion_token(token: str) -> bool:
     )
 
 
+def _brand_alias_targets(canonical_query: str) -> tuple[str, ...]:
+    return BRAND_ALIAS_TARGETS.get(canonical_query, ())
+
+
+def _brand_alias_rows(index: pd.DataFrame, alias_target: str) -> pd.DataFrame:
+    employer_norms = _text_column(index, "EMPLOYER_NORM")
+    return index[
+        (employer_norms == alias_target)
+        | employer_norms.str.startswith(f"{alias_target} ", na=False)
+    ]
+
+
 def _candidate_result(
     employer_query: str,
     row: pd.Series,
@@ -647,6 +662,19 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
             "exact_normalized",
             "The normalized input exactly matched the normalized DOL employer name.",
         )
+
+    for alias_target in _brand_alias_targets(canonical_query):
+        alias_rows = _brand_alias_rows(df, alias_target)
+        if not alias_rows.empty:
+            add_rows(
+                alias_rows,
+                0.98,
+                "brand_alias",
+                (
+                    f'"{employer_query}" is a known shorthand for {alias_target}; '
+                    "the result comes from matching that filing name."
+                ),
+            )
 
     query_pattern = r"\b" + re.escape(canonical_query) + r"\b"
     boundary_rows = df[df["EMPLOYER_NORM"].str.contains(query_pattern, na=False, regex=True)]
@@ -797,6 +825,11 @@ def suggest_employers_from_index(
     exact_rows = index[employer_norms == canonical_query]
     if not exact_rows.empty:
         add_rows(exact_rows, 4, 1.0, "exact_normalized")
+
+    for alias_target in _brand_alias_targets(canonical_query):
+        alias_rows = _brand_alias_rows(index, alias_target)
+        if not alias_rows.empty:
+            add_rows(alias_rows, 5, 0.98, "brand_alias")
 
     prefix_rows = index[employer_norms.str.startswith(canonical_query)]
     if not prefix_rows.empty:

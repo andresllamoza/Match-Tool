@@ -649,6 +649,13 @@ def suggestion_detail(suggestion: EmployerSuggestion) -> str:
 def render_employer_suggestions(
     employer_query: str,
     suggestions: list[EmployerSuggestion],
+    *,
+    show_empty: bool = True,
+    header: str = "Related names found in filings",
+    caption: str = (
+        "These are possible legal filing names for the employer you entered. "
+        "Nothing is pre-selected; use one only when it matches the company you meant."
+    ),
 ) -> None:
     visible_suggestions = [
         suggestion
@@ -656,17 +663,15 @@ def render_employer_suggestions(
         if suggestion.employer_name.strip().lower() != employer_query.strip().lower()
     ]
     if not visible_suggestions:
-        st.info("No matching employer found.")
+        if show_empty:
+            st.info("No matching employer found.")
         return
 
     st.markdown(
         '<div class="suggestions-panel">'
         '<div class="suggestions-kicker">Filing name intelligence</div>'
-        '<div class="suggestions-header">Related names found in filings</div>'
-        '<div class="suggestions-caption">'
-        "These are possible legal filing names for the employer you entered. "
-        "Nothing is pre-selected; use one only when it matches the company you meant."
-        "</div>"
+        f'<div class="suggestions-header">{html.escape(header)}</div>'
+        f'<div class="suggestions-caption">{html.escape(caption)}</div>'
         "</div>",
         unsafe_allow_html=True,
     )
@@ -713,6 +718,28 @@ employer_query = st.text_input(
     on_change=reset_lookup_feedback,
 )
 lookup_employer = employer_query.strip()
+proactive_suggestions: list[EmployerSuggestion] = []
+
+if lookup_employer:
+    try:
+        employer_index = load_cached_employer_index()
+        proactive_suggestions = suggest_employers_from_index(
+            lookup_employer,
+            employer_index,
+            limit=SUGGESTION_LIMIT,
+        )
+        render_employer_suggestions(
+            lookup_employer,
+            proactive_suggestions,
+            show_empty=False,
+            header="Suggested filing names",
+            caption=(
+                "Pick a legal filing name if it matches the company you meant. "
+                "This helps distinguish brands with similar names."
+            ),
+        )
+    except Exception as exc:
+        st.warning(f"Suggestions could not be loaded: {exc}")
 
 if lookup_employer:
     with st.spinner("Looking up..."):
@@ -765,12 +792,13 @@ if lookup_employer:
             "</div>",
             unsafe_allow_html=True,
         )
-        st.button(
-            "Show related filing names",
-            key="show_related_names_no_match",
-            on_click=show_employer_suggestions,
-            args=(lookup_employer,),
-        )
+        if not proactive_suggestions:
+            st.button(
+                "Show related filing names",
+                key="show_related_names_no_match",
+                on_click=show_employer_suggestions,
+                args=(lookup_employer,),
+            )
     else:
         top = results[0]
         near_misses = results[1:]
@@ -843,6 +871,7 @@ if lookup_employer:
     if (
         st.session_state.get("show_employer_suggestions")
         and st.session_state.get("suggestion_query") == lookup_employer
+        and not proactive_suggestions
     ):
         try:
             employer_index = load_cached_employer_index()
