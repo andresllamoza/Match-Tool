@@ -51,11 +51,11 @@ class EmployerSuggestion:
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
-MASTER_CACHE_VERSION = "6"
+MASTER_CACHE_VERSION = "7"
 
-# Prefer the newest complete DOL filing year and keep 2023 as a fallback for
-# plans that have not yet filed or were only present in the original MVP data.
-DEFAULT_YEARS = (2024, 2023)
+# Prefer the newest complete DOL filing year, then fall back through older
+# releases for plans that have not filed recently or have changed sponsors.
+DEFAULT_YEARS = (2024, 2023, 2022, 2021, 2020)
 TIER_RANK = {"TIER1": 1, "TIER2": 2}
 TIER1_RELATION = r"RECORDKEEPER|RECORD KEEPER|RECORDKEEPING|RECORD KEEPING|PLAN RECORDKEEPER"
 TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
@@ -617,7 +617,7 @@ def _curated_override_result(employer_query: str, canonical_query: str) -> Optio
 
 
 def _rank_rows(rows: pd.DataFrame) -> pd.DataFrame:
-    return rows.sort_values(["_tier_rank", "_n", "YEAR"], ascending=[True, False, False])
+    return rows.sort_values(["_tier_rank", "YEAR", "_n"], ascending=[True, False, False])
 
 
 def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
@@ -749,8 +749,8 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         key=lambda item: (
             item[0],
             -int(item[1].get("_tier_rank") or 99),
-            float(item[1].get("_n") or 0),
             int(float(item[1].get("YEAR") or 0)),
+            float(item[1].get("_n") or 0),
         ),
         reverse=True,
     )
@@ -904,8 +904,8 @@ def suggest_employers_from_index(
             item[0],
             item[1],
             -int(item[2].get("_tier_rank") or 99),
-            float(item[2].get("_n") or 0),
             int(float(item[2].get("YEAR") or 0)),
+            float(item[2].get("_n") or 0),
         ),
         reverse=True,
     )
