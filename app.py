@@ -7,6 +7,7 @@ Run locally: streamlit run app.py
 import csv
 from datetime import datetime, timezone
 import html
+import time
 
 import pandas as pd
 import streamlit as st
@@ -442,6 +443,53 @@ st.markdown(
         margin-top: 0.35rem;
     }
 
+
+    .batch-panel {
+        margin: 1.8rem 0 1.25rem;
+        padding: 1.35rem 1.45rem;
+        border: 1px solid rgba(232, 220, 198, 0.95);
+        border-radius: 26px;
+        background: rgba(255, 252, 244, 0.86);
+        box-shadow: 0 16px 36px rgba(7, 20, 38, 0.07);
+    }
+
+    .batch-title {
+        margin: 0 0 0.35rem;
+        color: var(--pb-navy);
+        font-size: 1.18rem;
+        font-weight: 850;
+        letter-spacing: -0.02em;
+    }
+
+    .batch-copy {
+        margin: 0;
+        color: var(--pb-muted);
+        font-size: 0.92rem;
+        line-height: 1.6;
+    }
+
+    .batch-summary {
+        margin: 1rem 0;
+        padding: 1rem 1.1rem;
+        border: 1px solid rgba(255, 178, 0, 0.34);
+        border-radius: 22px;
+        background: #FFF7E6;
+        color: var(--pb-navy);
+        box-shadow: 0 12px 28px rgba(7, 20, 38, 0.06);
+    }
+
+    .batch-summary-title {
+        margin: 0 0 0.3rem;
+        font-size: 1rem;
+        font-weight: 850;
+    }
+
+    .batch-summary-meta {
+        color: #6B5B40;
+        font-size: 0.86rem;
+        font-weight: 650;
+    }
+
     div[data-testid="stExpander"] details {
         border: 1px solid rgba(232, 220, 198, 0.95);
         border-radius: 22px;
@@ -768,6 +816,189 @@ def render_employer_search(selected_employer: str) -> str:
     return ""
 
 
+BATCH_EMPLOYER_COLUMNS = ("name", "employer", "employer_name", "company")
+BATCH_CHUNK_SIZE = 50
+
+
+def detect_employer_column(columns: list[str]) -> str:
+    normalized_columns = {str(column).strip().lower(): column for column in columns}
+    for candidate in BATCH_EMPLOYER_COLUMNS:
+        if candidate in normalized_columns:
+            return normalized_columns[candidate]
+    return columns[0]
+
+
+def batch_result_row(input_name: str) -> dict[str, object]:
+    cleaned_name = str(input_name or "").strip()
+    if not cleaned_name:
+        return {
+            "Input name": "",
+            "Matched employer": "",
+            "Recordkeeper": "No match found",
+            "Confidence": "none",
+            "Plan participants": "",
+            "Data year": "",
+        }
+
+    results = match(cleaned_name, top_n=1)
+    if not results:
+        return {
+            "Input name": cleaned_name,
+            "Matched employer": "",
+            "Recordkeeper": "No match found",
+            "Confidence": "none",
+            "Plan participants": "",
+            "Data year": "",
+        }
+
+    top = results[0]
+    confidence_label, _, _ = confidence_tier(top)
+    return {
+        "Input name": cleaned_name,
+        "Matched employer": top.matched_employer_name,
+        "Recordkeeper": top.recordkeeper or "No match found",
+        "Confidence": confidence_label,
+        "Plan participants": top.plan_participants or "",
+        "Data year": filing_year(top) or "",
+    }
+
+
+def confidence_dot_label(value: object) -> str:
+    value_text = str(value or "none").upper()
+    if value_text == "HIGH":
+        return "● HIGH"
+    if value_text == "MEDIUM":
+        return "● MEDIUM"
+    if value_text == "LOW":
+        return "● LOW"
+    return "none"
+
+
+def style_batch_results(results: pd.DataFrame):
+    display_results = results.copy()
+    display_results["Confidence"] = display_results["Confidence"].apply(confidence_dot_label)
+
+    def style_row(row: pd.Series) -> list[str]:
+        if row.get("Recordkeeper") == "No match found":
+            return ["color: #8A8F9C; background-color: #F7F8FA"] * len(row)
+        return [""] * len(row)
+
+    def style_confidence(value: object) -> str:
+        value_text = str(value)
+        if "HIGH" in value_text:
+            return "color: #9A6200; font-weight: 800"
+        if "MEDIUM" in value_text:
+            return "color: #B5762B; font-weight: 800"
+        if "LOW" in value_text:
+            return "color: #667085; font-weight: 800"
+        return "color: #8A8F9C"
+
+    styled = display_results.style.apply(style_row, axis=1)
+    if hasattr(styled, "map"):
+        return styled.map(style_confidence, subset=["Confidence"])
+    return styled.applymap(style_confidence, subset=["Confidence"])
+
+
+def render_batch_results(results: pd.DataFrame) -> None:
+    total_count = len(results)
+    matched_count = int((results["Recordkeeper"] != "No match found").sum())
+    match_rate = (matched_count / total_count * 100) if total_count else 0.0
+    confidence_counts = results["Confidence"].value_counts().to_dict()
+    high_count = int(confidence_counts.get("HIGH", 0))
+    medium_count = int(confidence_counts.get("MEDIUM", 0))
+    low_count = int(confidence_counts.get("LOW", 0))
+    no_match_count = int(confidence_counts.get("none", 0))
+
+    st.markdown(
+        '<div class="batch-summary">'
+        f'<div class="batch-summary-title">Matched {matched_count:,} of {total_count:,} employers ({match_rate:.1f}%)</div>'
+        f'<div class="batch-summary-meta">{high_count:,} high confidence · {medium_count:,} medium · {low_count:,} low · {no_match_count:,} no match</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    st.dataframe(style_batch_results(results), hide_index=True, use_container_width=True)
+    st.download_button(
+        "Download results as CSV",
+        results.to_csv(index=False).encode("utf-8"),
+        file_name="batch_recordkeeper_lookup_results.csv",
+        mime="text/csv",
+        key="download_batch_lookup_results",
+    )
+
+
+def render_batch_lookup() -> None:
+    st.markdown(
+        '<div class="batch-panel">'
+        '<div class="batch-title">Batch lookup</div>'
+        '<p class="batch-copy">Upload a CSV with employer names. We\'ll match each one against the DOL database.</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    uploaded_file = st.file_uploader(
+        "Upload employer CSV",
+        type=["csv"],
+        key="batch_lookup_upload",
+        help="CSV only. We will auto-detect the employer-name column.",
+    )
+    if uploaded_file is None:
+        st.session_state.pop("batch_lookup_upload_signature", None)
+        st.session_state.pop("batch_lookup_results", None)
+        return
+
+    upload_signature = (uploaded_file.name, getattr(uploaded_file, "size", None))
+    if st.session_state.get("batch_lookup_upload_signature") != upload_signature:
+        st.session_state["batch_lookup_upload_signature"] = upload_signature
+        st.session_state.pop("batch_lookup_results", None)
+
+    try:
+        uploaded = pd.read_csv(uploaded_file, dtype=str).fillna("")
+    except Exception as exc:
+        st.error(f"Could not read CSV: {exc}")
+        return
+
+    if uploaded.empty or len(uploaded.columns) == 0:
+        st.warning("The uploaded CSV appears to be empty.")
+        return
+
+    employer_column = detect_employer_column(list(uploaded.columns))
+    employer_names = uploaded[employer_column].fillna("").astype(str).tolist()
+    total_count = len(employer_names)
+    st.caption(f"Using `{employer_column}` as the employer-name column. {total_count:,} rows found.")
+
+    if not st.button("Run batch lookup", key="run_batch_lookup", type="primary"):
+        existing_results = st.session_state.get("batch_lookup_results")
+        if isinstance(existing_results, pd.DataFrame) and not existing_results.empty:
+            render_batch_results(existing_results)
+        return
+
+    progress = st.progress(0, text=f"Matching 0 / {total_count:,}...")
+    rows: list[dict[str, object]] = []
+    for start in range(0, total_count, BATCH_CHUNK_SIZE):
+        chunk = employer_names[start : start + BATCH_CHUNK_SIZE]
+        rows.extend(batch_result_row(name) for name in chunk)
+        matched_so_far = min(start + len(chunk), total_count)
+        progress.progress(
+            matched_so_far / total_count if total_count else 1.0,
+            text=f"Matching {matched_so_far:,} / {total_count:,}...",
+        )
+        time.sleep(0.01)
+    progress.empty()
+
+    results = pd.DataFrame(
+        rows,
+        columns=[
+            "Input name",
+            "Matched employer",
+            "Recordkeeper",
+            "Confidence",
+            "Plan participants",
+            "Data year",
+        ],
+    )
+    st.session_state["batch_lookup_results"] = results
+    render_batch_results(results)
+
+
 st.markdown(
     '<div class="tool-header">'
     '<div class="tool-kicker"><span class="tool-kicker-dot"></span>PensionBee internal</div>'
@@ -922,6 +1153,9 @@ else:
         """,
         unsafe_allow_html=True,
     )
+
+render_batch_lookup()
+
 
 with st.expander("Master list of entered attempts"):
     attempts = read_lookup_attempts()
