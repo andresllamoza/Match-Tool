@@ -7,11 +7,9 @@ Run locally: streamlit run app.py
 import csv
 from datetime import datetime, timezone
 import html
-import json
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 from src.lookup_log import append_lookup_attempt, read_lookup_attempts
 from src.matcher import (
@@ -611,25 +609,24 @@ def render_provider_feedback_form(lookup_employer: str, result: MatchResult) -> 
         st.success("Thanks - feedback captured for review.")
 
 
-@st.cache_data(show_spinner="Preparing employer command menu...")
-def load_command_search_csv() -> str:
+@st.cache_data(show_spinner="Preparing employer search options...")
+def load_employer_search_options() -> pd.DataFrame:
     index = employer_search_index().copy()
     if index.empty:
-        return "employer_name,recordkeeper,filing_year,plan_size\n"
+        return pd.DataFrame(columns=["employer_name", "recordkeeper", "filing_year", "plan_size"])
 
     plan_size_source = index["_n"] if "_n" in index.columns else 0
     year_source = index["YEAR"] if "YEAR" in index.columns else 0
-    index["_plan_size"] = pd.to_numeric(plan_size_source, errors="coerce").fillna(0)
-    index["_year_sort"] = pd.to_numeric(year_source, errors="coerce").fillna(0)
+    index["_plan_size"] = pd.to_numeric(plan_size_source, errors="coerce").fillna(0).astype(int)
+    index["_year_sort"] = pd.to_numeric(year_source, errors="coerce").fillna(0).astype(int)
     index["recordkeeper"] = index.get("RK_CANON", "").fillna("")
     index.loc[index["recordkeeper"] == "", "recordkeeper"] = index.get("RK_RAW", "").fillna("")
     index = index[index["EMPLOYER"].fillna("").astype(str).str.strip() != ""].copy()
     index = index.sort_values(["_year_sort", "_plan_size"], ascending=[False, False])
     index = index.drop_duplicates(subset=["EMPLOYER"], keep="first")
-    search_rows = index.rename(
+    return index.rename(
         columns={"EMPLOYER": "employer_name", "YEAR": "filing_year", "_plan_size": "plan_size"}
-    )[["employer_name", "recordkeeper", "filing_year", "plan_size"]]
-    return search_rows.to_csv(index=False)
+    )[["employer_name", "recordkeeper", "filing_year", "plan_size"]].reset_index(drop=True)
 
 
 def selected_employer_from_query_params() -> str:
@@ -648,89 +645,43 @@ def reset_lookup_feedback() -> None:
     st.session_state.pop("provider_feedback_submitted", None)
 
 
-def render_command_search(selected_employer: str) -> None:
-    csv_payload = load_command_search_csv()
-    component_html = f"""
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <style>
-    :root {{ --pb-card:#FFFCF4; --pb-navy:#071426; --pb-muted:#667085; --pb-gold:#FFB200; --pb-amber-soft:#FFF1D1; --pb-gray-soft:#F1F3F5; --pb-border:#E8DCC6; --pb-shadow:0 24px 70px rgba(7,20,38,.14); }}
-    * {{ box-sizing:border-box; }}
-    body {{ margin:0; background:transparent; color:var(--pb-navy); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }}
-    .command-shell {{ position:relative; padding:0 .15rem 1rem; }}
-    .command-label {{ display:block; margin:0 0 .48rem .12rem; color:var(--pb-navy); font-size:.88rem; font-weight:800; letter-spacing:-.01em; }}
-    .command-input-wrap {{ display:flex; align-items:center; gap:.75rem; min-height:4.1rem; padding:.75rem 1rem; border:1.5px solid #E2D3B7; border-radius:22px; background:rgba(255,252,244,.97); box-shadow:0 18px 44px rgba(7,20,38,.09); transition:border-color 160ms ease, box-shadow 160ms ease, background 160ms ease; }}
-    .command-input-wrap:focus-within {{ border-color:var(--pb-gold); background:#fff; box-shadow:0 0 0 4px rgba(255,178,0,.16),0 22px 54px rgba(7,20,38,.13); }}
-    .command-icon {{ flex:0 0 auto; color:#9A6200; }}
-    .command-input {{ width:100%; border:0; outline:0; background:transparent; color:var(--pb-navy); font-size:1.08rem; font-weight:650; letter-spacing:-.01em; }}
-    .command-input::placeholder {{ color:#9AA1AA; font-weight:560; }}
-    .command-shortcut {{ flex:0 0 auto; padding:.24rem .44rem; border:1px solid rgba(232,220,198,.96); border-radius:9px; background:rgba(255,241,209,.72); color:#8A5700; font-size:.68rem; font-weight:800; letter-spacing:.04em; }}
-    .command-panel {{ position:absolute; z-index:20; top:5.95rem; left:.15rem; right:.15rem; overflow:hidden; border:1px solid var(--pb-border); border-radius:24px; background:rgba(255,252,244,.98); box-shadow:var(--pb-shadow); animation:menu-in 140ms ease-out; }}
-    .command-panel[hidden] {{ display:none; }}
-    .command-panel-header {{ display:flex; justify-content:space-between; gap:1rem; padding:.78rem .95rem .58rem; border-bottom:1px solid rgba(232,220,198,.72); color:#7D705C; font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }}
-    .command-list {{ max-height:22rem; overflow-y:auto; padding:.4rem; }}
-    .command-item {{ display:block; width:100%; padding:.82rem .9rem; border:0; border-radius:16px; background:transparent; color:inherit; cursor:pointer; text-align:left; text-decoration:none; }}
-    .command-item:hover,.command-item[data-active="true"] {{ background:#FFF3CD; box-shadow:inset 0 0 0 1px rgba(255,178,0,.35); }}
-    .command-row-content {{ display:grid; grid-template-columns:1fr auto; gap:.85rem; align-items:start; width:100%; }}
-    .command-name {{ color:var(--pb-navy); font-size:.95rem; font-weight:760; line-height:1.35; }}
-    .command-name strong {{ font-weight:900; color:#2A1A00; background:rgba(255,178,0,.28); border-radius:4px; padding:0 .05rem; }}
-    .command-meta {{ display:block; margin-top:.22rem; color:var(--pb-muted); font-size:.78rem; font-weight:620; line-height:1.35; }}
-    .command-badge {{ align-self:start; min-width:4.2rem; padding:.34rem .5rem; border-radius:999px; font-size:.66rem; font-weight:900; letter-spacing:.08em; text-align:center; }}
-    .badge-high {{ background:var(--pb-gold); color:#2A1A00; box-shadow:0 8px 20px rgba(255,178,0,.23); }}
-    .badge-medium {{ background:var(--pb-amber-soft); color:#8A5700; border:1px solid rgba(217,140,0,.24); }}
-    .badge-low {{ background:var(--pb-gray-soft); color:#56616D; border:1px solid #D9DEE4; }}
-    .command-empty {{ padding:1.25rem 1rem; color:var(--pb-muted); font-size:.92rem; font-weight:680; text-align:center; }}
-    @keyframes menu-in {{ from {{ opacity:0; transform:translateY(-.35rem) scale(.99); }} to {{ opacity:1; transform:translateY(0) scale(1); }} }}
-  </style>
-</head>
-<body>
-  <div class="command-shell" id="command-root">
-    <label class="command-label" for="employer-command-input">Employer name</label>
-    <div class="command-input-wrap">
-      <svg class="command-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle><path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
-      <input id="employer-command-input" class="command-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="employer-command-results" autocomplete="off" placeholder="Search employers by filing name..." />
-      <span class="command-shortcut">ESC</span>
-    </div>
-    <div class="command-panel" id="command-panel" hidden><div class="command-panel-header"><span>Employers</span><span>Enter to select</span></div><div class="command-list" id="employer-command-results" role="listbox"></div></div>
-  </div>
-  <script>
-    const CSV_DATA = {json.dumps(csv_payload)};
-    const INITIAL_EMPLOYER = {json.dumps(selected_employer)};
-    const MAX_RESULTS = {SUGGESTION_LIMIT};
-    const root = document.getElementById("command-root");
-    const input = document.getElementById("employer-command-input");
-    const panel = document.getElementById("command-panel");
-    const list = document.getElementById("employer-command-results");
-    let fuse = null;
-    let activeIndex = 0;
-    let currentResults = [];
-    function escapeHtml(value) {{ return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }}
-    function planSizeLabel(value) {{ const size = Number(value) || 0; return size ? new Intl.NumberFormat("en-US").format(size) + " participants" : ""; }}
-    function confidenceFor(result, query) {{ const name = String(result.item.employer_name || "").toLowerCase(); const q = query.trim().toLowerCase(); if (name === q || name.startsWith(q)) return "HIGH"; if ((result.score ?? 1) <= .18) return "HIGH"; if ((result.score ?? 1) <= .32) return "MEDIUM"; return "LOW"; }}
-    function badgeClass(label) {{ return label === "HIGH" ? "badge-high" : label === "MEDIUM" ? "badge-medium" : "badge-low"; }}
-    function mergedRanges(indices) {{ const ranges = []; [...(indices || [])].sort((a,b)=>a[0]-b[0]).forEach(([start,end]) => {{ const last = ranges[ranges.length - 1]; if (last && start <= last[1] + 1) last[1] = Math.max(last[1], end); else ranges.push([start,end]); }}); return ranges; }}
-    function highlightedName(result) {{ const text = String(result.item.employer_name || ""); const match = (result.matches || []).find((candidate) => candidate.key === "employer_name"); const ranges = mergedRanges(match?.indices || []); if (!ranges.length) return escapeHtml(text); let output = ""; let cursor = 0; ranges.forEach(([start,end]) => {{ output += escapeHtml(text.slice(cursor, start)); output += "<strong>" + escapeHtml(text.slice(start, end + 1)) + "</strong>"; cursor = end + 1; }}); output += escapeHtml(text.slice(cursor)); return output; }}
-    function setPanelOpen(isOpen) {{ panel.hidden = !isOpen; input.setAttribute("aria-expanded", String(isOpen)); }}
-    function selectedUrl(employerName) {{ const target = new URL(window.parent.location.href); target.searchParams.set("selected_employer", employerName); return target.toString(); }}
-    function selectResult(result) {{ if (!result?.item?.employer_name) return; window.open(selectedUrl(result.item.employer_name), "_top"); }}
-    function renderResults() {{ const query = input.value.trim(); activeIndex = 0; currentResults = []; if (query.length < 2 || !fuse) {{ list.innerHTML = ""; setPanelOpen(false); return; }} currentResults = fuse.search(query).slice(0, MAX_RESULTS); setPanelOpen(true); if (!currentResults.length) {{ list.innerHTML = '<div class="command-empty">No matches — try a shorter or different name</div>'; return; }} list.innerHTML = currentResults.map((result,index) => {{ const item = result.item; const confidence = confidenceFor(result, query); const sizeLabel = planSizeLabel(item.plan_size); const yearLabel = item.filing_year ? `${{item.filing_year}} filing` : ""; const metaParts = [item.recordkeeper || "Recordkeeper unavailable", yearLabel, sizeLabel].filter(Boolean); return `<a class="command-item" role="option" href="${{escapeHtml(selectedUrl(item.employer_name))}}" target="_top" data-index="${{index}}" data-value="${{escapeHtml(`${{item.employer_name}}-emp-${{index}}`)}}" data-active="${{index === activeIndex}}"><div class="command-row-content"><div><span class="command-name">${{highlightedName(result)}}</span><span class="command-meta">${{escapeHtml(metaParts.join(" · "))}}</span></div><span class="command-badge ${{badgeClass(confidence)}}">${{confidence}}</span></div></a>`; }}).join(""); }}
-    function updateActiveItem(nextIndex) {{ if (!currentResults.length) return; activeIndex = (nextIndex + currentResults.length) % currentResults.length; document.querySelectorAll(".command-item").forEach((item,index) => {{ item.dataset.active = String(index === activeIndex); if (index === activeIndex) item.scrollIntoView({{ block:"nearest" }}); }}); }}
-    function initializeCommand() {{ if (!window.Papa || !window.Fuse) {{ window.setTimeout(initializeCommand, 40); return; }} const parsed = Papa.parse(CSV_DATA, {{ header:true, dynamicTyping:true, skipEmptyLines:true }}); const database = parsed.data.filter((row) => row.employer_name).sort((a,b) => ((Number(b.filing_year) || 0) - (Number(a.filing_year) || 0)) || ((Number(b.plan_size) || 0) - (Number(a.plan_size) || 0))); fuse = new Fuse(database, {{ keys:[{{ name:"employer_name", weight:1.0 }}], threshold:.4, includeMatches:true, includeScore:true, minMatchCharLength:2, ignoreLocation:true, shouldSort:false }}); input.value = INITIAL_EMPLOYER || ""; input.focus(); }}
-    input.addEventListener("input", renderResults);
-    input.addEventListener("focus", renderResults);
-    input.addEventListener("keydown", (event) => {{ if (event.key === "Escape") {{ setPanelOpen(false); input.blur(); return; }} if (event.key === "ArrowDown") {{ event.preventDefault(); updateActiveItem(activeIndex + 1); return; }} if (event.key === "ArrowUp") {{ event.preventDefault(); updateActiveItem(activeIndex - 1); return; }} if (event.key === "Enter" && currentResults.length && !panel.hidden) {{ event.preventDefault(); selectResult(currentResults[activeIndex]); }} }});
-    document.addEventListener("mousedown", (event) => {{ if (!root.contains(event.target)) setPanelOpen(false); }});
-    root.addEventListener("focusout", () => {{ window.setTimeout(() => {{ if (!root.contains(document.activeElement)) setPanelOpen(false); }}, 80); }});
-    initializeCommand();
-  </script>
-</body>
-</html>
-"""
-    components.html(component_html, height=430)
+def render_employer_search(selected_employer: str) -> str:
+    options = load_employer_search_options()
+    if options.empty:
+        st.info("Employer search options could not be loaded.")
+        return selected_employer
+
+    employer_names = options["employer_name"].tolist()
+    option_details = options.set_index("employer_name").to_dict("index")
+
+    def format_employer_option(employer_name: str) -> str:
+        details = option_details.get(employer_name, {})
+        meta_parts = [str(details.get("recordkeeper") or "Recordkeeper unavailable")]
+        filing_year = details.get("filing_year")
+        if filing_year:
+            meta_parts.append(f"{filing_year} filing")
+        plan_size = details.get("plan_size")
+        if plan_size:
+            meta_parts.append(f"{int(plan_size):,} participants")
+        return f"{employer_name} — {' · '.join(meta_parts)}"
+
+    current_index = employer_names.index(selected_employer) if selected_employer in employer_names else None
+    selected = st.selectbox(
+        "Employer name",
+        options=employer_names,
+        index=current_index,
+        format_func=format_employer_option,
+        placeholder="Search employers by filing name...",
+        key="employer_search_select",
+    )
+
+    if selected and selected != selected_employer:
+        reset_lookup_feedback()
+        try:
+            st.query_params["selected_employer"] = selected
+        except AttributeError:
+            st.experimental_set_query_params(selected_employer=selected)
+    return selected or selected_employer
 
 
 st.markdown(
@@ -743,7 +694,7 @@ st.markdown(
 )
 
 lookup_employer = selected_employer_from_query_params()
-render_command_search(lookup_employer)
+lookup_employer = render_employer_search(lookup_employer)
 
 if lookup_employer:
     with st.spinner("Looking up..."):
