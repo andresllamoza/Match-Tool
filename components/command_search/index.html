@@ -60,7 +60,7 @@
     }
     function setComponentReady() { sendStreamlitMessage("streamlit:componentReady", { apiVersion: 1 }); }
     function setFrameHeight(height) { sendStreamlitMessage("streamlit:setFrameHeight", { height }); }
-    function setComponentValue(value) { sendStreamlitMessage("streamlit:setComponentValue", { value }); }
+    function setComponentValue(value) { sendStreamlitMessage("streamlit:setComponentValue", { value, dataType: "json" }); }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
     function planSizeLabel(value) { const size = Number(value) || 0; return size ? new Intl.NumberFormat("en-US").format(size) + " participants" : ""; }
     function confidenceFor(result, query) { const name = String(result.item.employer_name || "").toLowerCase(); const q = query.trim().toLowerCase(); if (name === q || name.startsWith(q)) return "HIGH"; if ((result.score ?? 1) <= .18) return "HIGH"; if ((result.score ?? 1) <= .32) return "MEDIUM"; return "LOW"; }
@@ -95,7 +95,13 @@
         return `<button type="button" class="command-item" role="option" value="${escapeHtml(value)}" data-index="${index}" data-value="${escapeHtml(value)}" data-active="${index === activeIndex}"><div class="command-row-content"><div><span class="command-name">${highlightedName(result)}</span><span class="command-meta">${escapeHtml(metaParts.join(" · "))}</span></div><span class="command-badge ${badgeClass(confidence)}">${confidence}</span></div></button>`;
       }).join("");
       list.querySelectorAll(".command-item").forEach((button) => {
-        button.addEventListener("click", () => selectResult(currentResults[Number(button.dataset.index)]));
+        const chooseButton = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          selectResult(currentResults[Number(button.dataset.index)]);
+        };
+        button.addEventListener("mousedown", chooseButton);
+        button.addEventListener("click", chooseButton);
         button.addEventListener("keydown", handleCommandKeydown);
       });
     }
