@@ -846,13 +846,23 @@ def suggest_employers_from_index(
     def is_related_by_token(employer_norm: object) -> bool:
         if not query_tokens or pd.isna(employer_norm):
             return False
-        employer_tokens = str(employer_norm).split()
-        return any(
-            employer_token.startswith(query_token) or query_token.startswith(employer_token)
-            for query_token in query_tokens
-            for employer_token in employer_tokens
-            if _is_meaningful_suggestion_token(employer_token)
-        )
+        employer_tokens = [
+            token
+            for token in str(employer_norm).split()
+            if _is_meaningful_suggestion_token(token)
+        ]
+        if not employer_tokens:
+            return False
+
+        def token_matches(query_token: str) -> bool:
+            return any(
+                employer_token.startswith(query_token) or query_token.startswith(employer_token)
+                for employer_token in employer_tokens
+            )
+
+        if len(query_tokens) > 1:
+            return all(token_matches(query_token) for query_token in query_tokens)
+        return token_matches(query_tokens[0])
 
     token_rows = index[index["EMPLOYER_NORM"].apply(is_related_by_token)]
     if not token_rows.empty:
@@ -891,6 +901,21 @@ def suggest_employers_from_index(
         for matched_name, score, _ in fuzzy_matches:
             if score < SUGGESTION_FUZZY_THRESHOLD:
                 continue
+            if len(query_tokens) > 1:
+                matched_tokens = [
+                    token
+                    for token in str(matched_name).split()
+                    if _is_meaningful_suggestion_token(token)
+                ]
+                if not all(
+                    any(
+                        matched_token.startswith(query_token)
+                        or query_token.startswith(matched_token)
+                        for matched_token in matched_tokens
+                    )
+                    for query_token in query_tokens
+                ):
+                    continue
             add_rows(
                 index[index["EMPLOYER_NORM"] == matched_name],
                 1,

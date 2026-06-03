@@ -199,22 +199,6 @@ st.markdown(
         box-shadow: var(--pb-shadow);
     }
 
-    .result-card::before {
-        content: "";
-        position: absolute;
-        inset: 0 auto 0 0;
-        width: 0.45rem;
-        background: var(--pb-gold);
-    }
-
-    .result-card.medium-confidence::before {
-        background: #D98C00;
-    }
-
-    .result-card.low-confidence::before,
-    .result-card.no-match::before {
-        background: #A7ADB5;
-    }
 
     .result-eyebrow {
         margin: 0 0 0.55rem;
@@ -387,6 +371,42 @@ st.markdown(
         letter-spacing: 0.08em;
         margin-bottom: 0.2rem;
         text-transform: uppercase;
+    }
+
+    .best-match-card {
+        margin: 0.85rem 0 1rem;
+        padding: 1rem 1.05rem;
+        border: 1px solid rgba(255, 178, 0, 0.46);
+        border-radius: 20px;
+        background: linear-gradient(180deg, #FFF8E8 0%, #FFFCF4 100%);
+        box-shadow: 0 16px 36px rgba(7, 20, 38, 0.08);
+    }
+
+    .best-match-label {
+        display: inline-flex;
+        margin-bottom: 0.45rem;
+        padding: 0.24rem 0.52rem;
+        border-radius: 999px;
+        background: var(--pb-gold);
+        color: #2A1A00;
+        font-size: 0.66rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .best-match-name {
+        color: var(--pb-navy);
+        font-size: 1.05rem;
+        font-weight: 850;
+        line-height: 1.35;
+    }
+
+    .best-match-meta {
+        color: var(--pb-muted);
+        font-size: 0.82rem;
+        font-weight: 620;
+        margin-top: 0.3rem;
     }
 
     .suggestion-row {
@@ -690,31 +710,61 @@ def render_employer_search(selected_employer: str) -> str:
         '<div class="suggestions-panel">'
         '<div class="suggestions-kicker">Employer matches</div>'
         '<div class="suggestions-header">Choose the filing name that matches</div>'
-        '<div class="suggestions-caption">Showing up to 10 similar employer or plan names, not the full database.</div>'
+        '<div class="suggestions-caption">Showing up to 10 similar employer or plan names, with weak partial matches tucked away.</div>'
         '</div>',
         unsafe_allow_html=True,
     )
-    for index, suggestion in enumerate(suggestions[:SUGGESTION_LIMIT]):
-        name = html.escape(suggestion.employer_name)
-        details = html.escape(suggestion_detail(suggestion))
-        confidence = int(round(suggestion.confidence * 100))
-        info_col, action_col = st.columns([0.76, 0.24], vertical_alignment="center")
+
+    top_suggestion = suggestions[0]
+    has_best_match = top_suggestion.confidence >= 0.95
+    other_suggestions = suggestions[1:] if has_best_match else suggestions
+
+    if has_best_match:
+        name = html.escape(top_suggestion.employer_name)
+        details = html.escape(suggestion_detail(top_suggestion))
+        info_col, action_col = st.columns([0.78, 0.22], vertical_alignment="center")
         with info_col:
             st.markdown(
-                '<div class="suggestion-row">'
-                f'<div class="suggestion-name">{name}</div>'
-                f'<div class="suggestion-meta">{details} | {confidence}% name match</div>'
+                '<div class="best-match-card">'
+                '<div class="best-match-label">Best match</div>'
+                f'<div class="best-match-name">{name}</div>'
+                f'<div class="best-match-meta">{details}</div>'
                 '</div>',
                 unsafe_allow_html=True,
             )
         with action_col:
             st.button(
                 "Select",
-                key=f"employer_suggestion_{index}_{suggestion.employer_name}",
+                key=f"best_employer_suggestion_{top_suggestion.employer_name}",
                 on_click=select_employer,
-                args=(suggestion.employer_name,),
+                args=(top_suggestion.employer_name,),
                 use_container_width=True,
             )
+    else:
+        st.warning("No strong employer match yet. Check the similar names below or try a more specific name.")
+
+    if other_suggestions:
+        with st.expander("Other similar names", expanded=not has_best_match):
+            for index, suggestion in enumerate(other_suggestions[: SUGGESTION_LIMIT - 1 if has_best_match else SUGGESTION_LIMIT]):
+                name = html.escape(suggestion.employer_name)
+                details = html.escape(suggestion_detail(suggestion))
+                info_col, action_col = st.columns([0.76, 0.24], vertical_alignment="center")
+                with info_col:
+                    st.markdown(
+                        '<div class="suggestion-row">'
+                        f'<div class="suggestion-name">{name}</div>'
+                        f'<div class="suggestion-meta">{details}</div>'
+                        '</div>',
+                        unsafe_allow_html=True,
+                    )
+                with action_col:
+                    st.button(
+                        "Select",
+                        key=f"employer_suggestion_{index}_{suggestion.employer_name}",
+                        on_click=select_employer,
+                        args=(suggestion.employer_name,),
+                        use_container_width=True,
+                    )
     return ""
 
 

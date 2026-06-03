@@ -64,6 +64,9 @@ class MatcherReasonTest(unittest.TestCase):
         )
         citigroup_norm = matcher.canonicalize_employer("Citigroup Inc")
         citi_trends_norm = matcher.canonicalize_employer("Citi Trends Inc")
+        dollar_general_norm = matcher.canonicalize_employer("Dollar General Corporation")
+        dollar_tree_norm = matcher.canonicalize_employer("Dollar Tree Inc")
+        general_electric_norm = matcher.canonicalize_employer("General Electric Company")
         matcher._DATAFRAME_CACHE = pd.DataFrame(
             [
                 {
@@ -198,6 +201,65 @@ class MatcherReasonTest(unittest.TestCase):
                     "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
                     "TOT_PARTCP_BOY_CNT": "2500",
                     "SPONS_DFE_EIN": "52-2150697",
+                },
+                {
+                    "EMPLOYER": "DOLLAR GENERAL CORPORATION",
+                    "EMPLOYER_NORM": dollar_general_norm,
+                    "EMPLOYER_COLLAPSED": dollar_general_norm.replace(" ", ""),
+                    "RK_RAW": "VOYA",
+                    "RK_CANON": "Voya",
+                    "TIER": "TIER1",
+                    "YEAR": "2024",
+                    "_n": 185000,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "DOLLAR GENERAL 401(K) SAVINGS AND RETIREMENT PLAN",
+                    "PLAN_NORM": matcher.canonicalize_employer(
+                        "Dollar General 401(k) Savings and Retirement Plan"
+                    ),
+                    "PLAN_COLLAPSED": matcher.canonicalize_employer(
+                        "Dollar General 401(k) Savings and Retirement Plan"
+                    ).replace(" ", ""),
+                    "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                    "TOT_PARTCP_BOY_CNT": "185000",
+                    "SPONS_DFE_EIN": "61-0502302",
+                },
+                {
+                    "EMPLOYER": "DOLLAR TREE INC",
+                    "EMPLOYER_NORM": dollar_tree_norm,
+                    "EMPLOYER_COLLAPSED": dollar_tree_norm.replace(" ", ""),
+                    "RK_RAW": "FIDELITY",
+                    "RK_CANON": "Fidelity Investments",
+                    "TIER": "TIER1",
+                    "YEAR": "2024",
+                    "_n": 230000,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "DOLLAR TREE 401(K) PLAN",
+                    "PLAN_NORM": matcher.canonicalize_employer("Dollar Tree 401(k) Plan"),
+                    "PLAN_COLLAPSED": matcher.canonicalize_employer(
+                        "Dollar Tree 401(k) Plan"
+                    ).replace(" ", ""),
+                    "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                    "TOT_PARTCP_BOY_CNT": "230000",
+                    "SPONS_DFE_EIN": "54-1387365",
+                },
+                {
+                    "EMPLOYER": "GENERAL ELECTRIC COMPANY",
+                    "EMPLOYER_NORM": general_electric_norm,
+                    "EMPLOYER_COLLAPSED": general_electric_norm.replace(" ", ""),
+                    "RK_RAW": "FIDELITY",
+                    "RK_CANON": "Fidelity Investments",
+                    "TIER": "TIER1",
+                    "YEAR": "2024",
+                    "_n": 300000,
+                    "_tier_rank": 1,
+                    "PLAN_NAME": "GENERAL ELECTRIC 401(K) PLAN",
+                    "PLAN_NORM": matcher.canonicalize_employer("General Electric 401(k) Plan"),
+                    "PLAN_COLLAPSED": matcher.canonicalize_employer(
+                        "General Electric 401(k) Plan"
+                    ).replace(" ", ""),
+                    "PLAN_YEAR_BEGIN_DATE": "2024-01-01",
+                    "TOT_PARTCP_BOY_CNT": "300000",
+                    "SPONS_DFE_EIN": "14-0689340",
                 },
                 {
                     "EMPLOYER": "ALPHA RETAIL LLC",
@@ -359,6 +421,21 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(suggestions[0].employer_name, "CITIGROUP INC")
         self.assertEqual(suggestions[0].match_method, "brand_alias")
         self.assertEqual(suggestions[1].employer_name, "CITI TRENDS INC")
+
+    def test_suggest_employers_ranks_full_phrase_above_single_word_coincidences(self):
+        suggestions = self.matcher.suggest_employers("dollar general", limit=5)
+
+        self.assertGreaterEqual(len(suggestions), 1)
+        self.assertEqual(suggestions[0].employer_name, "DOLLAR GENERAL CORPORATION")
+        self.assertGreaterEqual(suggestions[0].confidence, 0.95)
+        self.assertNotIn(
+            "DOLLAR TREE INC",
+            [suggestion.employer_name for suggestion in suggestions],
+        )
+        self.assertNotIn(
+            "GENERAL ELECTRIC COMPANY",
+            [suggestion.employer_name for suggestion in suggestions],
+        )
 
     def test_match_overrides_bank_of_america_pension_row_to_merrill(self):
         results = self.matcher.match("bank of america", top_n=1)
