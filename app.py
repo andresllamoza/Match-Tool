@@ -7,11 +7,9 @@ Run locally: streamlit run app.py
 import csv
 from datetime import datetime, timezone
 import html
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 from src.lookup_log import append_lookup_attempt, read_lookup_attempts
 from src.matcher import (
@@ -32,11 +30,6 @@ FEEDBACK_COLUMNS = [
     "suggested_recordkeeper",
     "notes",
 ]
-
-COMMAND_SEARCH_COMPONENT = components.declare_component(
-    "command_search",
-    path=str(Path(__file__).parent / "components" / "command_search"),
-)
 
 
 st.set_page_config(
@@ -616,25 +609,24 @@ def render_provider_feedback_form(lookup_employer: str, result: MatchResult) -> 
         st.success("Thanks - feedback captured for review.")
 
 
-@st.cache_data(show_spinner="Preparing employer command menu...")
-def load_command_search_csv() -> str:
+@st.cache_data(show_spinner="Preparing employer search options...")
+def load_employer_search_options() -> pd.DataFrame:
     index = employer_search_index().copy()
     if index.empty:
-        return "employer_name,recordkeeper,filing_year,plan_size\n"
+        return pd.DataFrame(columns=["employer_name", "recordkeeper", "filing_year", "plan_size"])
 
     plan_size_source = index["_n"] if "_n" in index.columns else 0
     year_source = index["YEAR"] if "YEAR" in index.columns else 0
-    index["_plan_size"] = pd.to_numeric(plan_size_source, errors="coerce").fillna(0)
-    index["_year_sort"] = pd.to_numeric(year_source, errors="coerce").fillna(0)
+    index["_plan_size"] = pd.to_numeric(plan_size_source, errors="coerce").fillna(0).astype(int)
+    index["_year_sort"] = pd.to_numeric(year_source, errors="coerce").fillna(0).astype(int)
     index["recordkeeper"] = index.get("RK_CANON", "").fillna("")
     index.loc[index["recordkeeper"] == "", "recordkeeper"] = index.get("RK_RAW", "").fillna("")
     index = index[index["EMPLOYER"].fillna("").astype(str).str.strip() != ""].copy()
     index = index.sort_values(["_year_sort", "_plan_size"], ascending=[False, False])
     index = index.drop_duplicates(subset=["EMPLOYER"], keep="first")
-    search_rows = index.rename(
+    return index.rename(
         columns={"EMPLOYER": "employer_name", "YEAR": "filing_year", "_plan_size": "plan_size"}
-    )[["employer_name", "recordkeeper", "filing_year", "plan_size"]]
-    return search_rows.to_csv(index=False)
+    )[["employer_name", "recordkeeper", "filing_year", "plan_size"]].reset_index(drop=True)
 
 
 def selected_employer_from_query_params() -> str:
@@ -653,21 +645,43 @@ def reset_lookup_feedback() -> None:
     st.session_state.pop("provider_feedback_submitted", None)
 
 
-def render_command_search(selected_employer: str) -> None:
-    selected = COMMAND_SEARCH_COMPONENT(
-        csv_payload=load_command_search_csv(),
-        selected_employer=selected_employer,
-        suggestion_limit=SUGGESTION_LIMIT,
-        key="employer_command_search",
-        default="",
+def render_employer_search(selected_employer: str) -> str:
+    options = load_employer_search_options()
+    if options.empty:
+        st.info("Employer search options could not be loaded.")
+        return selected_employer
+
+    employer_names = options["employer_name"].tolist()
+    option_details = options.set_index("employer_name").to_dict("index")
+
+    def format_employer_option(employer_name: str) -> str:
+        details = option_details.get(employer_name, {})
+        meta_parts = [str(details.get("recordkeeper") or "Recordkeeper unavailable")]
+        filing_year = details.get("filing_year")
+        if filing_year:
+            meta_parts.append(f"{filing_year} filing")
+        plan_size = details.get("plan_size")
+        if plan_size:
+            meta_parts.append(f"{int(plan_size):,} participants")
+        return f"{employer_name} — {' · '.join(meta_parts)}"
+
+    current_index = employer_names.index(selected_employer) if selected_employer in employer_names else None
+    selected = st.selectbox(
+        "Employer name",
+        options=employer_names,
+        index=current_index,
+        format_func=format_employer_option,
+        placeholder="Search employers by filing name...",
+        key="employer_search_select",
     )
+
     if selected and selected != selected_employer:
         reset_lookup_feedback()
         try:
             st.query_params["selected_employer"] = selected
         except AttributeError:
             st.experimental_set_query_params(selected_employer=selected)
-        st.rerun()
+    return selected or selected_employer
 
 
 st.markdown(
@@ -680,7 +694,7 @@ st.markdown(
 )
 
 lookup_employer = selected_employer_from_query_params()
-render_command_search(lookup_employer)
+lookup_employer = render_employer_search(lookup_employer)
 
 if lookup_employer:
     with st.spinner("Looking up..."):
