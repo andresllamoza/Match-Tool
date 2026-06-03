@@ -14,13 +14,15 @@ import streamlit as st
 from src.lookup_log import append_lookup_attempt, read_lookup_attempts
 from src.matcher import (
     DATA_DIR,
+    EmployerSuggestion,
     MatchResult,
     employer_search_index,
     match,
+    suggest_employers_from_index,
 )
 
 
-SUGGESTION_LIMIT = 8
+SUGGESTION_LIMIT = 10
 FEEDBACK_LOG_FILENAME = "provider_feedback.csv"
 FEEDBACK_COLUMNS = [
     "timestamp_utc",
@@ -609,24 +611,9 @@ def render_provider_feedback_form(lookup_employer: str, result: MatchResult) -> 
         st.success("Thanks - feedback captured for review.")
 
 
-@st.cache_data(show_spinner="Preparing employer search options...")
-def load_employer_search_options() -> pd.DataFrame:
-    index = employer_search_index().copy()
-    if index.empty:
-        return pd.DataFrame(columns=["employer_name", "recordkeeper", "filing_year", "plan_size"])
-
-    plan_size_source = index["_n"] if "_n" in index.columns else 0
-    year_source = index["YEAR"] if "YEAR" in index.columns else 0
-    index["_plan_size"] = pd.to_numeric(plan_size_source, errors="coerce").fillna(0).astype(int)
-    index["_year_sort"] = pd.to_numeric(year_source, errors="coerce").fillna(0).astype(int)
-    index["recordkeeper"] = index.get("RK_CANON", "").fillna("")
-    index.loc[index["recordkeeper"] == "", "recordkeeper"] = index.get("RK_RAW", "").fillna("")
-    index = index[index["EMPLOYER"].fillna("").astype(str).str.strip() != ""].copy()
-    index = index.sort_values(["_year_sort", "_plan_size"], ascending=[False, False])
-    index = index.drop_duplicates(subset=["EMPLOYER"], keep="first")
-    return index.rename(
-        columns={"EMPLOYER": "employer_name", "YEAR": "filing_year", "_plan_size": "plan_size"}
-    )[["employer_name", "recordkeeper", "filing_year", "plan_size"]].reset_index(drop=True)
+@st.cache_data(show_spinner="Preparing employer search index...")
+def load_cached_employer_index() -> pd.DataFrame:
+    return employer_search_index()
 
 
 def selected_employer_from_query_params() -> str:
@@ -645,43 +632,90 @@ def reset_lookup_feedback() -> None:
     st.session_state.pop("provider_feedback_submitted", None)
 
 
+def suggestion_detail(suggestion: EmployerSuggestion) -> str:
+    details = [suggestion.recordkeeper]
+    if suggestion.ein:
+        details.append(f"EIN {suggestion.ein}")
+    if suggestion.plan_participants:
+        details.append(f"{suggestion.plan_participants:,} participants")
+    return " | ".join(details)
+
+
+def select_employer(employer_name: str) -> None:
+    reset_lookup_feedback()
+    st.session_state["employer_search_query"] = employer_name
+    try:
+        st.query_params["selected_employer"] = employer_name
+    except AttributeError:
+        st.experimental_set_query_params(selected_employer=employer_name)
+    st.rerun()
+
+
 def render_employer_search(selected_employer: str) -> str:
-    options = load_employer_search_options()
-    if options.empty:
-        st.info("Employer search options could not be loaded.")
+    if "employer_search_query" not in st.session_state:
+        st.session_state["employer_search_query"] = selected_employer
+
+    st.text_input(
+        "Employer name",
+        placeholder="Type at least 3 letters, e.g. Amazon or Disney",
+        key="employer_search_query",
+        on_change=reset_lookup_feedback,
+    )
+    query = st.session_state.get("employer_search_query", "").strip()
+    if not query:
+        return ""
+
+    if query == selected_employer:
         return selected_employer
 
-    employer_names = options["employer_name"].tolist()
-    option_details = options.set_index("employer_name").to_dict("index")
+    if len(query) < 3:
+        st.info("Type at least 3 letters to see similar employer names.")
+        return ""
 
-    def format_employer_option(employer_name: str) -> str:
-        details = option_details.get(employer_name, {})
-        meta_parts = [str(details.get("recordkeeper") or "Recordkeeper unavailable")]
-        filing_year = details.get("filing_year")
-        if filing_year:
-            meta_parts.append(f"{filing_year} filing")
-        plan_size = details.get("plan_size")
-        if plan_size:
-            meta_parts.append(f"{int(plan_size):,} participants")
-        return f"{employer_name} — {' · '.join(meta_parts)}"
+    try:
+        suggestions = suggest_employers_from_index(
+            query,
+            load_cached_employer_index(),
+            limit=SUGGESTION_LIMIT,
+        )
+    except Exception as exc:
+        st.warning(f"Suggestions could not be loaded: {exc}")
+        return ""
 
-    current_index = employer_names.index(selected_employer) if selected_employer in employer_names else None
-    selected = st.selectbox(
-        "Employer name",
-        options=employer_names,
-        index=current_index,
-        format_func=format_employer_option,
-        placeholder="Search employers by filing name...",
-        key="employer_search_select",
+    if not suggestions:
+        st.info("No matches — try a shorter or different name")
+        return ""
+
+    st.markdown(
+        '<div class="suggestions-panel">'
+        '<div class="suggestions-kicker">Employer matches</div>'
+        '<div class="suggestions-header">Choose the filing name that matches</div>'
+        '<div class="suggestions-caption">Showing up to 10 similar employer or plan names, not the full database.</div>'
+        '</div>',
+        unsafe_allow_html=True,
     )
-
-    if selected and selected != selected_employer:
-        reset_lookup_feedback()
-        try:
-            st.query_params["selected_employer"] = selected
-        except AttributeError:
-            st.experimental_set_query_params(selected_employer=selected)
-    return selected or selected_employer
+    for index, suggestion in enumerate(suggestions[:SUGGESTION_LIMIT]):
+        name = html.escape(suggestion.employer_name)
+        details = html.escape(suggestion_detail(suggestion))
+        confidence = int(round(suggestion.confidence * 100))
+        info_col, action_col = st.columns([0.76, 0.24], vertical_alignment="center")
+        with info_col:
+            st.markdown(
+                '<div class="suggestion-row">'
+                f'<div class="suggestion-name">{name}</div>'
+                f'<div class="suggestion-meta">{details} | {confidence}% name match</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        with action_col:
+            st.button(
+                "Select",
+                key=f"employer_suggestion_{index}_{suggestion.employer_name}",
+                on_click=select_employer,
+                args=(suggestion.employer_name,),
+                use_container_width=True,
+            )
+    return ""
 
 
 st.markdown(
