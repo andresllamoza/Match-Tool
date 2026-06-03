@@ -51,11 +51,11 @@ class EmployerSuggestion:
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
-MASTER_CACHE_VERSION = "6"
+MASTER_CACHE_VERSION = "7"
 
-# Prefer the newest complete DOL filing year and keep 2023 as a fallback for
-# plans that have not yet filed or were only present in the original MVP data.
-DEFAULT_YEARS = (2024, 2023)
+# Prefer the newest complete DOL filing year, then fall back through older
+# releases for plans that have not filed recently or have changed sponsors.
+DEFAULT_YEARS = (2024, 2023, 2022, 2021, 2020)
 TIER_RANK = {"TIER1": 1, "TIER2": 2}
 TIER1_RELATION = r"RECORDKEEPER|RECORD KEEPER|RECORDKEEPING|RECORD KEEPING|PLAN RECORDKEEPER"
 TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
