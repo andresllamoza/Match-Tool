@@ -51,12 +51,12 @@ class EmployerSuggestion:
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
-MASTER_CACHE_VERSION = "7"
+MASTER_CACHE_VERSION = "8"
 
 # Prefer the newest complete DOL filing year, then fall back through older
 # releases for plans that have not filed recently or have changed sponsors.
 DEFAULT_YEARS = (2024, 2023, 2022, 2021, 2020)
-TIER_RANK = {"TIER1": 1, "TIER2": 2}
+TIER_RANK = {"TIER1": 1, "TIER2": 2, "TIER1_ITEM1": 1, "TIER1_SCH_H": 1}
 TIER1_RELATION = r"RECORDKEEPER|RECORD KEEPER|RECORDKEEPING|RECORD KEEPING|PLAN RECORDKEEPER"
 TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
 TIER1_CODES = {"15", "64"}
@@ -354,6 +354,175 @@ def _looks_like_defined_contribution_plan_name(value: object) -> bool:
     return DC_PLAN_NAME_RE.search(str(value)) is not None
 
 
+ITEM1_RECORDKEEPER_NAME_RE = re.compile(
+    r"FIDELITY|FID\s|FID\.|RECORD\s*KEEP|RETIREMENT\s+PLAN\s+SRV|PLAN\s+ADMIN|"
+    r"EMPOWER|ALIGHT|GREAT\s*WEST|VOYA|PRINCIPAL|NATIONWIDE|"
+    r"PAYCHEX|\bADP\b|ASCENSUS|MASSMUTUAL|MUTUAL\s+OF\s+AMERICA",
+    re.IGNORECASE,
+)
+ITEM1_ADVISOR_TRUSTEE_NAME_RE = re.compile(
+    r"INV\s+ADV|INVESTMENT\s+ADV|INSTITUTIONAL\s+TRUST|TRUST\s+COMPANY|"
+    r"\bMERCER\b|BLACKROCK|NORTHERN\s+TRUST|NEWPORT|WILLIS\s+TOWERS|"
+    r"\bAON\b|CONSULT",
+    re.IGNORECASE,
+)
+
+
+def _score_item1_provider_name(provider_name: str) -> int:
+    """Rank Schedule C Part 1 Item 1 eligible providers toward recordkeeper vs advisor/trustee."""
+    upper = provider_name.upper()
+    score = 0
+    if ITEM1_RECORDKEEPER_NAME_RE.search(upper):
+        score += 100
+    if re.search(r"OPS|OPERATIONS|RECORD|RETIREMENT", upper):
+        score += 40
+    if ITEM1_ADVISOR_TRUSTEE_NAME_RE.search(upper):
+        score -= 50
+    if re.search(r"TRUSTEE|CUSTOD", upper) and not re.search(r"FIDELITY|FID\s", upper):
+        score -= 30
+    return score
+
+
+def _pick_item1_recordkeeper_provider(provider_names: list[str]) -> Optional[tuple[str, str]]:
+    """Return (raw_name, canonical_name) for the best Item 1 eligible provider, if any."""
+    ranked: list[tuple[int, str, str]] = []
+    for raw_name in provider_names:
+        cleaned = str(raw_name or "").strip().upper()
+        if not cleaned:
+            continue
+        canonical = _canonicalize_recordkeeper(cleaned)
+        if not canonical:
+            continue
+        ranked.append((_score_item1_provider_name(cleaned), cleaned, canonical))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    _, raw_name, canonical_name = ranked[0]
+    return raw_name, canonical_name
+
+
+def _filing_master_row(
+    filing: pd.Series,
+    provider_name: str,
+    canonical_name: str,
+    year: int,
+    tier: str,
+) -> dict[str, object]:
+    employer_norm = filing["EMPLOYER_NORM"]
+    plan_norm = filing.get("PLAN_NORM", "")
+    return {
+        "ACK_ID": filing["ACK_ID"],
+        "EMPLOYER": filing["SPONSOR_DFE_NAME"],
+        "EMPLOYER_NORM": employer_norm,
+        "EMPLOYER_COLLAPSED": _collapsed(employer_norm),
+        "PLAN_NORM": plan_norm,
+        "PLAN_COLLAPSED": _collapsed(plan_norm) if plan_norm else "",
+        "RK_RAW": provider_name,
+        "RK_CANON": canonical_name,
+        "TIER": tier,
+        "YEAR": year,
+        "_n": filing.get("_n", 0),
+        "_tier_rank": TIER_RANK[tier],
+        "PLAN_NAME": filing.get("PLAN_NAME"),
+        "TYPE_PENSION_BNFT_CODE": filing.get("TYPE_PENSION_BNFT_CODE"),
+        "PLAN_YEAR_BEGIN_DATE": filing.get("PLAN_YEAR_BEGIN_DATE"),
+        "TOT_PARTCP_BOY_CNT": filing.get("TOT_PARTCP_BOY_CNT"),
+        "SPONS_DFE_EIN": filing.get("SPONS_DFE_EIN"),
+    }
+
+
+def _build_item1_fallback(filings: pd.DataFrame, merged: pd.DataFrame, year: int) -> pd.DataFrame:
+    """
+    Add recordkeeper rows from Schedule C Part 1 Item 1 (eligible providers) when Item 2
+    service codes did not produce a recordkeeper-tier provider for the filing.
+    """
+    covered_acks = set(merged["ACK_ID"]) if not merged.empty else set()
+    missing = filings[~filings["ACK_ID"].isin(covered_acks)].copy()
+    if missing.empty:
+        return pd.DataFrame()
+
+    item1_path = _ensure_dol_csv(year, f"F_SCH_C_PART1_ITEM1_{year}_Latest")
+    item1 = _read_csv_columns(
+        item1_path,
+        ["ACK_ID", "ROW_ORDER", "PROVIDER_ELIGIBLE_NAME"],
+        ["ACK_ID", "PROVIDER_ELIGIBLE_NAME"],
+    )
+    item1["PROVIDER_ELIGIBLE_NAME"] = (
+        item1["PROVIDER_ELIGIBLE_NAME"].fillna("").str.strip().str.upper()
+    )
+    item1 = item1[item1["PROVIDER_ELIGIBLE_NAME"] != ""]
+    item1 = item1[item1["ACK_ID"].isin(missing["ACK_ID"])]
+
+    rows: list[dict[str, object]] = []
+    for ack_id, group in item1.groupby("ACK_ID"):
+        picked = _pick_item1_recordkeeper_provider(group["PROVIDER_ELIGIBLE_NAME"].tolist())
+        if picked is None:
+            continue
+        raw_name, canonical_name = picked
+        filing = missing[missing["ACK_ID"] == ack_id].iloc[0]
+        rows.append(
+            _filing_master_row(filing, raw_name, canonical_name, year, "TIER1_ITEM1")
+        )
+    return pd.DataFrame(rows)
+
+
+def _build_schedule_h_fallback(
+    filings: pd.DataFrame,
+    merged: pd.DataFrame,
+    item1_rows: pd.DataFrame,
+    year: int,
+) -> pd.DataFrame:
+    """
+    Use Schedule H fiduciary trust / custodian name fields when still no provider row exists.
+    Many large plans list the recordkeeper trust there even when Schedule C codes are sparse.
+    """
+    covered_acks = set()
+    for frame in (merged, item1_rows):
+        if not frame.empty and "ACK_ID" in frame.columns:
+            covered_acks.update(frame["ACK_ID"].dropna().astype(str))
+
+    missing = filings[~filings["ACK_ID"].isin(covered_acks)].copy()
+    if missing.empty:
+        return pd.DataFrame()
+
+    sch_h_path = _find_existing_csv(f"F_SCH_H_{year}_Latest")
+    if sch_h_path is None:
+        try:
+            sch_h_path = _ensure_dol_csv(year, f"F_SCH_H_{year}_Latest")
+        except Exception:
+            return pd.DataFrame()
+
+    sch_h = _read_csv_columns(
+        sch_h_path,
+        ["ACK_ID", "FDCRY_TRUST_NAME", "FDCRY_TRUSTEE_CUST_NAME"],
+        ["ACK_ID"],
+    )
+    sch_h = sch_h[sch_h["ACK_ID"].isin(missing["ACK_ID"])]
+
+    rows: list[dict[str, object]] = []
+    for _, sch_row in sch_h.iterrows():
+        provider_name = _first_non_null(
+            sch_row.get("FDCRY_TRUST_NAME"),
+            sch_row.get("FDCRY_TRUSTEE_CUST_NAME"),
+        )
+        if not provider_name:
+            continue
+        canonical_name = _canonicalize_recordkeeper(provider_name)
+        if not canonical_name:
+            continue
+        filing = missing[missing["ACK_ID"] == sch_row["ACK_ID"]].iloc[0]
+        rows.append(
+            _filing_master_row(
+                filing,
+                str(provider_name).strip().upper(),
+                canonical_name,
+                year,
+                "TIER1_SCH_H",
+            )
+        )
+    return pd.DataFrame(rows)
+
+
 def _build_year_master(year: int) -> pd.DataFrame:
     main_path = _ensure_dol_csv(year, f"F_5500_{year}_Latest")
     provider_path = _ensure_dol_csv(year, f"F_SCH_C_PART1_ITEM2_{year}_Latest")
@@ -442,12 +611,19 @@ def _build_year_master(year: int) -> pd.DataFrame:
     merged["EMPLOYER_COLLAPSED"] = merged["EMPLOYER_NORM"].apply(_collapsed)
     merged["PLAN_COLLAPSED"] = merged["PLAN_NORM"].apply(_collapsed)
     merged["RK_CANON"] = merged["PROVIDER_OTHER_NAME"].apply(_canonicalize_recordkeeper)
-    return merged.rename(
+    merged = merged.rename(
         columns={
             "SPONSOR_DFE_NAME": "EMPLOYER",
             "PROVIDER_OTHER_NAME": "RK_RAW",
         }
     )
+
+    item1_rows = _build_item1_fallback(filings, merged, year)
+    sch_h_rows = _build_schedule_h_fallback(filings, merged, item1_rows, year)
+    fallback_frames = [frame for frame in (item1_rows, sch_h_rows) if not frame.empty]
+    if fallback_frames:
+        merged = pd.concat([merged, *fallback_frames], ignore_index=True)
+    return merged
 
 
 def _build_master() -> pd.DataFrame:

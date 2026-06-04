@@ -17,6 +17,8 @@ Default years: **2024, 2023, 2022, 2021, 2020** (`DEFAULT_YEARS` in `src/matcher
 | `F_5500_{year}_Latest` | Sponsor, plan name, EIN, participants, pension feature codes |
 | `F_SCH_C_PART1_ITEM2_{year}_Latest` | Service providers and relations per filing |
 | `F_SCH_C_PART1_ITEM2_CODES_{year}_Latest` | Schedule C service codes per provider row |
+| `F_SCH_C_PART1_ITEM1_{year}_Latest` | **Fallback:** eligible provider list (e.g. Fidelity ops co when Item 2 lacks codes 15/64) |
+| `F_SCH_H_{year}_Latest` | **Fallback:** fiduciary trust / custodian name on financial schedule (when populated) |
 
 ## Join logic (summary)
 
@@ -25,15 +27,18 @@ Default years: **2024, 2023, 2022, 2021, 2020** (`DEFAULT_YEARS` in `src/matcher
 3. Classify provider tier:
    - **TIER1:** service codes `15` or `64`, or relation matches recordkeeper patterns.
    - **TIER2:** code `13` or contract administrator relation.
-4. Canonicalize provider strings → Fidelity, Empower, Merrill, etc. (`CANONICAL_MAP`).
-5. Concatenate years; sort by employer, tier, year (desc), participants (desc).
+4. **Fallback** when a DC filing has no Item 2 recordkeeper row:
+   - **Schedule C Part 1 Item 1** eligible providers (canonical name + recordkeeper-oriented name scoring; fixes cases like Nike → Fidelity).
+   - **Schedule H** `FDCRY_TRUST_NAME` / `FDCRY_TRUSTEE_CUST_NAME` when present.
+5. Canonicalize provider strings → Fidelity, Empower, Merrill, etc. (`CANONICAL_MAP`).
+6. Concatenate years; sort by employer, tier, year (desc), participants (desc).
 
 ## Cache
 
 | File | Purpose |
 |------|---------|
 | `data/recordkeeper_master.csv` | Denormalized master used by `match()` |
-| `data/recordkeeper_master.version` | Must match `MASTER_CACHE_VERSION` (currently **7**) |
+| `data/recordkeeper_master.version` | Must match `MASTER_CACHE_VERSION` (currently **8**) |
 
 If version mismatches, master is rebuilt on next `load_dol_data()`.
 

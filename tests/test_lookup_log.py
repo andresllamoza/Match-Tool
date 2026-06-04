@@ -677,6 +677,90 @@ class MatcherBuildTest(unittest.TestCase):
         self.assertEqual(master.loc[0, "PLAN_NAME"], "THE BANK OF AMERICA 401(K) PLAN")
         self.assertEqual(master.loc[0, "RK_CANON"], "Merrill Lynch")
 
+    def test_build_master_uses_schedule_c_item1_when_item2_has_no_recordkeeper_codes(self):
+        from src import matcher
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_data_dir = matcher.DATA_DIR
+            original_years = os.environ.get("DOL_YEARS")
+            matcher.DATA_DIR = Path(temp_dir)
+            os.environ["DOL_YEARS"] = "2024"
+            try:
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "NIKE-401K-ACK",
+                            "SPONSOR_DFE_NAME": "NIKE, INC.",
+                            "SPONS_DFE_EIN": "930584541",
+                            "PLAN_NAME": "401(K) SAVINGS AND PROFIT SHARING PLAN FOR EMPLOYEES OF NIKE, INC.",
+                            "PLAN_YEAR_BEGIN_DATE": "2024-06-01",
+                            "TYPE_PENSION_BNFT_CODE": "2E2F2G2J2K2R3F3H",
+                            "TOT_PARTCP_BOY_CNT": "48889",
+                        }
+                    ]
+                ).to_csv(Path(temp_dir) / "F_5500_2024_Latest.csv", index=False)
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "NIKE-401K-ACK",
+                            "ROW_ORDER": "1",
+                            "PROVIDER_OTHER_NAME": "BLACKROCK INSTITUTIONAL TRUST",
+                            "PROVIDER_OTHER_RELATION": "INV. ADVISOR",
+                        }
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_2024_Latest.csv",
+                    index=False,
+                )
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "NIKE-401K-ACK",
+                            "ROW_ORDER": "1",
+                            "SERVICE_CODE": "27",
+                        },
+                        {
+                            "ACK_ID": "NIKE-401K-ACK",
+                            "ROW_ORDER": "1",
+                            "SERVICE_CODE": "50",
+                        },
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM2_CODES_2024_Latest.csv",
+                    index=False,
+                )
+                pd.DataFrame(
+                    [
+                        {
+                            "ACK_ID": "NIKE-401K-ACK",
+                            "ROW_ORDER": "1",
+                            "PROVIDER_ELIGIBLE_NAME": "BLACKROCK INSTITUTIONAL TRUST CO",
+                        },
+                        {
+                            "ACK_ID": "NIKE-401K-ACK",
+                            "ROW_ORDER": "3",
+                            "PROVIDER_ELIGIBLE_NAME": "FID INV INSTL OPS CO",
+                        },
+                    ]
+                ).to_csv(
+                    Path(temp_dir) / "F_SCH_C_PART1_ITEM1_2024_Latest.csv",
+                    index=False,
+                )
+
+                master = matcher._build_master()
+            finally:
+                matcher.DATA_DIR = original_data_dir
+                if original_years is None:
+                    os.environ.pop("DOL_YEARS", None)
+                else:
+                    os.environ["DOL_YEARS"] = original_years
+
+        self.assertEqual(len(master), 1)
+        item1_rows = master[master["TIER"] == "TIER1_ITEM1"]
+        self.assertEqual(len(item1_rows), 1)
+        self.assertEqual(item1_rows.iloc[0]["RK_CANON"], "Fidelity Investments")
+        self.assertEqual(item1_rows.iloc[0]["RK_RAW"], "FID INV INSTL OPS CO")
+
     def test_build_master_includes_no_code_401k_master_trust_rows(self):
         from src import matcher
 
