@@ -1,5 +1,5 @@
 # Data — never commit real DOL files or any client-adjacent data
-data/
+data/*
 !data/.gitkeep
 
 # Secrets — real values go in Streamlit Cloud's Secrets UI, not in the repo

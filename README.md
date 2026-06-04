@@ -1,56 +1,126 @@
-# Cursor / Claude Code Starter Prompts
+# 5500 Recordkeeper Lookup
 
-Use these prompts when you sit down to work on the repo. Each is scoped to one specific task — that's how you stay in control of what the AI generates rather than letting it sprawl.
+Internal PensionBee tool to find the **401(k) recordkeeper** for a US employer using public **DOL Form 5500** filings (Schedule C, recordkeeper-related service codes and relations).
 
----
-
-## Prompt 1: Move v4 logic from Colab into the matcher module
-
-Use this in Cursor (Cmd+L for chat) or Claude Code after you've opened the repo and have your Colab notebook open in another tab.
-
-> I have a Streamlit app for looking up 401(k) recordkeepers using DOL Form 5500 data. The matching logic lives in `src/matcher.py` and has two function bodies that need to be filled in:
->
-> 1. `load_dol_data()` — loads and joins four DOL CSV datasets, filters to Schedule C service codes 15 and 64, and applies canonical provider name mapping. Should return a single dataframe with columns: SPONSOR_DFE_NAME, PROVIDER_OTHER_NAME, canonical_recordkeeper, PLAN_NAME, PLAN_YEAR_BEGIN_DATE, TOT_PARTCP_BOY_CNT, SPONS_DFE_EIN.
->
-> 2. `match()` — takes an employer name string and a `top_n` integer, scores it against the dataframe rows, returns the top N as `MatchResult` objects (dataclass already defined).
->
-> I have the working v4 logic in this Colab notebook: [paste the relevant Colab cells here]. Please port it into `src/matcher.py` filling in the PASTE ZONE sections. Preserve the matching behavior exactly — don't try to improve the algorithm, just restructure for the module.
->
-> Use the existing function signatures and dataclass. Keep the module-level dataframe cache so the data only loads once per session.
+| | |
+|---|---|
+| **Live app** | Streamlit Community Cloud (password-gated) |
+| **Repo** | [andresllamoza/RecordKeeper-Match-Tool](https://github.com/andresllamoza/RecordKeeper-Match-Tool) |
+| **Docs site** | [GitHub Pages](https://andresllamoza.github.io/RecordKeeper-Match-Tool/) (architecture, data, demo script) |
 
 ---
 
-## Prompt 2: Add bulk lookup (only AFTER the basic version is shipped and someone has asked for it)
+## Quick start (local demo)
 
-> Extend the existing Streamlit app to support bulk lookup. Add a second tab or section to `app.py`:
->
-> - User uploads a CSV with an "employer_name" column, OR pastes a list of employer names (one per line) into a textarea
-> - For each name, run the existing `match()` function with top_n=1
-> - Return a downloadable CSV with columns: input_name, matched_employer, recordkeeper, confidence, ein, plan_name
->
-> Don't change anything about the single-lookup tab. Keep the password auth in place. Limit to 100 names per submission to avoid timeouts.
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
----
+# Optional: skip multi-year download on first run (single year only)
+# export DOL_YEARS=2024
 
-## Prompt 3: Improve match rate (separate later project, don't do this for v1)
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+# Edit app_password in secrets.toml
 
-> The v4 matcher hits 666/1000 high-confidence matches on the Fortune 1000 reference set. I want to investigate the 334 non-matches without changing the production app yet. Help me:
->
-> 1. Create a `notebooks/match_failure_analysis.ipynb` notebook
-> 2. Load the same DOL data the production matcher uses
-> 3. For each unmatched Fortune 1000 employer, find the closest candidates and categorize the failure mode (legal-entity-name mismatch, holding-company structure, employer below 5500 threshold, etc.)
-> 4. Output a frequency table of failure modes so I can decide which to tackle
->
-> Don't modify `src/matcher.py`. This is investigation only.
+streamlit run app.py
+```
+
+**First run:** the matcher downloads DOL CSVs from [askebsa.dol.gov](https://askebsa.dol.gov) and builds `data/recordkeeper_master.csv` (~2–5 minutes depending on network). Later runs load the cache in a few seconds.
+
+Open `http://localhost:8501`, sign in, type an employer name (at least 3 letters), pick a filing name from suggestions, and view the recordkeeper result.
 
 ---
 
-## A note on using AI tools well for this project
+## What it does
 
-The temptation will be to ask Claude Code to "build the whole thing." Resist it. The scaffold you have is structured to require you to engage with the substance — your v4 logic — explicitly. That engagement is the *learning*, and the learning is what compounds into your next three projects.
+- **Single lookup:** typeahead over ~**86k** employer/plan names from DOL filings **2020–2024**, then fuzzy and rule-based matching to a canonical recordkeeper.
+- **Batch lookup:** upload a CSV of employer names; download results with confidence tier.
+- **Verification:** expandable match detail (plan name, EIN, participants, match reason).
+- **Feedback:** flag wrong provider; attempts logged to `data/lookup_attempts_master.csv` (local) for review.
 
-Specifically:
+## What it does *not* do
 
-- After Prompt 1, read what Claude Code produced and ask "why did you structure this part this way?" for at least one decision. That five-minute conversation is the difference between "I used AI to build something" and "I have a workflow."
-- Don't ask Claude Code to deploy for you. Deploy yourself the first time. The Streamlit Cloud UI is the kind of thing you should see end-to-end once so you understand what's happening.
-- When you hit a bug in your v4 logic during the port, fix it manually before asking AI to help. Building the muscle of reading your own code under pressure is what makes the next tool faster.
+- Roth vs traditional splits, employment status, balance confirmation, rollover advice, or tax guidance.
+- It is a **lookup** tool, not a decision system.
+
+---
+
+## Repository map (where to read the code)
+
+| Path | Purpose |
+|------|---------|
+| [`app.py`](app.py) | Streamlit UI: auth, employer search, results, batch upload, feedback, lookup log |
+| [`src/matcher.py`](src/matcher.py) | DOL download/join, master cache, `match()`, `suggest_employers()`, canonical providers, curated overrides |
+| [`src/lookup_log.py`](src/lookup_log.py) | Append/read lookup attempt CSV |
+| [`tests/test_lookup_log.py`](tests/test_lookup_log.py) | Matcher and logging tests (25 cases) |
+| [`recordkeeper_mvp.py`](recordkeeper_mvp.py) | Original Colab export (reference only; production logic is in `src/matcher.py`) |
+| [`data/`](data/) | Runtime data (gitignored except `.gitkeep`): DOL CSVs, `recordkeeper_master.csv`, logs |
+
+Theme and Streamlit config: [`.streamlit/config.toml`](.streamlit/config.toml).
+
+---
+
+## Data pipeline
+
+The matcher does **not** ship DOL files in git. On first use it:
+
+1. Downloads per-year zips from DOL FOIA “Latest” URLs (default years **2024 → 2020**).
+2. Joins `F_5500`, Schedule C providers, and service codes; keeps defined-contribution plans and recordkeeper-tier providers.
+3. Canonicalizes provider names (Fidelity, Empower, Merrill, etc.).
+4. Writes **`data/recordkeeper_master.csv`** and version file `data/recordkeeper_master.version` (cache v7).
+
+Override **`DOL_YEARS`** (comma-separated) to limit years, e.g. `export DOL_YEARS=2024` for a faster first build.
+
+See [docs/data.md](docs/data.md) on the GitHub Pages site for file names, columns, and cache behavior.
+
+---
+
+## Demo script (tomorrow)
+
+Use these employers to show search, overrides, and confidence:
+
+| Type in search | Select / expect | Recordkeeper (typical) |
+|----------------|-----------------|-------------------------|
+| `Amazon` | AMAZON.COM SERVICES, LLC | Fidelity Investments |
+| `Disney` or `Walt Disney` | TWDC ENTERPRISES 18 CORP. | Fidelity Investments (curated 2024 override) |
+| `Microsoft` | MICROSOFT CORPORATION | Fidelity Investments |
+| `Target` | TARGET CORPORATION | Alight Solutions |
+| `Walmart` | WALMART INC. | Merrill Lynch |
+| `Bank of America` | BANK OF AMERICA CORPORATION | Merrill Lynch (curated; avoids pension-row noise) |
+| `Citi` | CITIGROUP INC | Empower Retirement (brand alias) |
+
+**Talking points:** DOL legal names vs brand names; “Match detail” explains *why*; batch CSV for Ops; data lag 12–24 months on plan changes.
+
+**Before the demo:** run the app once locally or on Streamlit Cloud so the master cache is warm (cold start otherwise downloads ~1GB+ of CSVs).
+
+---
+
+## Tests
+
+```bash
+source venv/bin/activate
+python -m unittest tests.test_lookup_log -v
+```
+
+All tests use in-memory fixtures; no DOL download required.
+
+---
+
+## Deploy
+
+Streamlit Community Cloud: point the app at `app.py`, set `app_password` in Secrets, Python **3.11** (`runtime.txt`). Full steps: [DEPLOYMENT.md](DEPLOYMENT.md).
+
+---
+
+## Current limitations
+
+- Fortune 1000 reference set: **~666/1000** high-confidence matches on v4 logic (improvement is a separate project).
+- Welfare or pension rows can still appear in edge cases; DC filters and curated overrides reduce but do not eliminate noise.
+- DOL releases update quarterly; refresh by deleting `data/recordkeeper_master.*` and restarting.
+
+---
+
+## Built by
+
+Andres Llamoza, PensionBee US Operations
