@@ -29,7 +29,11 @@ Default years: **2024, 2023, 2022, 2021, 2020** (`DEFAULT_YEARS` in `src/matcher
    - **TIER2:** code `13` or contract administrator relation.
 4. **Fallback** when a DC filing has no Item 2 recordkeeper row:
    - **Schedule C Part 1 Item 1** eligible providers (canonical name + recordkeeper-oriented name scoring; fixes cases like Nike → Fidelity).
-   - **Schedule H** `FDCRY_TRUST_NAME` / `FDCRY_TRUSTEE_CUST_NAME` when present.
+   - **Schedule H** `FDCRY_TRUST_NAME` / `FDCRY_TRUSTEE_CUST_NAME` when present (the fiduciary/custodian block at the end of Schedule H in the full 5500 PDF).
+
+### PDF vs CSV (important)
+
+The **full 5500** you read on eFast is a bundle: main form, Schedule R, **Schedule H (financial statements)**, Schedule C, etc. Narrative text in attached financial PDFs is **not** in DOL FOIA CSVs. Nike’s 2024 Schedule H CSV row has **blank** fiduciary name fields even though the PDF may show more detail; Fidelity appears in the structured **Schedule C Part 1 Item 1** roster (`FID INV INSTL OPS CO`).
 5. Canonicalize provider strings → Fidelity, Empower, Merrill, etc. (`CANONICAL_MAP`).
 6. Concatenate years; sort by employer, tier, year (desc), participants (desc).
 

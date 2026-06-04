@@ -741,6 +741,27 @@ def _brand_alias_rows(index: pd.DataFrame, alias_target: str) -> pd.DataFrame:
     ]
 
 
+def _recordkeeper_source_reason(tier: object, provider_name: object) -> Optional[str]:
+    """Explain which part of the 5500 filing package supplied the provider (for Match detail)."""
+    tier_text = str(tier or "")
+    provider_text = str(provider_name or "").strip()
+    if tier_text == "TIER1_ITEM1":
+        return (
+            "Listed on Schedule C Part 1 (eligible service providers on the filing). "
+            "This is separate from the Schedule C Part 1 Item 2 compensation table with "
+            "service codes 15/64. "
+            f"Provider on filing: {provider_text}."
+        )
+    if tier_text == "TIER1_SCH_H":
+        return (
+            "Listed on Schedule H (financial information) as the fiduciary trust or "
+            "custodian for plan assets — the section at the end of the financial schedule "
+            "in the full 5500 PDF. "
+            f"Name on filing: {provider_text}."
+        )
+    return None
+
+
 def _candidate_result(
     employer_query: str,
     row: pd.Series,
@@ -748,6 +769,10 @@ def _candidate_result(
     match_method: str,
     match_reason: str,
 ) -> MatchResult:
+    source_reason = _recordkeeper_source_reason(row.get("TIER"), row.get("RK_RAW"))
+    if source_reason:
+        match_reason = source_reason
+
     participants = pd.to_numeric(row.get("TOT_PARTCP_BOY_CNT") or row.get("_n"), errors="coerce")
     if pd.isna(participants):
         participant_count = None
