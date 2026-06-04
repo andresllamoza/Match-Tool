@@ -33,7 +33,14 @@ Default years: **2024, 2023, 2022, 2021, 2020** (`DEFAULT_YEARS` in `src/matcher
 
 ### PDF vs CSV (important)
 
-The **full 5500** you read on eFast is a bundle: main form, Schedule R, **Schedule H (financial statements)**, Schedule C, etc. Narrative text in attached financial PDFs is **not** in DOL FOIA CSVs. Nike’s 2024 Schedule H CSV row has **blank** fiduciary name fields even though the PDF may show more detail; Fidelity appears in the structured **Schedule C Part 1 Item 1** roster (`FID INV INSTL OPS CO`).
+The **full 5500** you read on eFast is a bundle: main form, Schedule R, **Schedule H (financial statements)**, Schedule C, etc.
+
+**Notes to Financial Statements** (the CPA attachment behind Schedule H Part III — often page 20+ of the PDF) are **not** in DOL FOIA CSVs. Nike’s 2024 notes (plan year ended May 31, 2024) state explicitly:
+
+> *Fidelity Workplace Services, LLC … is the record keeper of the Plan.*  
+> *The Northern Trust Company … is the trustee.*
+
+The matcher uses a **curated override** for Nike keyed to that language. For other employers without an override, we fall back to **Schedule C Part 1 Item 1** (`FID INV INSTL OPS CO` for Nike) when Item 2 lacks recordkeeper service codes 15/64.
 5. Canonicalize provider strings → Fidelity, Empower, Merrill, etc. (`CANONICAL_MAP`).
 6. Concatenate years; sort by employer, tier, year (desc), participants (desc).
 

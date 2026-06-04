@@ -447,6 +447,16 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertEqual(results[0].ein, "560906609")
         self.assertEqual(results[0].match_method, "curated_override")
 
+    def test_match_nike_uses_financial_statement_notes_override(self):
+        results = self.matcher.match("Nike", top_n=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].matched_employer_name, "NIKE, INC.")
+        self.assertEqual(results[0].recordkeeper, "Fidelity Workplace Services, LLC")
+        self.assertEqual(results[0].match_method, "financial_statement_notes")
+        self.assertIn("Notes to Financial Statements", results[0].match_reason)
+        self.assertIn("Northern Trust", results[0].match_reason)
+
 
 class MatcherBuildTest(unittest.TestCase):
     def test_configured_years_defaults_to_2020_through_2024(self):

@@ -22,10 +22,11 @@ Repeat briefly with **`Amazon`** → **AMAZON.COM SERVICES, LLC** / Fidelity (wo
 2. Result: **Merrill Lynch** on **401(k) plan**, not Fidelity from pension row.
 3. Match detail explains curated override vs misleading pension filing.
 
-## 4. Item 1 fallback — Nike
+## 4. Financial statement notes — Nike
 
 1. Type **`Nike`** → select **NIKE, INC.** (401(k) plan).
-2. Result: **Fidelity Investments** (from Schedule C Part 1 Item 1 eligible providers — `FID INV INSTL OPS CO` — when Item 2 service codes omit recordkeeper code 64).
+2. Result: **Fidelity Workplace Services, LLC** — sourced from the **Notes to Financial Statements** (Schedule H attachment; plan year ended May 31, 2024), which names Fidelity as record keeper and Northern Trust as trustee.
+3. Open **Match detail** to show the quoted rationale (distinguishes trustee vs recordkeeper).
 
 ## 5. Typeahead quality — Citi
 

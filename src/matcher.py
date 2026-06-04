@@ -178,11 +178,29 @@ DISNEY_2024_OVERRIDE = {
     ),
 }
 
+NIKE_401K_OVERRIDE = {
+    "matched_employer_name": "NIKE, INC.",
+    "recordkeeper": "Fidelity Workplace Services, LLC",
+    "plan_name": "401(K) SAVINGS AND PROFIT SHARING PLAN FOR EMPLOYEES OF NIKE, INC.",
+    "plan_year": 2024,
+    "plan_participants": 48889,
+    "ein": "930584541",
+    "plan_type_code": "2E2F2H2J2K2R3F3H",
+    "match_method": "financial_statement_notes",
+    "match_reason": (
+        "Per the Notes to Financial Statements attached to Schedule H (plan year ended "
+        'May 31, 2024): "Fidelity Workplace Services, LLC" is the record keeper of the Plan. '
+        "Northern Trust Company is the trustee, not the recordkeeper. "
+        "DOL Schedule C Part 1 also lists FID INV INSTL OPS CO (Fidelity operations)."
+    ),
+}
+
 # Keep this list small: use it only where public filings or plan materials
 # identify the 401(k) provider but name matching or DOL rows are misleading.
 CURATED_EMPLOYER_OVERRIDES = {
     "DISNEY": DISNEY_2024_OVERRIDE,
     "WALT DISNEY": DISNEY_2024_OVERRIDE,
+    "NIKE": NIKE_401K_OVERRIDE,
     "BANK AMERICA": {
         "matched_employer_name": "BANK OF AMERICA CORPORATION",
         "recordkeeper": "Merrill Lynch",
@@ -374,6 +392,8 @@ def _score_item1_provider_name(provider_name: str) -> int:
     score = 0
     if ITEM1_RECORDKEEPER_NAME_RE.search(upper):
         score += 100
+    if re.search(r"WORKPLACE", upper):
+        score += 60
     if re.search(r"OPS|OPERATIONS|RECORD|RETIREMENT", upper):
         score += 40
     if ITEM1_ADVISOR_TRUSTEE_NAME_RE.search(upper):
@@ -748,6 +768,8 @@ def _recordkeeper_source_reason(tier: object, provider_name: object) -> Optional
     if tier_text == "TIER1_ITEM1":
         return (
             "Listed on Schedule C Part 1 (eligible service providers on the filing). "
+            "For some large plans the recordkeeper is also named in the Notes to Financial "
+            "Statements attached to Schedule H (not available in DOL CSV extracts). "
             "This is separate from the Schedule C Part 1 Item 2 compensation table with "
             "service codes 15/64. "
             f"Provider on filing: {provider_text}."
