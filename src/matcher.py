@@ -6,6 +6,7 @@ from typing import Optional
 import urllib.request
 import zipfile
 
+import numpy as np
 import pandas as pd
 from rapidfuzz import fuzz, process
 
@@ -201,6 +202,9 @@ CURATED_EMPLOYER_OVERRIDES = {
 }
 
 _DATAFRAME_CACHE: Optional[pd.DataFrame] = None
+_EMPLOYER_NORM_UNIVERSE: Optional[list[str]] = None
+# Skip expensive fuzzy pass when a strong non-fuzzy candidate already exists.
+SKIP_FUZZY_MIN_CONFIDENCE = 0.85
 
 
 def _master_cache_path() -> Path:
@@ -674,6 +678,18 @@ def _build_master() -> pd.DataFrame:
     return master
 
 
+def _reset_match_caches() -> None:
+    global _EMPLOYER_NORM_UNIVERSE
+    _EMPLOYER_NORM_UNIVERSE = None
+
+
+def _employer_norm_universe(df: pd.DataFrame) -> list[str]:
+    global _EMPLOYER_NORM_UNIVERSE
+    if _EMPLOYER_NORM_UNIVERSE is None:
+        _EMPLOYER_NORM_UNIVERSE = df["EMPLOYER_NORM"].dropna().unique().tolist()
+    return _EMPLOYER_NORM_UNIVERSE
+
+
 def load_dol_data() -> pd.DataFrame:
     global _DATAFRAME_CACHE
     if _DATAFRAME_CACHE is not None:
@@ -687,9 +703,11 @@ def load_dol_data() -> pd.DataFrame:
             _DATAFRAME_CACHE["_tier_rank"],
             errors="coerce",
         ).fillna(99)
+        _reset_match_caches()
         return _DATAFRAME_CACHE
 
     _DATAFRAME_CACHE = _build_master()
+    _reset_match_caches()
     return _DATAFRAME_CACHE
 
 
@@ -923,26 +941,124 @@ def _rank_rows(rows: pd.DataFrame) -> pd.DataFrame:
     return rows.sort_values(["_tier_rank", "YEAR", "_n"], ascending=[True, False, False])
 
 
-def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
-    """
-    Look up the recordkeeper for an employer name.
+def _finalize_match_results(
+    employer_query: str,
+    canonical_query: str,
+    ranked_candidates: list[tuple[float, pd.Series, str, str]],
+    top_n: int,
+) -> list[MatchResult]:
+    results = [
+        _candidate_result(employer_query, row, confidence, match_method, match_reason)
+        for confidence, row, match_method, match_reason in ranked_candidates[:top_n]
+    ]
 
-    Args:
-        employer_query: the user-typed employer name
-        top_n: how many candidate matches to return (1 best + n-1 near-misses)
+    override_result = _curated_override_result(employer_query, canonical_query)
+    if override_result is not None:
+        override_employer_norm = canonicalize_employer(override_result.matched_employer_name)
+        results = [
+            result
+            for result in results
+            if canonicalize_employer(result.matched_employer_name) != override_employer_norm
+        ]
+        results.insert(0, override_result)
+    else:
+        results = _apply_financial_notes_fallback(employer_query, canonical_query, results)
 
-    Returns:
-        A list of MatchResult, ordered by confidence descending.
-        Empty list if no candidates were found above the noise threshold.
-    """
-    if not employer_query or not employer_query.strip():
-        return []
+    return results[:top_n]
 
-    df = load_dol_data()
-    canonical_query = canonicalize_employer(employer_query)
-    if not canonical_query:
-        return []
 
+def _fuzzy_match_limit(top_n: int) -> int:
+    return max(top_n * 5, 20)
+
+
+def _add_fuzzy_candidate_rows(
+    df: pd.DataFrame,
+    candidates: dict[str, tuple[float, pd.Series, str, str]],
+    matched_name: str,
+    score: float,
+) -> None:
+    if score < FUZZY_THRESHOLD:
+        return
+    rows = df[df["EMPLOYER_NORM"] == matched_name]
+    if rows.empty:
+        return
+    confidence = score / 100.0
+    match_reason = (
+        f"RapidFuzz WRatio scored {score:.0f}, meeting the {FUZZY_THRESHOLD} threshold."
+    )
+    for _, row in _rank_rows(rows).iterrows():
+        key = str(row["EMPLOYER_NORM"])
+        existing = candidates.get(key)
+        if existing is None or confidence > existing[0]:
+            candidates[key] = (confidence, row, "fuzzy", match_reason)
+
+
+def _add_fuzzy_candidates(
+    df: pd.DataFrame,
+    canonical_query: str,
+    candidates: dict[str, tuple[float, pd.Series, str, str]],
+    top_n: int,
+) -> None:
+    """Append fuzzy employer-name matches when non-fuzzy signals are weak."""
+    best_confidence = max((item[0] for item in candidates.values()), default=0.0)
+    if best_confidence >= SKIP_FUZZY_MIN_CONFIDENCE:
+        return
+
+    fuzzy_matches = process.extract(
+        canonical_query,
+        _employer_norm_universe(df),
+        scorer=fuzz.WRatio,
+        limit=_fuzzy_match_limit(top_n),
+    )
+    for matched_name, score, _ in fuzzy_matches:
+        _add_fuzzy_candidate_rows(df, candidates, matched_name, score)
+
+
+def _apply_batch_fuzzy_candidates(
+    df: pd.DataFrame,
+    fuzzy_queue: list[tuple[int, str, str, dict[str, tuple[float, pd.Series, str, str]]]],
+    top_n: int,
+) -> None:
+    """Run one vectorized fuzzy pass for all batch rows that need it."""
+    if not fuzzy_queue:
+        return
+
+    universe = _employer_norm_universe(df)
+    if not universe:
+        return
+
+    queries = [canonical_query for _, _, canonical_query, _ in fuzzy_queue]
+    limit = _fuzzy_match_limit(top_n)
+    score_matrix = process.cdist(
+        queries,
+        universe,
+        scorer=fuzz.WRatio,
+        score_cutoff=FUZZY_THRESHOLD,
+        workers=-1,
+        dtype=np.float32,
+    )
+
+    for row_idx, (_, _employer_query, _canonical_query, candidates) in enumerate(fuzzy_queue):
+        row_scores = score_matrix[row_idx]
+        if not np.any(row_scores):
+            continue
+        top_indices = np.argpartition(row_scores, -limit)[-limit:]
+        top_indices = top_indices[np.argsort(row_scores[top_indices])[::-1]]
+        for choice_index in top_indices:
+            score = float(row_scores[choice_index])
+            if score < FUZZY_THRESHOLD:
+                continue
+            _add_fuzzy_candidate_rows(df, candidates, universe[choice_index], score)
+
+
+def _collect_match_candidates(
+    df: pd.DataFrame,
+    employer_query: str,
+    canonical_query: str,
+    top_n: int,
+    *,
+    skip_fuzzy: bool = False,
+) -> dict[str, tuple[float, pd.Series, str, str]]:
     candidates: dict[str, tuple[float, pd.Series, str, str]] = {}
 
     def add_rows(
@@ -1030,24 +1146,16 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
                 "The normalized input matched the DOL plan name after removing spaces.",
             )
 
-    all_names = df["EMPLOYER_NORM"].dropna().tolist()
-    fuzzy_matches = process.extract(
-        canonical_query,
-        all_names,
-        scorer=fuzz.WRatio,
-        limit=max(top_n * 5, 20),
-    )
-    for matched_name, score, _ in fuzzy_matches:
-        if score < FUZZY_THRESHOLD:
-            continue
-        add_rows(
-            df[df["EMPLOYER_NORM"] == matched_name],
-            score / 100.0,
-            "fuzzy",
-            f"RapidFuzz WRatio scored {score:.0f}, meeting the {FUZZY_THRESHOLD} threshold.",
-        )
+    if not skip_fuzzy:
+        _add_fuzzy_candidates(df, canonical_query, candidates, top_n)
 
-    ranked_candidates = sorted(
+    return candidates
+
+
+def _rank_match_candidates(
+    candidates: dict[str, tuple[float, pd.Series, str, str]],
+) -> list[tuple[float, pd.Series, str, str]]:
+    return sorted(
         candidates.values(),
         key=lambda item: (
             item[0],
@@ -1057,24 +1165,87 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         ),
         reverse=True,
     )
-    results = [
-        _candidate_result(employer_query, row, confidence, match_method, match_reason)
-        for confidence, row, match_method, match_reason in ranked_candidates[:top_n]
-    ]
 
-    override_result = _curated_override_result(employer_query, canonical_query)
-    if override_result is not None:
-        override_employer_norm = canonicalize_employer(override_result.matched_employer_name)
-        results = [
-            result
-            for result in results
-            if canonicalize_employer(result.matched_employer_name) != override_employer_norm
-        ]
-        results.insert(0, override_result)
-    else:
-        results = _apply_financial_notes_fallback(employer_query, canonical_query, results)
 
-    return results[:top_n]
+def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
+    """
+    Look up the recordkeeper for an employer name.
+
+    Args:
+        employer_query: the user-typed employer name
+        top_n: how many candidate matches to return (1 best + n-1 near-misses)
+
+    Returns:
+        A list of MatchResult, ordered by confidence descending.
+        Empty list if no candidates were found above the noise threshold.
+    """
+    if not employer_query or not employer_query.strip():
+        return []
+
+    df = load_dol_data()
+    canonical_query = canonicalize_employer(employer_query)
+    if not canonical_query:
+        return []
+
+    candidates = _collect_match_candidates(df, employer_query, canonical_query, top_n)
+    ranked = _rank_match_candidates(candidates)
+    return _finalize_match_results(employer_query, canonical_query, ranked, top_n)
+
+
+def batch_match_top_results(employer_names: list[str]) -> list[Optional[MatchResult]]:
+    """
+    Match many employer names efficiently for CSV batch upload.
+
+    Loads DOL data once and skips fuzzy search when a strong exact/alias/boundary
+  match already exists (typical for Fortune-style company lists).
+    """
+    cleaned_names = [str(name or "").strip() for name in employer_names]
+    if not cleaned_names:
+        return []
+
+    df = load_dol_data()
+    results: list[Optional[MatchResult]] = [None] * len(cleaned_names)
+    fuzzy_queue: list[tuple[int, str, str, dict[str, tuple[float, pd.Series, str, str]]]] = []
+
+    for index, employer_query in enumerate(cleaned_names):
+        if not employer_query:
+            continue
+        canonical_query = canonicalize_employer(employer_query)
+        if not canonical_query:
+            continue
+
+        override_result = _curated_override_result(employer_query, canonical_query)
+        if override_result is not None:
+            results[index] = override_result
+            continue
+
+        notes_result = _resolve_financial_notes_override(employer_query, canonical_query, [])
+        if notes_result is not None:
+            results[index] = notes_result
+            continue
+
+        candidates = _collect_match_candidates(
+            df,
+            employer_query,
+            canonical_query,
+            top_n=1,
+            skip_fuzzy=True,
+        )
+        ranked = _rank_match_candidates(candidates)
+        if ranked and ranked[0][0] >= SKIP_FUZZY_MIN_CONFIDENCE:
+            finalized = _finalize_match_results(employer_query, canonical_query, ranked, top_n=1)
+            results[index] = finalized[0] if finalized else None
+        else:
+            fuzzy_queue.append((index, employer_query, canonical_query, candidates))
+
+    _apply_batch_fuzzy_candidates(df, fuzzy_queue, top_n=1)
+    for index, employer_query, canonical_query, candidates in fuzzy_queue:
+        ranked = _rank_match_candidates(candidates)
+        if ranked:
+            finalized = _finalize_match_results(employer_query, canonical_query, ranked, top_n=1)
+            results[index] = finalized[0] if finalized else None
+
+    return results
 
 
 def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSuggestion]:

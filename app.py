@@ -17,6 +17,7 @@ from src.matcher import (
     DATA_DIR,
     EmployerSuggestion,
     MatchResult,
+    batch_match_top_results,
     employer_search_index,
     match,
     suggest_employers_from_index,
@@ -817,7 +818,8 @@ def render_employer_search(selected_employer: str) -> str:
 
 
 BATCH_EMPLOYER_COLUMNS = ("name", "employer", "employer_name", "company")
-BATCH_CHUNK_SIZE = 50
+BATCH_CHUNK_SIZE = 100
+BATCH_MAX_ROWS = 2500
 
 
 def detect_employer_column(columns: list[str]) -> str:
@@ -828,7 +830,7 @@ def detect_employer_column(columns: list[str]) -> str:
     return columns[0]
 
 
-def batch_result_row(input_name: str) -> dict[str, object]:
+def batch_result_row(input_name: str, top: MatchResult | None) -> dict[str, object]:
     cleaned_name = str(input_name or "").strip()
     if not cleaned_name:
         return {
@@ -840,8 +842,7 @@ def batch_result_row(input_name: str) -> dict[str, object]:
             "Data year": "",
         }
 
-    results = match(cleaned_name, top_n=1)
-    if not results:
+    if top is None:
         return {
             "Input name": cleaned_name,
             "Matched employer": "",
@@ -851,7 +852,6 @@ def batch_result_row(input_name: str) -> dict[str, object]:
             "Data year": "",
         }
 
-    top = results[0]
     confidence_label, _, _ = confidence_tier(top)
     return {
         "Input name": cleaned_name,
@@ -964,6 +964,12 @@ def render_batch_lookup() -> None:
     employer_names = uploaded[employer_column].fillna("").astype(str).tolist()
     total_count = len(employer_names)
     st.caption(f"Using `{employer_column}` as the employer-name column. {total_count:,} rows found.")
+    if total_count > BATCH_MAX_ROWS:
+        st.error(
+            f"Batch lookup supports up to {BATCH_MAX_ROWS:,} rows. "
+            f"Split the file or trim to the first {BATCH_MAX_ROWS:,} employers."
+        )
+        return
 
     if not st.button("Run batch lookup", key="run_batch_lookup", type="primary"):
         existing_results = st.session_state.get("batch_lookup_results")
@@ -974,14 +980,17 @@ def render_batch_lookup() -> None:
     progress = st.progress(0, text=f"Matching 0 / {total_count:,}...")
     rows: list[dict[str, object]] = []
     for start in range(0, total_count, BATCH_CHUNK_SIZE):
-        chunk = employer_names[start : start + BATCH_CHUNK_SIZE]
-        rows.extend(batch_result_row(name) for name in chunk)
-        matched_so_far = min(start + len(chunk), total_count)
+        chunk_names = employer_names[start : start + BATCH_CHUNK_SIZE]
+        chunk_results = batch_match_top_results(chunk_names)
+        rows.extend(
+            batch_result_row(name, result)
+            for name, result in zip(chunk_names, chunk_results, strict=True)
+        )
+        matched_so_far = min(start + len(chunk_names), total_count)
         progress.progress(
             matched_so_far / total_count if total_count else 1.0,
             text=f"Matching {matched_so_far:,} / {total_count:,}...",
         )
-        time.sleep(0.01)
     progress.empty()
 
     results = pd.DataFrame(
