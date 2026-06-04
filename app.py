@@ -817,17 +817,10 @@ def render_employer_search(selected_employer: str) -> str:
     return ""
 
 
-BATCH_EMPLOYER_COLUMNS = ("name", "employer", "employer_name", "company")
+from src.batch_columns import detect_employer_column
+
 BATCH_CHUNK_SIZE = 100
 BATCH_MAX_ROWS = 2500
-
-
-def detect_employer_column(columns: list[str]) -> str:
-    normalized_columns = {str(column).strip().lower(): column for column in columns}
-    for candidate in BATCH_EMPLOYER_COLUMNS:
-        if candidate in normalized_columns:
-            return normalized_columns[candidate]
-    return columns[0]
 
 
 def batch_result_row(input_name: str, top: MatchResult | None) -> dict[str, object]:
