@@ -12,6 +12,7 @@ Documentation for the **RecordKeeper Match Tool** MVP — how the code is organi
 |-----|----------|
 | [Demo script](demo.md) | Step-by-step demo employers and talking points |
 | [Data pipeline](data.md) | DOL files, joins, cache, environment variables |
+| [Financial Notes fallback](financial-notes-fallback.md) | Large-plan fallback when service codes fail |
 | [Code map](code.md) | Modules, key functions, tests |
 
 ---

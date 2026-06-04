@@ -67,7 +67,7 @@ The matcher does **not** ship DOL files in git. On first use it:
 
 1. Downloads per-year zips from DOL FOIA “Latest” URLs (default years **2024 → 2020**).
 2. Joins `F_5500`, Schedule C Part 1 Item 2 providers, and service codes; keeps defined-contribution plans and recordkeeper-tier providers.
-3. **Fallback** when Item 2 has no recordkeeper codes: Schedule C Part 1 Item 1 eligible providers (e.g. Nike → Fidelity) and Schedule H fiduciary trust fields when filed.
+3. **Fallback** when Item 2 has no recordkeeper codes: Schedule C Part 1 Item 1, Schedule H fiduciary fields, then **[financial statement Notes](docs/financial-notes-fallback.md)** for large audited plans (registry in `src/financial_notes.py`).
 4. Canonicalizes provider names (Fidelity, Empower, Merrill, etc.).
 5. Writes **`data/recordkeeper_master.csv`** and version file `data/recordkeeper_master.version` (cache v8).
 

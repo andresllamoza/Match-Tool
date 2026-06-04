@@ -178,29 +178,11 @@ DISNEY_2024_OVERRIDE = {
     ),
 }
 
-NIKE_401K_OVERRIDE = {
-    "matched_employer_name": "NIKE, INC.",
-    "recordkeeper": "Fidelity Workplace Services, LLC",
-    "plan_name": "401(K) SAVINGS AND PROFIT SHARING PLAN FOR EMPLOYEES OF NIKE, INC.",
-    "plan_year": 2024,
-    "plan_participants": 48889,
-    "ein": "930584541",
-    "plan_type_code": "2E2F2H2J2K2R3F3H",
-    "match_method": "financial_statement_notes",
-    "match_reason": (
-        "Per the Notes to Financial Statements attached to Schedule H (plan year ended "
-        'May 31, 2024): "Fidelity Workplace Services, LLC" is the record keeper of the Plan. '
-        "Northern Trust Company is the trustee, not the recordkeeper. "
-        "DOL Schedule C Part 1 also lists FID INV INSTL OPS CO (Fidelity operations)."
-    ),
-}
-
 # Keep this list small: use it only where public filings or plan materials
 # identify the 401(k) provider but name matching or DOL rows are misleading.
 CURATED_EMPLOYER_OVERRIDES = {
     "DISNEY": DISNEY_2024_OVERRIDE,
     "WALT DISNEY": DISNEY_2024_OVERRIDE,
-    "NIKE": NIKE_401K_OVERRIDE,
     "BANK AMERICA": {
         "matched_employer_name": "BANK OF AMERICA CORPORATION",
         "recordkeeper": "Merrill Lynch",
@@ -818,25 +800,123 @@ def _candidate_result(
     )
 
 
+def _override_dict_to_result(
+    employer_query: str,
+    override: dict[str, object],
+    *,
+    default_match_method: str = "curated_override",
+) -> MatchResult:
+    return MatchResult(
+        employer_query=employer_query,
+        matched_employer_name=str(override["matched_employer_name"]),
+        recordkeeper=str(override["recordkeeper"]),
+        confidence=1.0,
+        plan_name=override.get("plan_name"),
+        plan_year=override.get("plan_year"),
+        plan_participants=override.get("plan_participants"),
+        ein=override.get("ein"),
+        plan_type_code=override.get("plan_type_code"),
+        relation_tier="TIER1",
+        match_method=str(override.get("match_method", default_match_method)),
+        match_reason=str(override.get("match_reason") or ""),
+    )
+
+
 def _curated_override_result(employer_query: str, canonical_query: str) -> Optional[MatchResult]:
     override = CURATED_EMPLOYER_OVERRIDES.get(canonical_query)
     if override is None:
         return None
+    return _override_dict_to_result(employer_query, override)
 
-    return MatchResult(
-        employer_query=employer_query,
-        matched_employer_name=override["matched_employer_name"],
-        recordkeeper=override["recordkeeper"],
-        confidence=1.0,
-        plan_name=override["plan_name"],
-        plan_year=override["plan_year"],
-        plan_participants=override["plan_participants"],
-        ein=override["ein"],
-        plan_type_code=override["plan_type_code"],
-        relation_tier="TIER1",
-        match_method=override["match_method"],
-        match_reason=override["match_reason"],
-    )
+
+def _financial_notes_override_result(
+    employer_query: str,
+    canonical_employer_key: str,
+) -> Optional[MatchResult]:
+    from src import financial_notes
+
+    entry = financial_notes.registry_entry(canonical_employer_key)
+    if entry is None:
+        return None
+    payload = dict(entry)
+    payload.setdefault("match_method", "financial_statement_notes")
+    payload.setdefault("match_reason", financial_notes.default_notes_reason(entry))
+    return _override_dict_to_result(employer_query, payload, default_match_method="financial_statement_notes")
+
+
+def _should_try_financial_notes(
+    results: list[MatchResult],
+    canonical_query: str,
+) -> bool:
+    from src import financial_notes
+
+    if financial_notes.registry_entry(canonical_query) is not None:
+        return True
+    if not results:
+        return True
+    top = results[0]
+    if not financial_notes.is_large_plan_participants(top.plan_participants):
+        return False
+    if financial_notes.dol_tier_is_weak(top.relation_tier):
+        return True
+    if top.match_method == "fuzzy" and top.confidence < 0.90:
+        return True
+    return False
+
+
+def _resolve_financial_notes_override(
+    employer_query: str,
+    canonical_query: str,
+    results: list[MatchResult],
+) -> Optional[MatchResult]:
+    keys: list[str] = []
+    if canonical_query:
+        keys.append(canonical_query)
+    if results:
+        keys.append(canonicalize_employer(results[0].matched_employer_name))
+    for key in keys:
+        notes_result = _financial_notes_override_result(employer_query, key)
+        if notes_result is not None:
+            return notes_result
+    return None
+
+
+def _apply_financial_notes_fallback(
+    employer_query: str,
+    canonical_query: str,
+    results: list[MatchResult],
+) -> list[MatchResult]:
+    from src import financial_notes
+
+    if not _should_try_financial_notes(results, canonical_query):
+        return results
+
+    notes_result = _resolve_financial_notes_override(employer_query, canonical_query, results)
+    if notes_result is not None:
+        employer_norm = canonicalize_employer(notes_result.matched_employer_name)
+        filtered = [
+            result
+            for result in results
+            if canonicalize_employer(result.matched_employer_name) != employer_norm
+        ]
+        return [notes_result, *filtered]
+
+    if results:
+        top = results[0]
+        if (
+            financial_notes.is_large_plan_participants(top.plan_participants)
+            and financial_notes.dol_tier_is_weak(top.relation_tier)
+            and financial_notes.registry_entry(canonical_query) is None
+            and financial_notes.registry_entry(
+                canonicalize_employer(top.matched_employer_name)
+            )
+            is None
+        ):
+            hint = financial_notes.verification_hint()
+            if hint not in (top.match_reason or ""):
+                top.match_reason = f"{top.match_reason} {hint}".strip()
+
+    return results
 
 
 def _rank_rows(rows: pd.DataFrame) -> pd.DataFrame:
@@ -991,6 +1071,8 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
             if canonicalize_employer(result.matched_employer_name) != override_employer_norm
         ]
         results.insert(0, override_result)
+    else:
+        results = _apply_financial_notes_fallback(employer_query, canonical_query, results)
 
     return results[:top_n]
 
