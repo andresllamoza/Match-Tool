@@ -17,7 +17,9 @@ from src.matcher import (
     DATA_DIR,
     EmployerSuggestion,
     MatchResult,
+    batch_match_top_results,
     employer_search_index,
+    load_dol_data,
     match,
     suggest_employers_from_index,
 )
@@ -60,25 +62,38 @@ st.markdown(
         --pb-shadow: 0 24px 70px rgba(7, 20, 38, 0.10);
     }
 
-    html, body, [class*="css"] {
+    html, body, #root, [class*="css"] {
         font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background-color: #FFF8EA !important;
     }
 
-    .stApp {
+    .stApp,
+    .stApp[data-test-script-state="running"],
+    .stApp[data-test-script-state="notRunning"] {
         color: var(--pb-navy);
         background:
             radial-gradient(circle at top left, rgba(255, 178, 0, 0.16), transparent 28rem),
-            linear-gradient(180deg, #FFF8EA 0%, #FFFDF7 58%, #FFF8EA 100%);
+            linear-gradient(180deg, #FFF8EA 0%, #FFFDF7 58%, #FFF8EA 100%) !important;
     }
 
     .block-container {
-        padding-top: 3.25rem;
+        padding-top: 1.75rem;
         padding-bottom: 3.5rem;
         max-width: 820px;
     }
 
+    .tool-header,
+    .hero-banner {
+        margin-bottom: 1.1rem;
+        padding: 1.05rem 1.15rem 0.95rem;
+        border: 1px solid rgba(255, 178, 0, 0.34);
+        border-radius: 28px;
+        background: linear-gradient(135deg, rgba(255, 252, 244, 0.98) 0%, rgba(255, 241, 209, 0.55) 100%);
+        box-shadow: var(--pb-shadow);
+    }
+
     .tool-header {
-        margin-bottom: 1.7rem;
+        margin-bottom: 1.25rem;
     }
 
     .tool-kicker {
@@ -106,7 +121,7 @@ st.markdown(
     }
 
     .tool-title {
-        font-size: clamp(2.35rem, 5vw, 4rem);
+        font-size: clamp(2rem, 4vw, 2.65rem);
         font-weight: 800;
         color: var(--pb-navy);
         letter-spacing: -0.055em;
@@ -116,10 +131,10 @@ st.markdown(
 
     .tool-subtitle {
         max-width: 42rem;
-        font-size: 1.02rem;
-        line-height: 1.7;
+        font-size: 0.94rem;
+        line-height: 1.5;
         color: var(--pb-muted);
-        margin-top: 1rem;
+        margin-top: 0.6rem;
     }
 
     div[data-testid="stTextInput"] {
@@ -193,11 +208,21 @@ st.markdown(
         position: relative;
         overflow: hidden;
         background: rgba(255, 252, 244, 0.95);
-        border: 1px solid var(--pb-border);
+        border: 1px solid rgba(255, 178, 0, 0.38);
         border-radius: 28px;
         padding: 1.55rem 1.65rem;
         margin: 1.2rem 0 1rem;
         box-shadow: var(--pb-shadow);
+    }
+
+    .result-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 5px;
+        background: linear-gradient(90deg, #FFB200 0%, #FFD24D 55%, #FFB200 100%);
     }
 
 
@@ -296,27 +321,71 @@ st.markdown(
         line-height: 1.55;
     }
 
+    div[data-testid="stForm"] {
+        margin: 0 0 1.15rem;
+        padding: 1.15rem 1.2rem 1.05rem;
+        border: 1px solid rgba(232, 220, 198, 0.95);
+        border-radius: 24px;
+        background: rgba(255, 252, 244, 0.92);
+        box-shadow: 0 14px 34px rgba(7, 20, 38, 0.07);
+    }
+
+    div[data-testid="stForm"] > div:first-child {
+        gap: 0.65rem;
+    }
+
+    .search-panel-title {
+        margin: 0 0 0.2rem;
+        color: var(--pb-navy);
+        font-size: 1.05rem;
+        font-weight: 850;
+        letter-spacing: -0.02em;
+    }
+
+    .search-panel-copy {
+        margin: 0 0 0.85rem;
+        color: var(--pb-muted);
+        font-size: 0.88rem;
+        line-height: 1.55;
+    }
+
     .stButton > button,
     .stDownloadButton > button,
-    div[data-testid="stFormSubmitButton"] button {
+    div[data-testid="stFormSubmitButton"] > button {
         border: 1px solid rgba(255, 178, 0, 0.45);
         border-radius: 999px;
         background: #FFF3CD;
         color: #3A2600;
         font-weight: 800;
-        min-height: 2.75rem;
-        padding: 0.55rem 1rem;
+        min-height: 3rem;
+        padding: 0.55rem 1.1rem;
         transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+
+    .stButton > button[kind="primary"],
+    div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+    div[data-testid="stFormSubmitButton"] > button[data-testid="stBaseButton-primary"] {
+        border: 1px solid #E09B00;
+        background: linear-gradient(180deg, #FFD24D 0%, #FFB200 100%);
+        color: #2A1A00;
+        box-shadow: 0 12px 28px rgba(255, 178, 0, 0.28);
     }
 
     .stButton > button:hover,
     .stDownloadButton > button:hover,
-    div[data-testid="stFormSubmitButton"] button:hover {
+    div[data-testid="stFormSubmitButton"] > button:hover {
         border-color: var(--pb-gold);
         background: #FFE6A3;
         color: #241700;
         box-shadow: 0 10px 24px rgba(255, 178, 0, 0.20);
         transform: translateY(-1px);
+    }
+
+    .stButton > button[kind="primary"]:hover,
+    div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"]:hover,
+    div[data-testid="stFormSubmitButton"] > button[data-testid="stBaseButton-primary"]:hover {
+        background: linear-gradient(180deg, #FFE08A 0%, #FFC933 100%);
+        box-shadow: 0 14px 30px rgba(255, 178, 0, 0.34);
     }
 
     .near-miss {
@@ -527,15 +596,90 @@ st.markdown(
         color: #7D705C;
         text-align: center;
     }
+
+    [data-testid="stToolbar"],
+    [data-testid="stDecoration"],
+    #MainMenu,
+    footer {
+        visibility: hidden;
+        height: 0;
+        min-height: 0;
+    }
+
+    header[data-testid="stHeader"] {
+        background-color: #FFF8EA !important;
+        border-bottom: none;
+        visibility: hidden;
+        height: 0.01rem;
+        min-height: 0;
+    }
+
+    div[data-testid="stForm"] {
+        margin-bottom: 0.85rem;
+    }
+
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    section.main,
+    [data-testid="stMainBlockContainer"],
+    [data-testid="stVerticalBlock"],
+    [data-testid="stHorizontalBlock"],
+    [data-testid="stBottomBlockContainer"] {
+        background-color: #FFF8EA !important;
+    }
+
+    [data-testid="stStatusWidget"],
+    [data-testid="stLoadingSpinner"] {
+        display: none !important;
+    }
+
+    div[data-testid="stForm"]:empty,
+    .stSpinner {
+        display: none !important;
+    }
+
+    .result-card {
+        animation: pb-result-in 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes pb-result-in {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
 
+def is_demo_mode() -> bool:
+    """Clean layout for recordings: ?demo=1 hides batch, extras, and Streamlit chrome."""
+    if st.session_state.get("demo_mode"):
+        return True
+    try:
+        demo_param = st.query_params.get("demo", "")
+        if isinstance(demo_param, list):
+            demo_param = demo_param[0] if demo_param else ""
+        if str(demo_param).lower() in ("1", "true", "yes"):
+            st.session_state["demo_mode"] = True
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def check_password() -> bool:
     """Simple password gate backed by Streamlit secrets."""
     if st.session_state.get("authenticated"):
+        return True
+    if is_demo_mode():
+        st.session_state["authenticated"] = True
         return True
 
     try:
@@ -544,8 +688,11 @@ def check_password() -> bool:
         expected_password = ""
 
     st.markdown(
-        '<div class="tool-header"><h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
-        '<div class="tool-subtitle">Internal tool - sign in to continue</div></div>',
+        '<div class="hero-banner tool-header">'
+        '<div class="tool-kicker"><span class="tool-kicker-dot"></span>PensionBee internal</div>'
+        '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
+        '<div class="tool-subtitle">Internal tool — sign in to continue</div>'
+        '</div>',
         unsafe_allow_html=True,
     )
     password = st.text_input("Password", type="password", key="password_input")
@@ -556,9 +703,8 @@ def check_password() -> bool:
     if password:
         if password == expected_password:
             st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.error("Incorrect password.")
+            return True
+        st.error("Incorrect password.")
     return False
 
 
@@ -684,6 +830,54 @@ def load_cached_employer_index() -> pd.DataFrame:
     return employer_search_index()
 
 
+@st.cache_data(show_spinner=False)
+def cached_match_results(employer_query: str, top_n: int = 4) -> tuple:
+    """Cache matcher results for snappy reruns during a demo session."""
+    results = match(employer_query, top_n=top_n)
+    return tuple(
+        (
+            result.employer_query,
+            result.matched_employer_name,
+            result.recordkeeper,
+            result.confidence,
+            result.plan_name,
+            result.plan_year,
+            result.plan_participants,
+            result.ein,
+            result.plan_type_code,
+            result.relation_tier,
+            result.match_method,
+            result.match_reason,
+        )
+        for result in results
+    )
+
+
+def hydrate_match_results(cached_rows: tuple) -> list[MatchResult]:
+    return [
+        MatchResult(
+            employer_query=row[0],
+            matched_employer_name=row[1],
+            recordkeeper=row[2],
+            confidence=row[3],
+            plan_name=row[4],
+            plan_year=row[5],
+            plan_participants=row[6],
+            ein=row[7],
+            plan_type_code=row[8],
+            relation_tier=row[9],
+            match_method=row[10],
+            match_reason=row[11],
+        )
+        for row in cached_rows
+    ]
+
+
+def warm_runtime_caches() -> None:
+    load_dol_data()
+    load_cached_employer_index()
+
+
 def selected_employer_from_query_params() -> str:
     try:
         value = st.query_params.get("selected_employer", "")
@@ -700,6 +894,11 @@ def reset_lookup_feedback() -> None:
     st.session_state.pop("provider_feedback_submitted", None)
 
 
+def clear_confirmed_lookup() -> None:
+    reset_lookup_feedback()
+    st.session_state.pop("confirmed_lookup", None)
+
+
 def suggestion_detail(suggestion: EmployerSuggestion) -> str:
     details = [suggestion.recordkeeper]
     if suggestion.ein:
@@ -709,36 +908,69 @@ def suggestion_detail(suggestion: EmployerSuggestion) -> str:
     return " | ".join(details)
 
 
-def select_employer(employer_name: str) -> None:
+def confirm_lookup(employer_name: str, *, sync_search_box: bool = False) -> None:
+    """Run a lookup for this employer (Enter, Search, or Select)."""
+    cleaned = str(employer_name or "").strip()
+    if not cleaned:
+        return
     reset_lookup_feedback()
-    st.session_state["employer_search_query"] = employer_name
-    try:
-        st.query_params["selected_employer"] = employer_name
-    except AttributeError:
-        st.experimental_set_query_params(selected_employer=employer_name)
-    st.rerun()
+    if sync_search_box:
+        st.session_state["_pending_search_query"] = cleaned
+    st.session_state["confirmed_lookup"] = cleaned
+    if not is_demo_mode():
+        try:
+            st.query_params["selected_employer"] = cleaned
+        except AttributeError:
+            st.experimental_set_query_params(selected_employer=cleaned)
 
 
-def render_employer_search(selected_employer: str) -> str:
-    if "employer_search_query" not in st.session_state:
-        st.session_state["employer_search_query"] = selected_employer
+def sync_confirmed_lookup_from_params() -> None:
+    param_employer = selected_employer_from_query_params()
+    if not param_employer:
+        return
+    signature = ("param", param_employer)
+    if st.session_state.get("_synced_param_lookup") == signature:
+        return
+    st.session_state["_synced_param_lookup"] = signature
+    st.session_state["confirmed_lookup"] = param_employer
+    st.session_state["_pending_search_query"] = param_employer
 
-    st.text_input(
-        "Employer name",
-        placeholder="Type at least 3 letters, e.g. Amazon or Disney",
-        key="employer_search_query",
-        on_change=reset_lookup_feedback,
+
+def render_employer_search_bar() -> str:
+    """Search box; Enter or Search runs a lookup on the typed name."""
+    sync_confirmed_lookup_from_params()
+    pending_query = st.session_state.pop("_pending_search_query", None)
+    input_kwargs: dict[str, object] = {
+        "placeholder": "e.g. Disney, Nike, Walmart",
+        "label_visibility": "visible",
+    }
+    if pending_query is not None:
+        input_kwargs["value"] = pending_query
+
+    search_copy = "Type a company name, then <strong>Enter</strong> or <strong>Search</strong>."
+    st.markdown(
+        '<div class="search-panel-title">Employer lookup</div>'
+        f'<p class="search-panel-copy">{search_copy}</p>',
+        unsafe_allow_html=True,
     )
-    query = st.session_state.get("employer_search_query", "").strip()
-    if not query:
-        return ""
+    with st.form("employer_lookup_form", clear_on_submit=False, border=False):
+        input_col, button_col = st.columns([0.8, 0.2], vertical_alignment="bottom")
+        with input_col:
+            query = st.text_input("Employer name", **input_kwargs)
+        with button_col:
+            submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
+    query = str(query or "").strip()
+    if submitted and query:
+        confirm_lookup(query)
+    return query
 
-    if query == selected_employer:
-        return selected_employer
 
+def render_employer_suggestions(query: str, *, below_results: bool = False) -> None:
+    """Filing-name suggestions — shown below the result card after Enter/Search."""
     if len(query) < 3:
-        st.info("Type at least 3 letters to see similar employer names.")
-        return ""
+        if not below_results:
+            st.info("Type at least 3 letters, then press Enter to search.")
+        return
 
     try:
         suggestions = suggest_employers_from_index(
@@ -748,52 +980,87 @@ def render_employer_search(selected_employer: str) -> str:
         )
     except Exception as exc:
         st.warning(f"Suggestions could not be loaded: {exc}")
-        return ""
+        return
 
     if not suggestions:
-        st.info("No matches — try a shorter or different name")
-        return ""
+        if not below_results:
+            st.info("No matches — try a shorter or different name")
+        return
 
-    st.markdown(
-        '<div class="suggestions-panel">'
-        '<div class="suggestions-kicker">Employer matches</div>'
-        '<div class="suggestions-header">Choose the filing name that matches</div>'
-        '<div class="suggestions-caption">Showing up to 10 similar employer or plan names, with weak partial matches tucked away.</div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
+    if below_results:
+        st.markdown(
+            '<div class="suggestions-panel" style="margin-top: 1.25rem;">'
+            '<div class="suggestions-kicker">Other filing names</div>'
+            '<div class="suggestions-header">Pick a different DOL employer if the match above looks wrong</div>'
+            '<div class="suggestions-caption">These are similar names from Form 5500 filings — selecting one re-runs the lookup.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="suggestions-panel">'
+            '<div class="suggestions-kicker">Employer matches</div>'
+            '<div class="suggestions-header">Press Enter to search, or choose a filing name</div>'
+            '<div class="suggestions-caption">Up to 10 similar employer or plan names from DOL data.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
     top_suggestion = suggestions[0]
     has_best_match = top_suggestion.confidence >= 0.95
     other_suggestions = suggestions[1:] if has_best_match else suggestions
 
-    if has_best_match:
+    if has_best_match and not below_results:
         name = html.escape(top_suggestion.employer_name)
         details = html.escape(suggestion_detail(top_suggestion))
         info_col, action_col = st.columns([0.78, 0.22], vertical_alignment="center")
         with info_col:
             st.markdown(
                 '<div class="best-match-card">'
-                '<div class="best-match-label">Best match</div>'
+                '<div class="best-match-label">Best filing match</div>'
                 f'<div class="best-match-name">{name}</div>'
                 f'<div class="best-match-meta">{details}</div>'
                 '</div>',
                 unsafe_allow_html=True,
             )
         with action_col:
-            st.button(
+            if st.button(
                 "Select",
                 key=f"best_employer_suggestion_{top_suggestion.employer_name}",
-                on_click=select_employer,
-                args=(top_suggestion.employer_name,),
                 use_container_width=True,
-            )
-    else:
-        st.warning("No strong employer match yet. Check the similar names below or try a more specific name.")
+            ):
+                confirm_lookup(top_suggestion.employer_name, sync_search_box=True)
+    elif not below_results:
+        st.warning("Press Enter to search this name, or pick a filing name below.")
 
     if other_suggestions:
-        with st.expander("Other similar names", expanded=not has_best_match):
-            for index, suggestion in enumerate(other_suggestions[: SUGGESTION_LIMIT - 1 if has_best_match else SUGGESTION_LIMIT]):
+        expander_label = "Other similar names"
+        expanded = not has_best_match and not below_results
+        with st.expander(expander_label, expanded=expanded):
+            suggestion_slice = other_suggestions[
+                : SUGGESTION_LIMIT - 1 if has_best_match and not below_results else SUGGESTION_LIMIT
+            ]
+            if below_results and has_best_match:
+                best = top_suggestion
+                name = html.escape(best.employer_name)
+                details = html.escape(suggestion_detail(best))
+                info_col, action_col = st.columns([0.76, 0.24], vertical_alignment="center")
+                with info_col:
+                    st.markdown(
+                        '<div class="suggestion-row">'
+                        f'<div class="suggestion-name">{name}</div>'
+                        f'<div class="suggestion-meta">{details}</div>'
+                        '</div>',
+                        unsafe_allow_html=True,
+                    )
+                with action_col:
+                    if st.button(
+                        "Select",
+                        key=f"below_best_suggestion_{best.employer_name}",
+                        use_container_width=True,
+                    ):
+                        confirm_lookup(best.employer_name, sync_search_box=True)
+            for index, suggestion in enumerate(suggestion_slice):
                 name = html.escape(suggestion.employer_name)
                 details = html.escape(suggestion_detail(suggestion))
                 info_col, action_col = st.columns([0.76, 0.24], vertical_alignment="center")
@@ -806,29 +1073,146 @@ def render_employer_search(selected_employer: str) -> str:
                         unsafe_allow_html=True,
                     )
                 with action_col:
-                    st.button(
+                    if st.button(
                         "Select",
                         key=f"employer_suggestion_{index}_{suggestion.employer_name}",
-                        on_click=select_employer,
-                        args=(suggestion.employer_name,),
                         use_container_width=True,
-                    )
-    return ""
+                    ):
+                        confirm_lookup(suggestion.employer_name, sync_search_box=True)
 
 
-BATCH_EMPLOYER_COLUMNS = ("name", "employer", "employer_name", "company")
-BATCH_CHUNK_SIZE = 50
+def render_lookup_results(lookup_employer: str) -> None:
+    lookup_error = ""
+    try:
+        results = hydrate_match_results(cached_match_results(lookup_employer, top_n=4))
+    except NotImplementedError:
+        lookup_error = "Matcher logic not yet implemented."
+        st.error(
+            "Matcher logic not yet implemented. "
+            "Paste your v4 Colab logic into `src/matcher.py` to enable lookups."
+        )
+        results = []
+    except Exception as exc:
+        lookup_error = str(exc)
+        st.error(f"Error running matcher: {exc}")
+        results = []
+
+    lookup_signature = (
+        lookup_employer,
+        lookup_error,
+        tuple(
+            (
+                result.matched_employer_name,
+                result.recordkeeper,
+                round(result.confidence, 4),
+                result.match_method,
+            )
+            for result in results
+        ),
+    )
+    if st.session_state.get("last_logged_lookup_signature") != lookup_signature:
+        try:
+            append_lookup_attempt(lookup_employer, results, error=lookup_error)
+            st.session_state["last_logged_lookup_signature"] = lookup_signature
+        except Exception as exc:
+            st.warning(f"Lookup completed, but the attempt log could not be updated: {exc}")
+
+    if not results:
+        escaped_lookup = html.escape(lookup_employer)
+        st.markdown(
+            '<div class="result-card no-match">'
+            '<div class="result-eyebrow">No provider returned</div>'
+            '<div class="result-recordkeeper">No match found</div>'
+            f'<div class="result-employer">No candidate matches for "{escaped_lookup}" in the 5500 dataset.</div>'
+            '<div style="font-size: 0.88rem; color: #667085; margin-top: 0.5rem; line-height: 1.6;">'
+            "This could mean the employer's plan is not in the latest DOL release, "
+            "the employer name is spelled differently in filings, or the plan is below the 5500 filing threshold."
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        return
+
+    top = results[0]
+    near_misses = results[1:]
+    card_class = result_card_class(top)
+    tier_label, tier_class, tier_note = confidence_tier(top)
+    tier_note_html = (
+        f'<span class="confidence-note">{html.escape(tier_note)}</span>'
+        if tier_note
+        else ""
+    )
+    recordkeeper = html.escape(top.recordkeeper)
+    matched_employer = html.escape(top.matched_employer_name)
+
+    st.markdown(
+        f'<div class="{card_class}">'
+        '<div class="result-eyebrow">Likely recordkeeper</div>'
+        f'<div class="result-recordkeeper">{recordkeeper}</div>'
+        f'<div class="result-source">{result_source_line(top)}</div>'
+        f'<div class="result-employer">Matched employer: <strong>{matched_employer}</strong></div>'
+        f'<span class="result-confidence {tier_class}">'
+        f'{tier_label}'
+        "</span>"
+        f"{tier_note_html}"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    if not is_demo_mode():
+        st.button(
+            "No, this is not my provider",
+            key="show_provider_feedback_button",
+            on_click=show_provider_feedback_form,
+            help="Open a short correction form so the team can review this provider.",
+        )
+        if st.session_state.get("show_provider_feedback"):
+            render_provider_feedback_form(lookup_employer, top)
+
+    if is_demo_mode():
+        return
+
+    with st.expander("Match detail (for verification)"):
+        st.markdown("**Why this name was pulled**")
+        st.write(top.match_reason or top.match_method)
+        detail_cols = st.columns(2)
+        with detail_cols[0]:
+            st.markdown("**Plan name**")
+            st.write(top.plan_name or "-")
+            st.markdown("**EIN**")
+            st.write(top.ein or "-")
+        with detail_cols[1]:
+            st.markdown("**Plan year**")
+            st.write(top.plan_year or "-")
+            st.markdown("**Participants**")
+            st.write(f"{top.plan_participants:,}" if top.plan_participants else "-")
+
+    if near_misses:
+        st.markdown("##### Other recordkeeper candidates")
+        near_miss_html = ""
+        for candidate in near_misses:
+            candidate_tier, candidate_tier_class, _ = confidence_tier(candidate)
+            candidate_employer = html.escape(candidate.matched_employer_name)
+            candidate_recordkeeper = html.escape(candidate.recordkeeper)
+            near_miss_html += (
+                '<div class="near-miss">'
+                f'<div><div class="near-miss-name">{candidate_employer}</div>'
+                f'<div class="near-miss-rk">{candidate_recordkeeper}</div></div>'
+                f'<span class="result-confidence {candidate_tier_class}">'
+                f'{candidate_tier}'
+                "</span>"
+                "</div>"
+            )
+        st.markdown(near_miss_html, unsafe_allow_html=True)
 
 
-def detect_employer_column(columns: list[str]) -> str:
-    normalized_columns = {str(column).strip().lower(): column for column in columns}
-    for candidate in BATCH_EMPLOYER_COLUMNS:
-        if candidate in normalized_columns:
-            return normalized_columns[candidate]
-    return columns[0]
+from src.batch_columns import detect_employer_column
+
+BATCH_CHUNK_SIZE = 100
+BATCH_MAX_ROWS = 2500
 
 
-def batch_result_row(input_name: str) -> dict[str, object]:
+def batch_result_row(input_name: str, top: MatchResult | None) -> dict[str, object]:
     cleaned_name = str(input_name or "").strip()
     if not cleaned_name:
         return {
@@ -840,8 +1224,7 @@ def batch_result_row(input_name: str) -> dict[str, object]:
             "Data year": "",
         }
 
-    results = match(cleaned_name, top_n=1)
-    if not results:
+    if top is None:
         return {
             "Input name": cleaned_name,
             "Matched employer": "",
@@ -851,7 +1234,6 @@ def batch_result_row(input_name: str) -> dict[str, object]:
             "Data year": "",
         }
 
-    top = results[0]
     confidence_label, _, _ = confidence_tier(top)
     return {
         "Input name": cleaned_name,
@@ -916,7 +1298,12 @@ def render_batch_results(results: pd.DataFrame) -> None:
         '</div>',
         unsafe_allow_html=True,
     )
-    st.dataframe(style_batch_results(results), hide_index=True, use_container_width=True)
+    try:
+        st.dataframe(style_batch_results(results), hide_index=True, use_container_width=True)
+    except Exception:
+        display = results.copy()
+        display["Confidence"] = display["Confidence"].apply(confidence_dot_label)
+        st.dataframe(display, hide_index=True, use_container_width=True)
     st.download_button(
         "Download results as CSV",
         results.to_csv(index=False).encode("utf-8"),
@@ -964,6 +1351,12 @@ def render_batch_lookup() -> None:
     employer_names = uploaded[employer_column].fillna("").astype(str).tolist()
     total_count = len(employer_names)
     st.caption(f"Using `{employer_column}` as the employer-name column. {total_count:,} rows found.")
+    if total_count > BATCH_MAX_ROWS:
+        st.error(
+            f"Batch lookup supports up to {BATCH_MAX_ROWS:,} rows. "
+            f"Split the file or trim to the first {BATCH_MAX_ROWS:,} employers."
+        )
+        return
 
     if not st.button("Run batch lookup", key="run_batch_lookup", type="primary"):
         existing_results = st.session_state.get("batch_lookup_results")
@@ -974,14 +1367,17 @@ def render_batch_lookup() -> None:
     progress = st.progress(0, text=f"Matching 0 / {total_count:,}...")
     rows: list[dict[str, object]] = []
     for start in range(0, total_count, BATCH_CHUNK_SIZE):
-        chunk = employer_names[start : start + BATCH_CHUNK_SIZE]
-        rows.extend(batch_result_row(name) for name in chunk)
-        matched_so_far = min(start + len(chunk), total_count)
+        chunk_names = employer_names[start : start + BATCH_CHUNK_SIZE]
+        chunk_results = batch_match_top_results(chunk_names)
+        rows.extend(
+            batch_result_row(name, result)
+            for name, result in zip(chunk_names, chunk_results, strict=True)
+        )
+        matched_so_far = min(start + len(chunk_names), total_count)
         progress.progress(
             matched_so_far / total_count if total_count else 1.0,
             text=f"Matching {matched_so_far:,} / {total_count:,}...",
         )
-        time.sleep(0.01)
     progress.empty()
 
     results = pd.DataFrame(
@@ -999,208 +1395,103 @@ def render_batch_lookup() -> None:
     render_batch_results(results)
 
 
+if not st.session_state.get("runtime_cache_warmed"):
+    warm_runtime_caches()
+    st.session_state["runtime_cache_warmed"] = True
+
+_demo = is_demo_mode()
 st.markdown(
-    '<div class="tool-header">'
+    '<div class="hero-banner tool-header">'
     '<div class="tool-kicker"><span class="tool-kicker-dot"></span>PensionBee internal</div>'
     '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
-    '<div class="tool-subtitle">Find the 401(k) recordkeeper for an employer using DOL Form 5500 data.</div>'
+    '<div class="tool-subtitle">401(k) recordkeeper lookup from public DOL Form 5500 filings.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
 
-lookup_employer = selected_employer_from_query_params()
-lookup_employer = render_employer_search(lookup_employer)
+search_query = render_employer_search_bar()
+confirmed_lookup = str(st.session_state.get("confirmed_lookup", "") or "").strip()
 
-if lookup_employer:
-    with st.spinner("Looking up..."):
-        lookup_error = ""
-        try:
-            results = match(lookup_employer, top_n=4)
-        except NotImplementedError:
-            lookup_error = "Matcher logic not yet implemented."
-            st.error(
-                "Matcher logic not yet implemented. "
-                "Paste your v4 Colab logic into `src/matcher.py` to enable lookups."
-            )
-            results = []
-        except Exception as exc:
-            lookup_error = str(exc)
-            st.error(f"Error running matcher: {exc}")
-            results = []
-
-    lookup_signature = (
-        lookup_employer,
-        lookup_error,
-        tuple(
-            (
-                result.matched_employer_name,
-                result.recordkeeper,
-                round(result.confidence, 4),
-                result.match_method,
-            )
-            for result in results
-        ),
-    )
-    if st.session_state.get("last_logged_lookup_signature") != lookup_signature:
-        try:
-            append_lookup_attempt(lookup_employer, results, error=lookup_error)
-            st.session_state["last_logged_lookup_signature"] = lookup_signature
-        except Exception as exc:
-            st.warning(f"Lookup completed, but the attempt log could not be updated: {exc}")
-
-    if not results:
-        escaped_lookup = html.escape(lookup_employer)
-        st.markdown(
-            '<div class="result-card no-match">'
-            '<div class="result-eyebrow">No provider returned</div>'
-            '<div class="result-recordkeeper">No match found</div>'
-            f'<div class="result-employer">No candidate matches for "{escaped_lookup}" in the 5500 dataset.</div>'
-            '<div style="font-size: 0.88rem; color: #667085; margin-top: 0.5rem; line-height: 1.6;">'
-            "This could mean the employer's plan is not in the latest DOL release, "
-            "the employer name is spelled differently in filings, or the plan is below the 5500 filing threshold."
-            "</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        top = results[0]
-        near_misses = results[1:]
-        card_class = result_card_class(top)
-        tier_label, tier_class, tier_note = confidence_tier(top)
-        tier_note_html = (
-            f'<span class="confidence-note">{html.escape(tier_note)}</span>'
-            if tier_note
-            else ""
-        )
-        recordkeeper = html.escape(top.recordkeeper)
-        matched_employer = html.escape(top.matched_employer_name)
-
-        st.markdown(
-            f'<div class="{card_class}">'
-            '<div class="result-eyebrow">Likely recordkeeper</div>'
-            f'<div class="result-recordkeeper">{recordkeeper}</div>'
-            f'<div class="result-source">{result_source_line(top)}</div>'
-            f'<div class="result-employer">Matched employer: <strong>{matched_employer}</strong></div>'
-            f'<span class="result-confidence {tier_class}">'
-            f'{tier_label}'
-            "</span>"
-            f"{tier_note_html}"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        st.button(
-            "No, this is not my provider",
-            key="show_provider_feedback_button",
-            on_click=show_provider_feedback_form,
-            help="Open a short correction form so the team can review this provider.",
-        )
-        if st.session_state.get("show_provider_feedback"):
-            render_provider_feedback_form(lookup_employer, top)
-
-        with st.expander("Match detail (for verification)"):
-            st.markdown("**Why this name was pulled**")
-            st.write(top.match_reason or top.match_method)
-            detail_cols = st.columns(2)
-            with detail_cols[0]:
-                st.markdown("**Plan name**")
-                st.write(top.plan_name or "-")
-                st.markdown("**EIN**")
-                st.write(top.ein or "-")
-            with detail_cols[1]:
-                st.markdown("**Plan year**")
-                st.write(top.plan_year or "-")
-                st.markdown("**Participants**")
-                st.write(f"{top.plan_participants:,}" if top.plan_participants else "-")
-
-        if near_misses:
-            st.markdown("##### Other candidates")
-            near_miss_html = ""
-            for candidate in near_misses:
-                candidate_tier, candidate_tier_class, _ = confidence_tier(candidate)
-                candidate_employer = html.escape(candidate.matched_employer_name)
-                candidate_recordkeeper = html.escape(candidate.recordkeeper)
-                near_miss_html += (
-                    '<div class="near-miss">'
-                    f'<div><div class="near-miss-name">{candidate_employer}</div>'
-                    f'<div class="near-miss-rk">{candidate_recordkeeper}</div></div>'
-                    f'<span class="result-confidence {candidate_tier_class}">'
-                    f'{candidate_tier}'
-                    "</span>"
-                    "</div>"
-                )
-            st.markdown(near_miss_html, unsafe_allow_html=True)
-
+if confirmed_lookup:
+    render_lookup_results(confirmed_lookup)
+    if not _demo:
+        render_employer_suggestions(search_query or confirmed_lookup, below_results=True)
 else:
     st.session_state.pop("last_logged_lookup_signature", None)
-    st.markdown(
-        """
-        <div class="empty-state">
-            <div class="empty-illustration" aria-hidden="true">
-                <svg width="58" height="58" viewBox="0 0 58 58" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="25" cy="25" r="15" fill="#FFB200" fill-opacity="0.32" stroke="#071426" stroke-width="2.5"/>
-                    <path d="M36 36L48 48" stroke="#071426" stroke-width="4" stroke-linecap="round"/>
-                    <path d="M20 23H30M20 29H35" stroke="#071426" stroke-width="2.5" stroke-linecap="round"/>
-                    <path d="M42 9L47 12V18L42 21L37 18V12L42 9Z" fill="#FFB200" fill-opacity="0.55"/>
-                    <path d="M11 38L16 41V47L11 50L6 47V41L11 38Z" fill="#FFB200" fill-opacity="0.35"/>
-                </svg>
+    if len(search_query) >= 3 and not _demo:
+        render_employer_suggestions(search_query, below_results=False)
+    else:
+        st.markdown(
+            """
+            <div class="empty-state">
+                <div class="empty-illustration" aria-hidden="true">
+                    <svg width="58" height="58" viewBox="0 0 58 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="25" cy="25" r="15" fill="#FFB200" fill-opacity="0.32" stroke="#071426" stroke-width="2.5"/>
+                        <path d="M36 36L48 48" stroke="#071426" stroke-width="4" stroke-linecap="round"/>
+                        <path d="M20 23H30M20 29H35" stroke="#071426" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M42 9L47 12V18L42 21L37 18V12L42 9Z" fill="#FFB200" fill-opacity="0.55"/>
+                        <path d="M11 38L16 41V47L11 50L6 47V41L11 38Z" fill="#FFB200" fill-opacity="0.35"/>
+                    </svg>
+                </div>
+                <div class="empty-title">Type a company name and press Enter.</div>
+                <p class="empty-copy">
+                    We search ~86k US employers from DOL Form 5500 filings. Enter at least 3 letters, then press Enter or Search.
+                </p>
             </div>
-            <div class="empty-title">Start with an employer name.</div>
-            <p class="empty-copy">
-                This lookup covers approximately 86k US employers from DOL Form 5500 filings.
-            </p>
-        </div>
-        """,
+            """,
+            unsafe_allow_html=True,
+        )
+
+if not _demo:
+    render_batch_lookup()
+
+
+if not _demo:
+    with st.expander("Master list of entered attempts"):
+        attempts = read_lookup_attempts()
+        if attempts.empty:
+            st.info("No lookup attempts have been recorded yet.")
+        else:
+            visible_columns = [
+                "timestamp_utc",
+                "input_name",
+                "matched_employer",
+                "recordkeeper",
+                "confidence",
+                "match_method",
+                "match_reason",
+                "candidate_count",
+                "ein",
+            ]
+            st.dataframe(
+                attempts[visible_columns].rename(
+                    columns={
+                        "timestamp_utc": "Timestamp (UTC)",
+                        "input_name": "Entered name",
+                        "matched_employer": "Pulled employer name",
+                        "recordkeeper": "Recordkeeper",
+                        "confidence": "Confidence",
+                        "match_method": "Match method",
+                        "match_reason": "Why it pulled this name",
+                        "candidate_count": "Candidates",
+                        "ein": "EIN",
+                    }
+                ),
+                hide_index=True,
+                use_container_width=True,
+            )
+            st.download_button(
+                "Download master attempts CSV",
+                attempts.to_csv(index=False).encode("utf-8"),
+                file_name="lookup_attempts_master.csv",
+                mime="text/csv",
+            )
+
+if not _demo:
+    st.markdown(
+        '<div class="footer-note">'
+        "Data covers DOL Form 5500 filings 2020-2024. "
+        "Recordkeeper data may lag actual plan transitions by 12-24 months."
+        "</div>",
         unsafe_allow_html=True,
     )
-
-render_batch_lookup()
-
-
-with st.expander("Master list of entered attempts"):
-    attempts = read_lookup_attempts()
-    if attempts.empty:
-        st.info("No lookup attempts have been recorded yet.")
-    else:
-        visible_columns = [
-            "timestamp_utc",
-            "input_name",
-            "matched_employer",
-            "recordkeeper",
-            "confidence",
-            "match_method",
-            "match_reason",
-            "candidate_count",
-            "ein",
-        ]
-        st.dataframe(
-            attempts[visible_columns].rename(
-                columns={
-                    "timestamp_utc": "Timestamp (UTC)",
-                    "input_name": "Entered name",
-                    "matched_employer": "Pulled employer name",
-                    "recordkeeper": "Recordkeeper",
-                    "confidence": "Confidence",
-                    "match_method": "Match method",
-                    "match_reason": "Why it pulled this name",
-                    "candidate_count": "Candidates",
-                    "ein": "EIN",
-                }
-            ),
-            hide_index=True,
-            use_container_width=True,
-        )
-        st.download_button(
-            "Download master attempts CSV",
-            attempts.to_csv(index=False).encode("utf-8"),
-            file_name="lookup_attempts_master.csv",
-            mime="text/csv",
-        )
-
-st.markdown(
-    '<div class="footer-note">'
-    "Data covers DOL Form 5500 filings 2020-2024. "
-    "Recordkeeper data may lag actual plan transitions by 12-24 months."
-    "</div>",
-    unsafe_allow_html=True,
-)

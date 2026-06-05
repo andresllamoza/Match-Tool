@@ -22,18 +22,24 @@ Repeat briefly with **`Amazon`** → **AMAZON.COM SERVICES, LLC** / Fidelity (wo
 2. Result: **Merrill Lynch** on **401(k) plan**, not Fidelity from pension row.
 3. Match detail explains curated override vs misleading pension filing.
 
-## 4. Typeahead quality — Citi
+## 4. Financial statement notes — Nike
+
+1. Type **`Nike`** → select **NIKE, INC.** (401(k) plan).
+2. Result: **Fidelity Workplace Services, LLC** — sourced from the **Notes to Financial Statements** (Schedule H attachment; plan year ended May 31, 2024), which names Fidelity as record keeper and Northern Trust as trustee.
+3. Open **Match detail** to show the quoted rationale (distinguishes trustee vs recordkeeper).
+
+## 5. Typeahead quality — Citi
 
 1. Type **`Citi`**.
 2. Show **CITIGROUP INC** ranked above **CITI TRENDS INC** (brand alias).
 
-## 5. Batch lookup (optional)
+## 6. Batch lookup (optional)
 
 1. Scroll to **Batch lookup**.
 2. Upload CSV with column `employer_name` (or `name` / `company` — auto-detected).
 3. **Run batch lookup** → summary match rate → **Download results as CSV**.
 
-## 6. Feedback and audit (optional)
+## 7. Feedback and audit (optional)
 
 - **No, this is not my provider** → correction form.
 - **Master list of entered attempts** → Ops audit trail (local/cloud ephemeral).

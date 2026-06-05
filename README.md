@@ -28,7 +28,7 @@ streamlit run app.py
 
 **First run:** the matcher downloads DOL CSVs from [askebsa.dol.gov](https://askebsa.dol.gov) and builds `data/recordkeeper_master.csv` (~2–5 minutes depending on network). Later runs load the cache in a few seconds.
 
-Open `http://localhost:8501`, sign in, type an employer name (at least 3 letters), pick a filing name from suggestions, and view the recordkeeper result.
+Open `http://localhost:8501`, sign in, type an employer name (at least 3 letters), press **Enter** or **Search**, then view the recordkeeper result (filing-name suggestions appear below).
 
 ---
 
@@ -66,9 +66,10 @@ Theme and Streamlit config: [`.streamlit/config.toml`](.streamlit/config.toml).
 The matcher does **not** ship DOL files in git. On first use it:
 
 1. Downloads per-year zips from DOL FOIA “Latest” URLs (default years **2024 → 2020**).
-2. Joins `F_5500`, Schedule C providers, and service codes; keeps defined-contribution plans and recordkeeper-tier providers.
-3. Canonicalizes provider names (Fidelity, Empower, Merrill, etc.).
-4. Writes **`data/recordkeeper_master.csv`** and version file `data/recordkeeper_master.version` (cache v7).
+2. Joins `F_5500`, Schedule C Part 1 Item 2 providers, and service codes; keeps defined-contribution plans and recordkeeper-tier providers.
+3. **Fallback** when Item 2 has no recordkeeper codes: Schedule C Part 1 Item 1, Schedule H fiduciary fields, then **[financial statement Notes](docs/financial-notes-fallback.md)** for large audited plans (registry in `src/financial_notes.py`).
+4. Canonicalizes provider names (Fidelity, Empower, Merrill, etc.).
+5. Writes **`data/recordkeeper_master.csv`** and version file `data/recordkeeper_master.version` (cache v8).
 
 Override **`DOL_YEARS`** (comma-separated) to limit years, e.g. `export DOL_YEARS=2024` for a faster first build.
 
@@ -76,7 +77,11 @@ See [docs/data.md](docs/data.md) on the GitHub Pages site for file names, column
 
 ---
 
-## Demo script (tomorrow)
+## Demo script
+
+**90s demo video:** [`demo/recordkeeper_demo_90s.mp4`](demo/recordkeeper_demo_90s.mp4) — use `/?demo=1` for clean UI  
+**Scripts:** [`demo/DEMO_SCRIPT_90s.md`](demo/DEMO_SCRIPT_90s.md) · [`demo/DEMO_EXEC.md`](demo/DEMO_EXEC.md)  
+**Batch CSV:** [`demo/fortune_demo_batch_25.csv`](demo/fortune_demo_batch_25.csv)
 
 Use these employers to show search, overrides, and confidence:
 
@@ -89,6 +94,7 @@ Use these employers to show search, overrides, and confidence:
 | `Walmart` | WALMART INC. | Merrill Lynch |
 | `Bank of America` | BANK OF AMERICA CORPORATION | Merrill Lynch (curated; avoids pension-row noise) |
 | `Citi` | CITIGROUP INC | Empower Retirement (brand alias) |
+| `Nike` | NIKE, INC. | Fidelity Workplace Services, LLC (Notes to Financial Statements) |
 
 **Talking points:** DOL legal names vs brand names; “Match detail” explains *why*; batch CSV for Ops; data lag 12–24 months on plan changes.
 

@@ -6,6 +6,7 @@ from typing import Optional
 import urllib.request
 import zipfile
 
+import numpy as np
 import pandas as pd
 from rapidfuzz import fuzz, process
 
@@ -51,12 +52,12 @@ class EmployerSuggestion:
 DATA_DIR = Path(__file__).parent.parent / "data"
 MASTER_CACHE_FILENAME = "recordkeeper_master.csv"
 MASTER_CACHE_VERSION_FILENAME = "recordkeeper_master.version"
-MASTER_CACHE_VERSION = "7"
+MASTER_CACHE_VERSION = "8"
 
 # Prefer the newest complete DOL filing year, then fall back through older
 # releases for plans that have not filed recently or have changed sponsors.
 DEFAULT_YEARS = (2024, 2023, 2022, 2021, 2020)
-TIER_RANK = {"TIER1": 1, "TIER2": 2}
+TIER_RANK = {"TIER1": 1, "TIER2": 2, "TIER1_ITEM1": 1, "TIER1_SCH_H": 1}
 TIER1_RELATION = r"RECORDKEEPER|RECORD KEEPER|RECORDKEEPING|RECORD KEEPING|PLAN RECORDKEEPER"
 TIER2_RELATION = r"CONTRACT ADMINISTRATOR|CONTRACT ADMIN"
 TIER1_CODES = {"15", "64"}
@@ -122,6 +123,13 @@ SUGGESTION_GENERIC_TOKENS = {
 }
 BRAND_ALIAS_TARGETS = {
     "CITI": ("CITIGROUP",),
+    "DISNEY": ("TWDC",),
+    "WALT DISNEY": ("TWDC",),
+    # Fortune / brand names → legal DOL employer keys
+    "ALPHABET": ("GOOGLE",),
+    "FANNIE MAE": ("FEDERAL NATIONAL MORTGAGE ASSOCIATION",),
+    "STATE FARM INSURANCE": ("STATE FARM",),
+    "EXPRESS SCRIPTS": ("CIGNA",),
 }
 
 CANONICAL_MAP = [
@@ -178,11 +186,49 @@ DISNEY_2024_OVERRIDE = {
     ),
 }
 
+JPMC_401K_OVERRIDE = {
+    "matched_employer_name": "JPMORGAN CHASE BANK, NATIONAL ASSOCIATION",
+    "recordkeeper": "Empower",
+    "plan_name": "JPMORGAN CHASE 401(K) SAVINGS PLAN",
+    "plan_year": 2024,
+    "plan_participants": 299277,
+    "ein": "134994650",
+    "plan_type_code": "2E2F2G2J2K2S2T3F3H",
+    "match_method": "curated_override",
+    "match_reason": (
+        "The JPMorgan Chase 401(k) Savings Plan SPD names Empower as the third-party "
+        "recordkeeper. DOL Schedule C Item 1 can list investment managers such as "
+        "Fidelity without being the plan recordkeeper."
+    ),
+}
+
+STATE_FARM_401K_OVERRIDE = {
+    "matched_employer_name": "STATE FARM MUTUAL AUTOMOBILE INSURANCE COMPANY",
+    "recordkeeper": "Alight Solutions",
+    "plan_name": "STATE FARM 401(K) SAVINGS PLAN",
+    "plan_year": 2024,
+    "plan_participants": 102869,
+    "ein": "370533100",
+    "plan_type_code": "2E2F2G2J2K2S2T3F3H",
+    "match_method": "curated_override",
+    "match_reason": (
+        "State Farm plan materials name Alight Solutions as recordkeeper via the "
+        "State Farm Benefits Center (1-866-935-4015). DOL Schedule C may list "
+        "Vanguard for investment platform services on the same plan."
+    ),
+}
+
 # Keep this list small: use it only where public filings or plan materials
 # identify the 401(k) provider but name matching or DOL rows are misleading.
 CURATED_EMPLOYER_OVERRIDES = {
     "DISNEY": DISNEY_2024_OVERRIDE,
     "WALT DISNEY": DISNEY_2024_OVERRIDE,
+    "JP MORGAN CHASE": JPMC_401K_OVERRIDE,
+    "JPMORGAN CHASE": JPMC_401K_OVERRIDE,
+    "JPMORGAN CHASE BANK NATIONAL ASSOCIATION": JPMC_401K_OVERRIDE,
+    "STATE FARM": STATE_FARM_401K_OVERRIDE,
+    "STATE FARM INSURANCE": STATE_FARM_401K_OVERRIDE,
+    "STATE FARM MUTUAL AUTOMOBILE INSURANCE": STATE_FARM_401K_OVERRIDE,
     "BANK AMERICA": {
         "matched_employer_name": "BANK OF AMERICA CORPORATION",
         "recordkeeper": "Merrill Lynch",
@@ -201,6 +247,9 @@ CURATED_EMPLOYER_OVERRIDES = {
 }
 
 _DATAFRAME_CACHE: Optional[pd.DataFrame] = None
+_EMPLOYER_NORM_UNIVERSE: Optional[list[str]] = None
+# Skip expensive fuzzy pass when a strong non-fuzzy candidate already exists.
+SKIP_FUZZY_MIN_CONFIDENCE = 0.85
 
 
 def _master_cache_path() -> Path:
@@ -354,6 +403,177 @@ def _looks_like_defined_contribution_plan_name(value: object) -> bool:
     return DC_PLAN_NAME_RE.search(str(value)) is not None
 
 
+ITEM1_RECORDKEEPER_NAME_RE = re.compile(
+    r"FIDELITY|FID\s|FID\.|RECORD\s*KEEP|RETIREMENT\s+PLAN\s+SRV|PLAN\s+ADMIN|"
+    r"EMPOWER|ALIGHT|GREAT\s*WEST|VOYA|PRINCIPAL|NATIONWIDE|"
+    r"PAYCHEX|\bADP\b|ASCENSUS|MASSMUTUAL|MUTUAL\s+OF\s+AMERICA",
+    re.IGNORECASE,
+)
+ITEM1_ADVISOR_TRUSTEE_NAME_RE = re.compile(
+    r"INV\s+ADV|INVESTMENT\s+ADV|INSTITUTIONAL\s+TRUST|TRUST\s+COMPANY|"
+    r"\bMERCER\b|BLACKROCK|NORTHERN\s+TRUST|NEWPORT|WILLIS\s+TOWERS|"
+    r"\bAON\b|CONSULT",
+    re.IGNORECASE,
+)
+
+
+def _score_item1_provider_name(provider_name: str) -> int:
+    """Rank Schedule C Part 1 Item 1 eligible providers toward recordkeeper vs advisor/trustee."""
+    upper = provider_name.upper()
+    score = 0
+    if ITEM1_RECORDKEEPER_NAME_RE.search(upper):
+        score += 100
+    if re.search(r"WORKPLACE", upper):
+        score += 60
+    if re.search(r"OPS|OPERATIONS|RECORD|RETIREMENT", upper):
+        score += 40
+    if ITEM1_ADVISOR_TRUSTEE_NAME_RE.search(upper):
+        score -= 50
+    if re.search(r"TRUSTEE|CUSTOD", upper) and not re.search(r"FIDELITY|FID\s", upper):
+        score -= 30
+    return score
+
+
+def _pick_item1_recordkeeper_provider(provider_names: list[str]) -> Optional[tuple[str, str]]:
+    """Return (raw_name, canonical_name) for the best Item 1 eligible provider, if any."""
+    ranked: list[tuple[int, str, str]] = []
+    for raw_name in provider_names:
+        cleaned = str(raw_name or "").strip().upper()
+        if not cleaned:
+            continue
+        canonical = _canonicalize_recordkeeper(cleaned)
+        if not canonical:
+            continue
+        ranked.append((_score_item1_provider_name(cleaned), cleaned, canonical))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    _, raw_name, canonical_name = ranked[0]
+    return raw_name, canonical_name
+
+
+def _filing_master_row(
+    filing: pd.Series,
+    provider_name: str,
+    canonical_name: str,
+    year: int,
+    tier: str,
+) -> dict[str, object]:
+    employer_norm = filing["EMPLOYER_NORM"]
+    plan_norm = filing.get("PLAN_NORM", "")
+    return {
+        "ACK_ID": filing["ACK_ID"],
+        "EMPLOYER": filing["SPONSOR_DFE_NAME"],
+        "EMPLOYER_NORM": employer_norm,
+        "EMPLOYER_COLLAPSED": _collapsed(employer_norm),
+        "PLAN_NORM": plan_norm,
+        "PLAN_COLLAPSED": _collapsed(plan_norm) if plan_norm else "",
+        "RK_RAW": provider_name,
+        "RK_CANON": canonical_name,
+        "TIER": tier,
+        "YEAR": year,
+        "_n": filing.get("_n", 0),
+        "_tier_rank": TIER_RANK[tier],
+        "PLAN_NAME": filing.get("PLAN_NAME"),
+        "TYPE_PENSION_BNFT_CODE": filing.get("TYPE_PENSION_BNFT_CODE"),
+        "PLAN_YEAR_BEGIN_DATE": filing.get("PLAN_YEAR_BEGIN_DATE"),
+        "TOT_PARTCP_BOY_CNT": filing.get("TOT_PARTCP_BOY_CNT"),
+        "SPONS_DFE_EIN": filing.get("SPONS_DFE_EIN"),
+    }
+
+
+def _build_item1_fallback(filings: pd.DataFrame, merged: pd.DataFrame, year: int) -> pd.DataFrame:
+    """
+    Add recordkeeper rows from Schedule C Part 1 Item 1 (eligible providers) when Item 2
+    service codes did not produce a recordkeeper-tier provider for the filing.
+    """
+    covered_acks = set(merged["ACK_ID"]) if not merged.empty else set()
+    missing = filings[~filings["ACK_ID"].isin(covered_acks)].copy()
+    if missing.empty:
+        return pd.DataFrame()
+
+    item1_path = _ensure_dol_csv(year, f"F_SCH_C_PART1_ITEM1_{year}_Latest")
+    item1 = _read_csv_columns(
+        item1_path,
+        ["ACK_ID", "ROW_ORDER", "PROVIDER_ELIGIBLE_NAME"],
+        ["ACK_ID", "PROVIDER_ELIGIBLE_NAME"],
+    )
+    item1["PROVIDER_ELIGIBLE_NAME"] = (
+        item1["PROVIDER_ELIGIBLE_NAME"].fillna("").str.strip().str.upper()
+    )
+    item1 = item1[item1["PROVIDER_ELIGIBLE_NAME"] != ""]
+    item1 = item1[item1["ACK_ID"].isin(missing["ACK_ID"])]
+
+    rows: list[dict[str, object]] = []
+    for ack_id, group in item1.groupby("ACK_ID"):
+        picked = _pick_item1_recordkeeper_provider(group["PROVIDER_ELIGIBLE_NAME"].tolist())
+        if picked is None:
+            continue
+        raw_name, canonical_name = picked
+        filing = missing[missing["ACK_ID"] == ack_id].iloc[0]
+        rows.append(
+            _filing_master_row(filing, raw_name, canonical_name, year, "TIER1_ITEM1")
+        )
+    return pd.DataFrame(rows)
+
+
+def _build_schedule_h_fallback(
+    filings: pd.DataFrame,
+    merged: pd.DataFrame,
+    item1_rows: pd.DataFrame,
+    year: int,
+) -> pd.DataFrame:
+    """
+    Use Schedule H fiduciary trust / custodian name fields when still no provider row exists.
+    Many large plans list the recordkeeper trust there even when Schedule C codes are sparse.
+    """
+    covered_acks = set()
+    for frame in (merged, item1_rows):
+        if not frame.empty and "ACK_ID" in frame.columns:
+            covered_acks.update(frame["ACK_ID"].dropna().astype(str))
+
+    missing = filings[~filings["ACK_ID"].isin(covered_acks)].copy()
+    if missing.empty:
+        return pd.DataFrame()
+
+    sch_h_path = _find_existing_csv(f"F_SCH_H_{year}_Latest")
+    if sch_h_path is None:
+        try:
+            sch_h_path = _ensure_dol_csv(year, f"F_SCH_H_{year}_Latest")
+        except Exception:
+            return pd.DataFrame()
+
+    sch_h = _read_csv_columns(
+        sch_h_path,
+        ["ACK_ID", "FDCRY_TRUST_NAME", "FDCRY_TRUSTEE_CUST_NAME"],
+        ["ACK_ID"],
+    )
+    sch_h = sch_h[sch_h["ACK_ID"].isin(missing["ACK_ID"])]
+
+    rows: list[dict[str, object]] = []
+    for _, sch_row in sch_h.iterrows():
+        provider_name = _first_non_null(
+            sch_row.get("FDCRY_TRUST_NAME"),
+            sch_row.get("FDCRY_TRUSTEE_CUST_NAME"),
+        )
+        if not provider_name:
+            continue
+        canonical_name = _canonicalize_recordkeeper(provider_name)
+        if not canonical_name:
+            continue
+        filing = missing[missing["ACK_ID"] == sch_row["ACK_ID"]].iloc[0]
+        rows.append(
+            _filing_master_row(
+                filing,
+                str(provider_name).strip().upper(),
+                canonical_name,
+                year,
+                "TIER1_SCH_H",
+            )
+        )
+    return pd.DataFrame(rows)
+
+
 def _build_year_master(year: int) -> pd.DataFrame:
     main_path = _ensure_dol_csv(year, f"F_5500_{year}_Latest")
     provider_path = _ensure_dol_csv(year, f"F_SCH_C_PART1_ITEM2_{year}_Latest")
@@ -442,12 +662,19 @@ def _build_year_master(year: int) -> pd.DataFrame:
     merged["EMPLOYER_COLLAPSED"] = merged["EMPLOYER_NORM"].apply(_collapsed)
     merged["PLAN_COLLAPSED"] = merged["PLAN_NORM"].apply(_collapsed)
     merged["RK_CANON"] = merged["PROVIDER_OTHER_NAME"].apply(_canonicalize_recordkeeper)
-    return merged.rename(
+    merged = merged.rename(
         columns={
             "SPONSOR_DFE_NAME": "EMPLOYER",
             "PROVIDER_OTHER_NAME": "RK_RAW",
         }
     )
+
+    item1_rows = _build_item1_fallback(filings, merged, year)
+    sch_h_rows = _build_schedule_h_fallback(filings, merged, item1_rows, year)
+    fallback_frames = [frame for frame in (item1_rows, sch_h_rows) if not frame.empty]
+    if fallback_frames:
+        merged = pd.concat([merged, *fallback_frames], ignore_index=True)
+    return merged
 
 
 def _build_master() -> pd.DataFrame:
@@ -496,6 +723,18 @@ def _build_master() -> pd.DataFrame:
     return master
 
 
+def _reset_match_caches() -> None:
+    global _EMPLOYER_NORM_UNIVERSE
+    _EMPLOYER_NORM_UNIVERSE = None
+
+
+def _employer_norm_universe(df: pd.DataFrame) -> list[str]:
+    global _EMPLOYER_NORM_UNIVERSE
+    if _EMPLOYER_NORM_UNIVERSE is None:
+        _EMPLOYER_NORM_UNIVERSE = df["EMPLOYER_NORM"].dropna().unique().tolist()
+    return _EMPLOYER_NORM_UNIVERSE
+
+
 def load_dol_data() -> pd.DataFrame:
     global _DATAFRAME_CACHE
     if _DATAFRAME_CACHE is not None:
@@ -509,14 +748,16 @@ def load_dol_data() -> pd.DataFrame:
             _DATAFRAME_CACHE["_tier_rank"],
             errors="coerce",
         ).fillna(99)
+        _reset_match_caches()
         return _DATAFRAME_CACHE
 
     _DATAFRAME_CACHE = _build_master()
+    _reset_match_caches()
     return _DATAFRAME_CACHE
 
 
 def employer_search_index() -> pd.DataFrame:
-    """Return the canonical employer rows needed by the typeahead UI."""
+    """Return one best row per employer for the typeahead UI (not every plan row)."""
     df = load_dol_data()
     columns = [
         "EMPLOYER",
@@ -533,7 +774,8 @@ def employer_search_index() -> pd.DataFrame:
         "YEAR",
     ]
     available_columns = [column for column in columns if column in df.columns]
-    return df[available_columns].copy()
+    slim = df[available_columns]
+    return _rank_rows(slim).drop_duplicates(subset=["EMPLOYER_NORM"], keep="first")
 
 
 def canonicalize_employer(name: str) -> str:
@@ -565,6 +807,29 @@ def _brand_alias_rows(index: pd.DataFrame, alias_target: str) -> pd.DataFrame:
     ]
 
 
+def _recordkeeper_source_reason(tier: object, provider_name: object) -> Optional[str]:
+    """Explain which part of the 5500 filing package supplied the provider (for Match detail)."""
+    tier_text = str(tier or "")
+    provider_text = str(provider_name or "").strip()
+    if tier_text == "TIER1_ITEM1":
+        return (
+            "Listed on Schedule C Part 1 (eligible service providers on the filing). "
+            "For some large plans the recordkeeper is also named in the Notes to Financial "
+            "Statements attached to Schedule H (not available in DOL CSV extracts). "
+            "This is separate from the Schedule C Part 1 Item 2 compensation table with "
+            "service codes 15/64. "
+            f"Provider on filing: {provider_text}."
+        )
+    if tier_text == "TIER1_SCH_H":
+        return (
+            "Listed on Schedule H (financial information) as the fiduciary trust or "
+            "custodian for plan assets — the section at the end of the financial schedule "
+            "in the full 5500 PDF. "
+            f"Name on filing: {provider_text}."
+        )
+    return None
+
+
 def _candidate_result(
     employer_query: str,
     row: pd.Series,
@@ -572,6 +837,10 @@ def _candidate_result(
     match_method: str,
     match_reason: str,
 ) -> MatchResult:
+    source_reason = _recordkeeper_source_reason(row.get("TIER"), row.get("RK_RAW"))
+    if source_reason:
+        match_reason = source_reason
+
     participants = pd.to_numeric(row.get("TOT_PARTCP_BOY_CNT") or row.get("_n"), errors="coerce")
     if pd.isna(participants):
         participant_count = None
@@ -595,51 +864,247 @@ def _candidate_result(
     )
 
 
+def _override_dict_to_result(
+    employer_query: str,
+    override: dict[str, object],
+    *,
+    default_match_method: str = "curated_override",
+) -> MatchResult:
+    return MatchResult(
+        employer_query=employer_query,
+        matched_employer_name=str(override["matched_employer_name"]),
+        recordkeeper=str(override["recordkeeper"]),
+        confidence=1.0,
+        plan_name=override.get("plan_name"),
+        plan_year=override.get("plan_year"),
+        plan_participants=override.get("plan_participants"),
+        ein=override.get("ein"),
+        plan_type_code=override.get("plan_type_code"),
+        relation_tier="TIER1",
+        match_method=str(override.get("match_method", default_match_method)),
+        match_reason=str(override.get("match_reason") or ""),
+    )
+
+
 def _curated_override_result(employer_query: str, canonical_query: str) -> Optional[MatchResult]:
     override = CURATED_EMPLOYER_OVERRIDES.get(canonical_query)
     if override is None:
         return None
+    return _override_dict_to_result(employer_query, override)
 
-    return MatchResult(
-        employer_query=employer_query,
-        matched_employer_name=override["matched_employer_name"],
-        recordkeeper=override["recordkeeper"],
-        confidence=1.0,
-        plan_name=override["plan_name"],
-        plan_year=override["plan_year"],
-        plan_participants=override["plan_participants"],
-        ein=override["ein"],
-        plan_type_code=override["plan_type_code"],
-        relation_tier="TIER1",
-        match_method=override["match_method"],
-        match_reason=override["match_reason"],
-    )
+
+def _financial_notes_override_result(
+    employer_query: str,
+    canonical_employer_key: str,
+) -> Optional[MatchResult]:
+    from src import financial_notes
+
+    entry = financial_notes.registry_entry(canonical_employer_key)
+    if entry is None:
+        return None
+    payload = dict(entry)
+    payload.setdefault("match_method", "financial_statement_notes")
+    payload.setdefault("match_reason", financial_notes.default_notes_reason(entry))
+    return _override_dict_to_result(employer_query, payload, default_match_method="financial_statement_notes")
+
+
+def _should_try_financial_notes(
+    results: list[MatchResult],
+    canonical_query: str,
+) -> bool:
+    from src import financial_notes
+
+    if financial_notes.registry_entry(canonical_query) is not None:
+        return True
+    if not results:
+        return True
+    top = results[0]
+    if not financial_notes.is_large_plan_participants(top.plan_participants):
+        return False
+    if financial_notes.dol_tier_is_weak(top.relation_tier):
+        return True
+    if top.match_method == "fuzzy" and top.confidence < 0.90:
+        return True
+    return False
+
+
+def _resolve_financial_notes_override(
+    employer_query: str,
+    canonical_query: str,
+    results: list[MatchResult],
+) -> Optional[MatchResult]:
+    keys: list[str] = []
+    if canonical_query:
+        keys.append(canonical_query)
+    if results:
+        keys.append(canonicalize_employer(results[0].matched_employer_name))
+    for key in keys:
+        notes_result = _financial_notes_override_result(employer_query, key)
+        if notes_result is not None:
+            return notes_result
+    return None
+
+
+def _apply_financial_notes_fallback(
+    employer_query: str,
+    canonical_query: str,
+    results: list[MatchResult],
+) -> list[MatchResult]:
+    from src import financial_notes
+
+    if not _should_try_financial_notes(results, canonical_query):
+        return results
+
+    notes_result = _resolve_financial_notes_override(employer_query, canonical_query, results)
+    if notes_result is not None:
+        employer_norm = canonicalize_employer(notes_result.matched_employer_name)
+        filtered = [
+            result
+            for result in results
+            if canonicalize_employer(result.matched_employer_name) != employer_norm
+        ]
+        return [notes_result, *filtered]
+
+    if results:
+        top = results[0]
+        if (
+            financial_notes.is_large_plan_participants(top.plan_participants)
+            and financial_notes.dol_tier_is_weak(top.relation_tier)
+            and financial_notes.registry_entry(canonical_query) is None
+            and financial_notes.registry_entry(
+                canonicalize_employer(top.matched_employer_name)
+            )
+            is None
+        ):
+            hint = financial_notes.verification_hint()
+            if hint not in (top.match_reason or ""):
+                top.match_reason = f"{top.match_reason} {hint}".strip()
+
+    return results
 
 
 def _rank_rows(rows: pd.DataFrame) -> pd.DataFrame:
     return rows.sort_values(["_tier_rank", "YEAR", "_n"], ascending=[True, False, False])
 
 
-def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
-    """
-    Look up the recordkeeper for an employer name.
+def _finalize_match_results(
+    employer_query: str,
+    canonical_query: str,
+    ranked_candidates: list[tuple[float, pd.Series, str, str]],
+    top_n: int,
+) -> list[MatchResult]:
+    results = [
+        _candidate_result(employer_query, row, confidence, match_method, match_reason)
+        for confidence, row, match_method, match_reason in ranked_candidates[:top_n]
+    ]
 
-    Args:
-        employer_query: the user-typed employer name
-        top_n: how many candidate matches to return (1 best + n-1 near-misses)
+    override_result = _curated_override_result(employer_query, canonical_query)
+    if override_result is not None:
+        override_employer_norm = canonicalize_employer(override_result.matched_employer_name)
+        results = [
+            result
+            for result in results
+            if canonicalize_employer(result.matched_employer_name) != override_employer_norm
+        ]
+        results.insert(0, override_result)
+    else:
+        results = _apply_financial_notes_fallback(employer_query, canonical_query, results)
 
-    Returns:
-        A list of MatchResult, ordered by confidence descending.
-        Empty list if no candidates were found above the noise threshold.
-    """
-    if not employer_query or not employer_query.strip():
-        return []
+    return results[:top_n]
 
-    df = load_dol_data()
-    canonical_query = canonicalize_employer(employer_query)
-    if not canonical_query:
-        return []
 
+def _fuzzy_match_limit(top_n: int) -> int:
+    return max(top_n * 5, 20)
+
+
+def _add_fuzzy_candidate_rows(
+    df: pd.DataFrame,
+    candidates: dict[str, tuple[float, pd.Series, str, str]],
+    matched_name: str,
+    score: float,
+) -> None:
+    if score < FUZZY_THRESHOLD:
+        return
+    rows = df[df["EMPLOYER_NORM"] == matched_name]
+    if rows.empty:
+        return
+    confidence = score / 100.0
+    match_reason = (
+        f"RapidFuzz WRatio scored {score:.0f}, meeting the {FUZZY_THRESHOLD} threshold."
+    )
+    for _, row in _rank_rows(rows).iterrows():
+        key = str(row["EMPLOYER_NORM"])
+        existing = candidates.get(key)
+        if existing is None or confidence > existing[0]:
+            candidates[key] = (confidence, row, "fuzzy", match_reason)
+
+
+def _add_fuzzy_candidates(
+    df: pd.DataFrame,
+    canonical_query: str,
+    candidates: dict[str, tuple[float, pd.Series, str, str]],
+    top_n: int,
+) -> None:
+    """Append fuzzy employer-name matches when non-fuzzy signals are weak."""
+    best_confidence = max((item[0] for item in candidates.values()), default=0.0)
+    if best_confidence >= SKIP_FUZZY_MIN_CONFIDENCE:
+        return
+
+    fuzzy_matches = process.extract(
+        canonical_query,
+        _employer_norm_universe(df),
+        scorer=fuzz.WRatio,
+        limit=_fuzzy_match_limit(top_n),
+    )
+    for matched_name, score, _ in fuzzy_matches:
+        _add_fuzzy_candidate_rows(df, candidates, matched_name, score)
+
+
+def _apply_batch_fuzzy_candidates(
+    df: pd.DataFrame,
+    fuzzy_queue: list[tuple[int, str, str, dict[str, tuple[float, pd.Series, str, str]]]],
+    top_n: int,
+) -> None:
+    """Run one vectorized fuzzy pass for all batch rows that need it."""
+    if not fuzzy_queue:
+        return
+
+    universe = _employer_norm_universe(df)
+    if not universe:
+        return
+
+    queries = [canonical_query for _, _, canonical_query, _ in fuzzy_queue]
+    limit = _fuzzy_match_limit(top_n)
+    score_matrix = process.cdist(
+        queries,
+        universe,
+        scorer=fuzz.WRatio,
+        score_cutoff=FUZZY_THRESHOLD,
+        workers=-1,
+        dtype=np.float32,
+    )
+
+    for row_idx, (_, _employer_query, _canonical_query, candidates) in enumerate(fuzzy_queue):
+        row_scores = score_matrix[row_idx]
+        if not np.any(row_scores):
+            continue
+        top_indices = np.argpartition(row_scores, -limit)[-limit:]
+        top_indices = top_indices[np.argsort(row_scores[top_indices])[::-1]]
+        for choice_index in top_indices:
+            score = float(row_scores[choice_index])
+            if score < FUZZY_THRESHOLD:
+                continue
+            _add_fuzzy_candidate_rows(df, candidates, universe[choice_index], score)
+
+
+def _collect_match_candidates(
+    df: pd.DataFrame,
+    employer_query: str,
+    canonical_query: str,
+    top_n: int,
+    *,
+    skip_fuzzy: bool = False,
+) -> dict[str, tuple[float, pd.Series, str, str]]:
     candidates: dict[str, tuple[float, pd.Series, str, str]] = {}
 
     def add_rows(
@@ -727,24 +1192,16 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
                 "The normalized input matched the DOL plan name after removing spaces.",
             )
 
-    all_names = df["EMPLOYER_NORM"].dropna().tolist()
-    fuzzy_matches = process.extract(
-        canonical_query,
-        all_names,
-        scorer=fuzz.WRatio,
-        limit=max(top_n * 5, 20),
-    )
-    for matched_name, score, _ in fuzzy_matches:
-        if score < FUZZY_THRESHOLD:
-            continue
-        add_rows(
-            df[df["EMPLOYER_NORM"] == matched_name],
-            score / 100.0,
-            "fuzzy",
-            f"RapidFuzz WRatio scored {score:.0f}, meeting the {FUZZY_THRESHOLD} threshold.",
-        )
+    if not skip_fuzzy:
+        _add_fuzzy_candidates(df, canonical_query, candidates, top_n)
 
-    ranked_candidates = sorted(
+    return candidates
+
+
+def _rank_match_candidates(
+    candidates: dict[str, tuple[float, pd.Series, str, str]],
+) -> list[tuple[float, pd.Series, str, str]]:
+    return sorted(
         candidates.values(),
         key=lambda item: (
             item[0],
@@ -754,22 +1211,87 @@ def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
         ),
         reverse=True,
     )
-    results = [
-        _candidate_result(employer_query, row, confidence, match_method, match_reason)
-        for confidence, row, match_method, match_reason in ranked_candidates[:top_n]
-    ]
 
-    override_result = _curated_override_result(employer_query, canonical_query)
-    if override_result is not None:
-        override_employer_norm = canonicalize_employer(override_result.matched_employer_name)
-        results = [
-            result
-            for result in results
-            if canonicalize_employer(result.matched_employer_name) != override_employer_norm
-        ]
-        results.insert(0, override_result)
 
-    return results[:top_n]
+def match(employer_query: str, top_n: int = 4) -> list[MatchResult]:
+    """
+    Look up the recordkeeper for an employer name.
+
+    Args:
+        employer_query: the user-typed employer name
+        top_n: how many candidate matches to return (1 best + n-1 near-misses)
+
+    Returns:
+        A list of MatchResult, ordered by confidence descending.
+        Empty list if no candidates were found above the noise threshold.
+    """
+    if not employer_query or not employer_query.strip():
+        return []
+
+    df = load_dol_data()
+    canonical_query = canonicalize_employer(employer_query)
+    if not canonical_query:
+        return []
+
+    candidates = _collect_match_candidates(df, employer_query, canonical_query, top_n)
+    ranked = _rank_match_candidates(candidates)
+    return _finalize_match_results(employer_query, canonical_query, ranked, top_n)
+
+
+def batch_match_top_results(employer_names: list[str]) -> list[Optional[MatchResult]]:
+    """
+    Match many employer names efficiently for CSV batch upload.
+
+    Loads DOL data once and skips fuzzy search when a strong exact/alias/boundary
+  match already exists (typical for Fortune-style company lists).
+    """
+    cleaned_names = [str(name or "").strip() for name in employer_names]
+    if not cleaned_names:
+        return []
+
+    df = load_dol_data()
+    results: list[Optional[MatchResult]] = [None] * len(cleaned_names)
+    fuzzy_queue: list[tuple[int, str, str, dict[str, tuple[float, pd.Series, str, str]]]] = []
+
+    for index, employer_query in enumerate(cleaned_names):
+        if not employer_query:
+            continue
+        canonical_query = canonicalize_employer(employer_query)
+        if not canonical_query:
+            continue
+
+        override_result = _curated_override_result(employer_query, canonical_query)
+        if override_result is not None:
+            results[index] = override_result
+            continue
+
+        notes_result = _resolve_financial_notes_override(employer_query, canonical_query, [])
+        if notes_result is not None:
+            results[index] = notes_result
+            continue
+
+        candidates = _collect_match_candidates(
+            df,
+            employer_query,
+            canonical_query,
+            top_n=1,
+            skip_fuzzy=True,
+        )
+        ranked = _rank_match_candidates(candidates)
+        if ranked and ranked[0][0] >= SKIP_FUZZY_MIN_CONFIDENCE:
+            finalized = _finalize_match_results(employer_query, canonical_query, ranked, top_n=1)
+            results[index] = finalized[0] if finalized else None
+        else:
+            fuzzy_queue.append((index, employer_query, canonical_query, candidates))
+
+    _apply_batch_fuzzy_candidates(df, fuzzy_queue, top_n=1)
+    for index, employer_query, canonical_query, candidates in fuzzy_queue:
+        ranked = _rank_match_candidates(candidates)
+        if ranked:
+            finalized = _finalize_match_results(employer_query, canonical_query, ranked, top_n=1)
+            results[index] = finalized[0] if finalized else None
+
+    return results
 
 
 def suggest_employers(employer_query: str, limit: int = 5) -> list[EmployerSuggestion]:
@@ -864,9 +1386,12 @@ def suggest_employers_from_index(
             return all(token_matches(query_token) for query_token in query_tokens)
         return token_matches(query_tokens[0])
 
-    token_rows = index[index["EMPLOYER_NORM"].apply(is_related_by_token)]
-    if not token_rows.empty:
-        add_rows(token_rows, 2, 0.85, "token_related")
+    best_priority = max((item[0] for item in candidates.values()), default=0)
+    if best_priority < 3 and len(candidates) < limit:
+        token_rows = index[index["EMPLOYER_NORM"].apply(is_related_by_token)]
+        if not token_rows.empty:
+            add_rows(token_rows, 2, 0.85, "token_related")
+        best_priority = max((item[0] for item in candidates.values()), default=0)
 
     collapsed_query = _collapsed(canonical_query)
     if collapsed_query != canonical_query and len(collapsed_query) >= 4:
@@ -890,8 +1415,14 @@ def suggest_employers_from_index(
         if not plan_collapsed_rows.empty:
             add_rows(plan_collapsed_rows, 2, 0.86, "plan_spacing_insensitive")
 
-    if len(canonical_query) >= 3:
-        all_names = index["EMPLOYER_NORM"].dropna().tolist()
+    best_confidence = max((item[1] for item in candidates.values()), default=0.0)
+    if (
+        len(canonical_query) >= 3
+        and best_priority < 3
+        and best_confidence < 0.92
+        and len(candidates) < limit
+    ):
+        all_names = index["EMPLOYER_NORM"].dropna().unique().tolist()
         fuzzy_matches = process.extract(
             canonical_query,
             all_names,
