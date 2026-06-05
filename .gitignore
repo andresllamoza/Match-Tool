@@ -13,9 +13,10 @@ __pycache__/
 venv/
 .env
 
-# Large local recordings (keep demo/recordkeeper_exec_demo.mp4)
+# Large local recordings (keep committed demo videos)
 *.mp4
 !demo/recordkeeper_exec_demo.mp4
+!demo/recordkeeper_demo_90s.mp4
 
 # IDE / OS
 .vscode/

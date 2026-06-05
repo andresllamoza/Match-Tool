@@ -79,8 +79,8 @@ See [docs/data.md](docs/data.md) on the GitHub Pages site for file names, column
 
 ## Demo script
 
-**Executive walkthrough:** [`demo/DEMO_EXEC.md`](demo/DEMO_EXEC.md) (3–4 min, HoP/CTO)  
-**Compact recording script:** [`demo/DEMO_SCRIPT_COMPACT.md`](demo/DEMO_SCRIPT_COMPACT.md)  
+**90s demo video:** [`demo/recordkeeper_demo_90s.mp4`](demo/recordkeeper_demo_90s.mp4) — use `/?demo=1` for clean UI  
+**Scripts:** [`demo/DEMO_SCRIPT_90s.md`](demo/DEMO_SCRIPT_90s.md) · [`demo/DEMO_EXEC.md`](demo/DEMO_EXEC.md)  
 **Batch CSV:** [`demo/fortune_demo_batch_25.csv`](demo/fortune_demo_batch_25.csv)
 
 Use these employers to show search, overrides, and confidence:
