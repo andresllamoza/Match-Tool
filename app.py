@@ -628,13 +628,7 @@ st.markdown(
         background-color: #FFF8EA !important;
     }
 
-    [data-testid="stStatusWidget"],
-    [data-testid="stLoadingSpinner"] {
-        display: none !important;
-    }
-
-    div[data-testid="stForm"]:empty,
-    .stSpinner {
+    [data-testid="stStatusWidget"] {
         display: none !important;
     }
 
@@ -1402,10 +1396,6 @@ def render_batch_lookup() -> None:
     render_batch_results(results)
 
 
-if not st.session_state.get("runtime_cache_warmed"):
-    warm_runtime_caches()
-    st.session_state["runtime_cache_warmed"] = True
-
 _demo = is_demo_mode()
 st.markdown(
     '<div class="hero-banner tool-header">'
@@ -1415,6 +1405,19 @@ st.markdown(
     '</div>',
     unsafe_allow_html=True,
 )
+
+if not st.session_state.get("runtime_cache_warmed"):
+    st.markdown(
+        '<div class="empty-state">'
+        '<div class="empty-title">Loading employer database</div>'
+        '<p class="empty-copy">First sign-in may take 1–2 minutes while DOL data loads. Please wait…</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    with st.spinner("Preparing employer search index…"):
+        warm_runtime_caches()
+    st.session_state["runtime_cache_warmed"] = True
+    st.rerun()
 
 search_query = render_employer_search_bar()
 confirmed_lookup = str(st.session_state.get("confirmed_lookup", "") or "").strip()
