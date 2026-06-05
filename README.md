@@ -28,7 +28,7 @@ streamlit run app.py
 
 **First run:** the matcher downloads DOL CSVs from [askebsa.dol.gov](https://askebsa.dol.gov) and builds `data/recordkeeper_master.csv` (~2–5 minutes depending on network). Later runs load the cache in a few seconds.
 
-Open `http://localhost:8501`, sign in, type an employer name (at least 3 letters), pick a filing name from suggestions, and view the recordkeeper result.
+Open `http://localhost:8501`, sign in, type an employer name (at least 3 letters), press **Enter** or **Search**, then view the recordkeeper result (filing-name suggestions appear below).
 
 ---
 
@@ -77,7 +77,11 @@ See [docs/data.md](docs/data.md) on the GitHub Pages site for file names, column
 
 ---
 
-## Demo script (tomorrow)
+## Demo script
+
+**Executive walkthrough:** [`demo/DEMO_EXEC.md`](demo/DEMO_EXEC.md) (3–4 min, HoP/CTO)  
+**Compact recording script:** [`demo/DEMO_SCRIPT_COMPACT.md`](demo/DEMO_SCRIPT_COMPACT.md)  
+**Batch CSV:** [`demo/fortune_demo_batch_25.csv`](demo/fortune_demo_batch_25.csv)
 
 Use these employers to show search, overrides, and confidence:
 
