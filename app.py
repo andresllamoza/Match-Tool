@@ -720,6 +720,7 @@ def select_employer(employer_name: str) -> None:
     st.rerun()
 
 
+@st.fragment
 def render_employer_search(selected_employer: str) -> str:
     if "employer_search_query" not in st.session_state:
         st.session_state["employer_search_query"] = selected_employer

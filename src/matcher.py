@@ -123,6 +123,8 @@ SUGGESTION_GENERIC_TOKENS = {
 }
 BRAND_ALIAS_TARGETS = {
     "CITI": ("CITIGROUP",),
+    "DISNEY": ("TWDC",),
+    "WALT DISNEY": ("TWDC",),
     # Fortune / brand names → legal DOL employer keys
     "ALPHABET": ("GOOGLE",),
     "FANNIE MAE": ("FEDERAL NATIONAL MORTGAGE ASSOCIATION",),
@@ -755,7 +757,7 @@ def load_dol_data() -> pd.DataFrame:
 
 
 def employer_search_index() -> pd.DataFrame:
-    """Return the canonical employer rows needed by the typeahead UI."""
+    """Return one best row per employer for the typeahead UI (not every plan row)."""
     df = load_dol_data()
     columns = [
         "EMPLOYER",
@@ -772,7 +774,8 @@ def employer_search_index() -> pd.DataFrame:
         "YEAR",
     ]
     available_columns = [column for column in columns if column in df.columns]
-    return df[available_columns].copy()
+    slim = df[available_columns]
+    return _rank_rows(slim).drop_duplicates(subset=["EMPLOYER_NORM"], keep="first")
 
 
 def canonicalize_employer(name: str) -> str:
@@ -1383,9 +1386,12 @@ def suggest_employers_from_index(
             return all(token_matches(query_token) for query_token in query_tokens)
         return token_matches(query_tokens[0])
 
-    token_rows = index[index["EMPLOYER_NORM"].apply(is_related_by_token)]
-    if not token_rows.empty:
-        add_rows(token_rows, 2, 0.85, "token_related")
+    best_priority = max((item[0] for item in candidates.values()), default=0)
+    if best_priority < 3 and len(candidates) < limit:
+        token_rows = index[index["EMPLOYER_NORM"].apply(is_related_by_token)]
+        if not token_rows.empty:
+            add_rows(token_rows, 2, 0.85, "token_related")
+        best_priority = max((item[0] for item in candidates.values()), default=0)
 
     collapsed_query = _collapsed(canonical_query)
     if collapsed_query != canonical_query and len(collapsed_query) >= 4:
@@ -1409,8 +1415,14 @@ def suggest_employers_from_index(
         if not plan_collapsed_rows.empty:
             add_rows(plan_collapsed_rows, 2, 0.86, "plan_spacing_insensitive")
 
-    if len(canonical_query) >= 3:
-        all_names = index["EMPLOYER_NORM"].dropna().tolist()
+    best_confidence = max((item[1] for item in candidates.values()), default=0.0)
+    if (
+        len(canonical_query) >= 3
+        and best_priority < 3
+        and best_confidence < 0.92
+        and len(candidates) < limit
+    ):
+        all_names = index["EMPLOYER_NORM"].dropna().unique().tolist()
         fuzzy_matches = process.extract(
             canonical_query,
             all_names,

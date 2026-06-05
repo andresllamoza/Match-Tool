@@ -404,7 +404,7 @@ class MatcherReasonTest(unittest.TestCase):
         self.assertGreaterEqual(len(suggestions), 1)
         self.assertEqual(suggestions[0].employer_name, "TWDC ENTERPRISES 18 CORP.")
         self.assertEqual(suggestions[0].recordkeeper, "Fidelity Investments")
-        self.assertEqual(suggestions[0].match_method, "plan_contains")
+        self.assertIn(suggestions[0].match_method, ("brand_alias", "plan_contains"))
 
     def test_match_uses_citi_brand_alias_for_citigroup(self):
         results = self.matcher.match("Citi", top_n=2)
