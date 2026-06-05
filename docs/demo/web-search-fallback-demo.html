@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Web search fallback demo — 5 Fortune misses</title>
+  <style>
+    :root {
+      --pb-yellow: #f5c518;
+      --pb-navy: #1a1f36;
+      --pb-gray: #667085;
+      --pb-light: #f7f8fa;
+      --ok: #0d7a4a;
+      --warn: #9a6200;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      margin: 0;
+      color: var(--pb-navy);
+      background: #fff;
+      line-height: 1.5;
+    }
+    header {
+      background: var(--pb-navy);
+      color: #fff;
+      padding: 2rem 2.5rem;
+    }
+    header h1 { margin: 0 0 0.5rem; font-size: 1.75rem; }
+    header p { margin: 0; opacity: 0.85; max-width: 52rem; }
+    .kicker {
+      display: inline-block;
+      background: var(--pb-yellow);
+      color: var(--pb-navy);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+    }
+    main { padding: 2rem 2.5rem 3rem; max-width: 1100px; }
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: center;
+      margin: 1.5rem 0 2.5rem;
+      padding: 1.25rem;
+      background: var(--pb-light);
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+    .flow .box {
+      background: #fff;
+      border: 1px solid #e4e7ec;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      text-align: center;
+    }
+    .flow .arrow { color: var(--pb-gray); font-size: 1.25rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      border: 1px solid #e4e7ec;
+      padding: 0.85rem 1rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--pb-light); font-weight: 700; }
+    tr:nth-child(even) td { background: #fafbfc; }
+    .miss { color: #b42318; font-weight: 600; }
+    .hit { color: var(--ok); font-weight: 600; }
+    .query {
+      font-family: ui-monospace, monospace;
+      font-size: 0.82rem;
+      background: #eef2ff;
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
+    }
+    .note {
+      margin-top: 2rem;
+      padding: 1rem 1.25rem;
+      border-left: 4px solid var(--pb-yellow);
+      background: #fffbeb;
+      font-size: 0.9rem;
+    }
+    a { color: #175cd3; }
+    footer {
+      padding: 1rem 2.5rem 2rem;
+      font-size: 0.8rem;
+      color: var(--pb-gray);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="kicker">Internal demo</div>
+    <h1>When DOL matching misses — web search fallback</h1>
+    <p>
+      Fortune 1000 batch upload: ~173 employers return “No match found” from DOL Schedule C data alone.
+      A simple web query <span class="query">{company} 401k plan recordkeeper</span> often surfaces
+      the real plan name and provider from SEC filings or plan SPDs.
+    </p>
+  </header>
+
+  <main>
+    <div class="flow">
+      <div class="box"><strong>1.</strong> CSV employer name<br><small>e.g. “Alphabet”</small></div>
+      <div class="arrow">→</div>
+      <div class="box"><strong>2.</strong> DOL matcher<br><small>Schedule C / master CSV</small></div>
+      <div class="arrow">→</div>
+      <div class="box"><strong>3.</strong> Web search<br><small>Google / SEC 11-K</small></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Fortune list name</th>
+          <th>DOL tool today</th>
+          <th>Google-style query</th>
+          <th>Web suggests</th>
+          <th>Evidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Alphabet</strong></td>
+          <td class="miss">No match</td>
+          <td><span class="query">Alphabet 401k plan recordkeeper</span></td>
+          <td class="hit">Vanguard<br><small>GOOGLE LLC 401(K) SAVINGS PLAN</small></td>
+          <td><a href="https://www.hicapitalize.com/find-my-401k/google/">HiCapitalize / Google plan</a></td>
+        </tr>
+        <tr>
+          <td><strong>JP Morgan Chase</strong></td>
+          <td class="miss">Weak / wrong row<br><small>bank entity, not 401(k) plan</small></td>
+          <td><span class="query">JP Morgan Chase 401k recordkeeper</span></td>
+          <td class="hit">Empower<br><small>JPMORGAN CHASE 401(K) SAVINGS PLAN</small></td>
+          <td><a href="https://www.jpmcbenefitsguide.com/content/dam/jpmorganchase/jpmc-benefits-guide/documents/jpmc-401k-plan-spd.pdf">JPMC plan SPD (PDF)</a></td>
+        </tr>
+        <tr>
+          <td><strong>Fannie Mae</strong></td>
+          <td class="miss">No match</td>
+          <td><span class="query">Fannie Mae 401k plan recordkeeper</span></td>
+          <td class="hit">Fidelity (likely)<br><small>FEDERAL NATIONAL MORTGAGE ASSN RETIREMENT SAVINGS PLAN</small></td>
+          <td><a href="https://meetbeagle.com/my-401k-login/FEDERAL-NATIONAL-MORTGAGE-ASSOCIATION-401k-login-56733">Plan login aggregator</a></td>
+        </tr>
+        <tr>
+          <td><strong>State Farm Insurance Cos.</strong></td>
+          <td class="miss">No match</td>
+          <td><span class="query">State Farm 401k recordkeeper</span></td>
+          <td class="hit">Alight Solutions<br><small>State Farm 401(k) Savings Plan</small></td>
+          <td><a href="https://cache.hacontent.com/ybr/R516/01283_ybr_ybrfndt/downloads/spdRetirement2010.pdf">Plan SPD — Record Keeper table</a></td>
+        </tr>
+        <tr>
+          <td><strong>Express Scripts Holding</strong></td>
+          <td class="miss">No match</td>
+          <td><span class="query">Express Scripts 401k recordkeeper</span></td>
+          <td class="hit">Prudential → Empower<br><small>merged into Cigna 401(k); legacy PRIAC</small></td>
+          <td><a href="https://www.sec.gov/Archives/edgar/data/1739940/000095015921000180/cigna11k.htm">SEC Form 11-K (Cigna)</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>What we built in the repo:</strong>
+      <code>scripts/enrich_misses_web_search.py</code> exports Fortune/batch misses and runs the same style of query
+      (Google Custom Search API recommended; ~100 free queries/day).
+      Results need human review before adding to curated overrides — same workflow as Nike’s financial-statement notes entry.
+      <br><br>
+      <strong>Why DOL misses:</strong> brand vs legal name (Alphabet/Google), holding-company labels, mergers (Express Scripts/Cigna),
+      or missing Schedule C service codes — not because the 401(k) is secret.
+    </div>
+  </main>
+
+  <footer>
+    RecordKeeper Match Tool · demo generated for internal walkthrough · Jun 2026
+  </footer>
+</body>
+</html>
