@@ -19,6 +19,7 @@ from src.matcher import (
     MatchResult,
     batch_match_top_results,
     employer_search_index,
+    load_dol_data,
     match,
     suggest_employers_from_index,
 )
@@ -76,6 +77,16 @@ st.markdown(
         padding-top: 3.25rem;
         padding-bottom: 3.5rem;
         max-width: 820px;
+    }
+
+    .tool-header,
+    .hero-banner {
+        margin-bottom: 1.55rem;
+        padding: 1.35rem 1.45rem 1.25rem;
+        border: 1px solid rgba(255, 178, 0, 0.34);
+        border-radius: 28px;
+        background: linear-gradient(135deg, rgba(255, 252, 244, 0.98) 0%, rgba(255, 241, 209, 0.55) 100%);
+        box-shadow: var(--pb-shadow);
     }
 
     .tool-header {
@@ -194,11 +205,21 @@ st.markdown(
         position: relative;
         overflow: hidden;
         background: rgba(255, 252, 244, 0.95);
-        border: 1px solid var(--pb-border);
+        border: 1px solid rgba(255, 178, 0, 0.38);
         border-radius: 28px;
         padding: 1.55rem 1.65rem;
         margin: 1.2rem 0 1rem;
         box-shadow: var(--pb-shadow);
+    }
+
+    .result-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 5px;
+        background: linear-gradient(90deg, #FFB200 0%, #FFD24D 55%, #FFB200 100%);
     }
 
 
@@ -297,27 +318,71 @@ st.markdown(
         line-height: 1.55;
     }
 
+    div[data-testid="stForm"] {
+        margin: 0 0 1.15rem;
+        padding: 1.15rem 1.2rem 1.05rem;
+        border: 1px solid rgba(232, 220, 198, 0.95);
+        border-radius: 24px;
+        background: rgba(255, 252, 244, 0.92);
+        box-shadow: 0 14px 34px rgba(7, 20, 38, 0.07);
+    }
+
+    div[data-testid="stForm"] > div:first-child {
+        gap: 0.65rem;
+    }
+
+    .search-panel-title {
+        margin: 0 0 0.2rem;
+        color: var(--pb-navy);
+        font-size: 1.05rem;
+        font-weight: 850;
+        letter-spacing: -0.02em;
+    }
+
+    .search-panel-copy {
+        margin: 0 0 0.85rem;
+        color: var(--pb-muted);
+        font-size: 0.88rem;
+        line-height: 1.55;
+    }
+
     .stButton > button,
     .stDownloadButton > button,
-    div[data-testid="stFormSubmitButton"] button {
+    div[data-testid="stFormSubmitButton"] > button {
         border: 1px solid rgba(255, 178, 0, 0.45);
         border-radius: 999px;
         background: #FFF3CD;
         color: #3A2600;
         font-weight: 800;
-        min-height: 2.75rem;
-        padding: 0.55rem 1rem;
+        min-height: 3rem;
+        padding: 0.55rem 1.1rem;
         transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+
+    .stButton > button[kind="primary"],
+    div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+    div[data-testid="stFormSubmitButton"] > button[data-testid="stBaseButton-primary"] {
+        border: 1px solid #E09B00;
+        background: linear-gradient(180deg, #FFD24D 0%, #FFB200 100%);
+        color: #2A1A00;
+        box-shadow: 0 12px 28px rgba(255, 178, 0, 0.28);
     }
 
     .stButton > button:hover,
     .stDownloadButton > button:hover,
-    div[data-testid="stFormSubmitButton"] button:hover {
+    div[data-testid="stFormSubmitButton"] > button:hover {
         border-color: var(--pb-gold);
         background: #FFE6A3;
         color: #241700;
         box-shadow: 0 10px 24px rgba(255, 178, 0, 0.20);
         transform: translateY(-1px);
+    }
+
+    .stButton > button[kind="primary"]:hover,
+    div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"]:hover,
+    div[data-testid="stFormSubmitButton"] > button[data-testid="stBaseButton-primary"]:hover {
+        background: linear-gradient(180deg, #FFE08A 0%, #FFC933 100%);
+        box-shadow: 0 14px 30px rgba(255, 178, 0, 0.34);
     }
 
     .near-miss {
@@ -545,8 +610,11 @@ def check_password() -> bool:
         expected_password = ""
 
     st.markdown(
-        '<div class="tool-header"><h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
-        '<div class="tool-subtitle">Internal tool - sign in to continue</div></div>',
+        '<div class="hero-banner tool-header">'
+        '<div class="tool-kicker"><span class="tool-kicker-dot"></span>PensionBee internal</div>'
+        '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
+        '<div class="tool-subtitle">Internal tool — sign in to continue</div>'
+        '</div>',
         unsafe_allow_html=True,
     )
     password = st.text_input("Password", type="password", key="password_input")
@@ -685,6 +753,54 @@ def load_cached_employer_index() -> pd.DataFrame:
     return employer_search_index()
 
 
+@st.cache_data(show_spinner=False)
+def cached_match_results(employer_query: str, top_n: int = 4) -> tuple:
+    """Cache matcher results for snappy reruns during a demo session."""
+    results = match(employer_query, top_n=top_n)
+    return tuple(
+        (
+            result.employer_query,
+            result.matched_employer_name,
+            result.recordkeeper,
+            result.confidence,
+            result.plan_name,
+            result.plan_year,
+            result.plan_participants,
+            result.ein,
+            result.plan_type_code,
+            result.relation_tier,
+            result.match_method,
+            result.match_reason,
+        )
+        for result in results
+    )
+
+
+def hydrate_match_results(cached_rows: tuple) -> list[MatchResult]:
+    return [
+        MatchResult(
+            employer_query=row[0],
+            matched_employer_name=row[1],
+            recordkeeper=row[2],
+            confidence=row[3],
+            plan_name=row[4],
+            plan_year=row[5],
+            plan_participants=row[6],
+            ein=row[7],
+            plan_type_code=row[8],
+            relation_tier=row[9],
+            match_method=row[10],
+            match_reason=row[11],
+        )
+        for row in cached_rows
+    ]
+
+
+def warm_runtime_caches() -> None:
+    load_dol_data()
+    load_cached_employer_index()
+
+
 def selected_employer_from_query_params() -> str:
     try:
         value = st.query_params.get("selected_employer", "")
@@ -747,16 +863,22 @@ def render_employer_search_bar() -> str:
     if "employer_search_query" not in st.session_state:
         st.session_state["employer_search_query"] = selected_employer_from_query_params()
 
-    with st.form("employer_lookup_form", clear_on_submit=False):
-        input_col, button_col = st.columns([0.82, 0.18], vertical_alignment="bottom")
+    st.markdown(
+        '<div class="search-panel-title">Employer lookup</div>'
+        '<p class="search-panel-copy">Type a company name and press <strong>Enter</strong> or the gold Search button.</p>',
+        unsafe_allow_html=True,
+    )
+    with st.form("employer_lookup_form", clear_on_submit=False, border=False):
+        input_col, button_col = st.columns([0.8, 0.2], vertical_alignment="bottom")
         with input_col:
             query = st.text_input(
                 "Employer name",
-                placeholder="e.g. Disney — press Enter to search",
+                placeholder="e.g. Disney, Nike, Walmart",
                 value=st.session_state.get("employer_search_query", ""),
+                label_visibility="visible",
             )
         with button_col:
-            submitted = st.form_submit_button("Search", use_container_width=True)
+            submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
     query = str(query or "").strip()
     if query != st.session_state.get("employer_search_query", ""):
         st.session_state["employer_search_query"] = query
@@ -766,6 +888,7 @@ def render_employer_search_bar() -> str:
     return query
 
 
+@st.fragment
 def render_employer_suggestions(query: str, *, below_results: bool = False) -> None:
     """Filing-name suggestions — shown below the result card after Enter/Search."""
     if len(query) < 3:
@@ -886,21 +1009,20 @@ def render_employer_suggestions(query: str, *, below_results: bool = False) -> N
 
 
 def render_lookup_results(lookup_employer: str) -> None:
-    with st.spinner("Looking up..."):
-        lookup_error = ""
-        try:
-            results = match(lookup_employer, top_n=4)
-        except NotImplementedError:
-            lookup_error = "Matcher logic not yet implemented."
-            st.error(
-                "Matcher logic not yet implemented. "
-                "Paste your v4 Colab logic into `src/matcher.py` to enable lookups."
-            )
-            results = []
-        except Exception as exc:
-            lookup_error = str(exc)
-            st.error(f"Error running matcher: {exc}")
-            results = []
+    lookup_error = ""
+    try:
+        results = hydrate_match_results(cached_match_results(lookup_employer, top_n=4))
+    except NotImplementedError:
+        lookup_error = "Matcher logic not yet implemented."
+        st.error(
+            "Matcher logic not yet implemented. "
+            "Paste your v4 Colab logic into `src/matcher.py` to enable lookups."
+        )
+        results = []
+    except Exception as exc:
+        lookup_error = str(exc)
+        st.error(f"Error running matcher: {exc}")
+        results = []
 
     lookup_signature = (
         lookup_employer,
@@ -1196,8 +1318,12 @@ def render_batch_lookup() -> None:
     render_batch_results(results)
 
 
+if not st.session_state.get("runtime_cache_warmed"):
+    warm_runtime_caches()
+    st.session_state["runtime_cache_warmed"] = True
+
 st.markdown(
-    '<div class="tool-header">'
+    '<div class="hero-banner tool-header">'
     '<div class="tool-kicker"><span class="tool-kicker-dot"></span>PensionBee internal</div>'
     '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
     '<div class="tool-subtitle">Find the 401(k) recordkeeper for an employer using DOL Form 5500 data.</div>'
