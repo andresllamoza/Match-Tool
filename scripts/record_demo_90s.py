@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Polished demo: one session, empty screen → type → Enter → result (no page reloads)."""
+"""Polished demo: empty screen → visible letter-by-letter typing → Enter."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import Locator, Page, sync_playwright
 
 APP_URL = "http://localhost:8501/?demo=1"
 SINGLE_LOOKUPS: list[tuple[str, str]] = [
@@ -19,10 +19,10 @@ SINGLE_LOOKUPS: list[tuple[str, str]] = [
     ("Walmart", "Merrill"),
 ]
 
-CHAR_DELAY_MS = 130
+PER_CHAR_MS = 195
 EMPTY_HOLD_MS = 3_500
-RESULT_HOLD_MS = 8_000
-BETWEEN_MS = 500
+PRE_ENTER_MS = 700
+RESULT_HOLD_MS = 7_500
 
 
 def wait_for_app_ready(page: Page) -> None:
@@ -32,6 +32,31 @@ def wait_for_app_ready(page: Page) -> None:
     page.wait_for_timeout(600)
 
 
+def clear_field_human(field: Locator, page: Page) -> None:
+    field.click()
+    page.wait_for_timeout(250)
+    value = field.input_value()
+    if not value:
+        return
+    field.press("End")
+    for _ in value:
+        field.press("Backspace")
+        page.wait_for_timeout(55)
+
+
+def type_name_human(field: Locator, page: Page, name: str) -> None:
+    """One visible character at a time — no instant fill."""
+    clear_field_human(field, page)
+    page.wait_for_timeout(350)
+    for char in name:
+        if char == " ":
+            field.press("Space")
+        else:
+            field.press(char)
+        page.wait_for_timeout(PER_CHAR_MS)
+    page.wait_for_timeout(PRE_ENTER_MS)
+
+
 def type_and_search(page: Page, name: str, expect_text: str, *, show_empty_first: bool) -> None:
     if show_empty_first:
         page.wait_for_selector(".empty-state", timeout=10_000)
@@ -39,13 +64,7 @@ def type_and_search(page: Page, name: str, expect_text: str, *, show_empty_first
 
     page.evaluate("window.scrollTo(0, 0)")
     field = page.get_by_role("textbox", name="Employer name")
-    field.click()
-    page.wait_for_timeout(300)
-    field.press("Control+a")
-    field.press("Backspace")
-    page.wait_for_timeout(BETWEEN_MS)
-    page.keyboard.type(name, delay=CHAR_DELAY_MS)
-    page.wait_for_timeout(450)
+    type_name_human(field, page, name)
     field.press("Enter")
 
     page.locator(".result-recordkeeper").filter(has_text=expect_text).wait_for(timeout=60_000)
@@ -92,7 +111,7 @@ def record_with_ffmpeg(out_path: Path) -> None:
         time.sleep(0.35)
         try:
             for index, (name, expect) in enumerate(SINGLE_LOOKUPS):
-                type_and_search(page, name, expect, show_empty_first=False)
+                type_and_search(page, name, expect, show_empty_first=index == 0)
             page.wait_for_timeout(1_000)
         finally:
             browser.close()
