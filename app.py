@@ -909,7 +909,12 @@ def render_batch_results(results: pd.DataFrame) -> None:
         '</div>',
         unsafe_allow_html=True,
     )
-    st.dataframe(style_batch_results(results), hide_index=True, use_container_width=True)
+    try:
+        st.dataframe(style_batch_results(results), hide_index=True, use_container_width=True)
+    except Exception:
+        display = results.copy()
+        display["Confidence"] = display["Confidence"].apply(confidence_dot_label)
+        st.dataframe(display, hide_index=True, use_container_width=True)
     st.download_button(
         "Download results as CSV",
         results.to_csv(index=False).encode("utf-8"),
