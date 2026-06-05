@@ -62,15 +62,18 @@ st.markdown(
         --pb-shadow: 0 24px 70px rgba(7, 20, 38, 0.10);
     }
 
-    html, body, [class*="css"] {
+    html, body, #root, [class*="css"] {
         font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background-color: #FFF8EA !important;
     }
 
-    .stApp {
+    .stApp,
+    .stApp[data-test-script-state="running"],
+    .stApp[data-test-script-state="notRunning"] {
         color: var(--pb-navy);
         background:
             radial-gradient(circle at top left, rgba(255, 178, 0, 0.16), transparent 28rem),
-            linear-gradient(180deg, #FFF8EA 0%, #FFFDF7 58%, #FFF8EA 100%);
+            linear-gradient(180deg, #FFF8EA 0%, #FFFDF7 58%, #FFF8EA 100%) !important;
     }
 
     .block-container {
@@ -597,15 +600,18 @@ st.markdown(
     [data-testid="stToolbar"],
     [data-testid="stDecoration"],
     #MainMenu,
-    footer,
-    header[data-testid="stHeader"] {
+    footer {
         visibility: hidden;
         height: 0;
         min-height: 0;
     }
 
     header[data-testid="stHeader"] {
-        background: transparent;
+        background-color: #FFF8EA !important;
+        border-bottom: none;
+        visibility: hidden;
+        height: 0.01rem;
+        min-height: 0;
     }
 
     .demo-compact .tool-title {
@@ -635,11 +641,20 @@ st.markdown(
     [data-testid="stAppViewContainer"],
     [data-testid="stMain"],
     section.main,
-    [data-testid="stMainBlockContainer"] {
+    [data-testid="stMainBlockContainer"],
+    [data-testid="stVerticalBlock"],
+    [data-testid="stHorizontalBlock"],
+    [data-testid="stBottomBlockContainer"] {
         background-color: #FFF8EA !important;
     }
 
-    [data-testid="stStatusWidget"] {
+    [data-testid="stStatusWidget"],
+    [data-testid="stLoadingSpinner"] {
+        display: none !important;
+    }
+
+    div[data-testid="stForm"]:empty,
+    .stSpinner {
         display: none !important;
     }
 

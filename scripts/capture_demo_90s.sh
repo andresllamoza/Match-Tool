@@ -5,8 +5,11 @@ OUT="$ROOT/demo/recordkeeper_demo_90s.mp4"
 ART="/opt/cursor/artifacts/recordkeeper_demo_90s.mp4"
 TMP="${OUT%.mp4}_raw.mp4"
 
-# Warm up app in demo mode before recording
+# Warm caches + paint cream UI twice before recording (avoids gray first frame)
 python3 "$ROOT/scripts/record_demo_90s.py" --warmup-only 2>/dev/null || true
+sleep 1
+python3 "$ROOT/scripts/record_demo_90s.py" --warmup-only 2>/dev/null || true
+sleep 1
 
 python3 - <<'PY'
 import subprocess
