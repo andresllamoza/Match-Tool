@@ -77,15 +77,15 @@ st.markdown(
     }
 
     .block-container {
-        padding-top: 3.25rem;
+        padding-top: 1.75rem;
         padding-bottom: 3.5rem;
         max-width: 820px;
     }
 
     .tool-header,
     .hero-banner {
-        margin-bottom: 1.55rem;
-        padding: 1.35rem 1.45rem 1.25rem;
+        margin-bottom: 1.1rem;
+        padding: 1.05rem 1.15rem 0.95rem;
         border: 1px solid rgba(255, 178, 0, 0.34);
         border-radius: 28px;
         background: linear-gradient(135deg, rgba(255, 252, 244, 0.98) 0%, rgba(255, 241, 209, 0.55) 100%);
@@ -93,7 +93,7 @@ st.markdown(
     }
 
     .tool-header {
-        margin-bottom: 1.7rem;
+        margin-bottom: 1.25rem;
     }
 
     .tool-kicker {
@@ -121,7 +121,7 @@ st.markdown(
     }
 
     .tool-title {
-        font-size: clamp(2.35rem, 5vw, 4rem);
+        font-size: clamp(2rem, 4vw, 2.65rem);
         font-weight: 800;
         color: var(--pb-navy);
         letter-spacing: -0.055em;
@@ -131,10 +131,10 @@ st.markdown(
 
     .tool-subtitle {
         max-width: 42rem;
-        font-size: 1.02rem;
-        line-height: 1.7;
+        font-size: 0.94rem;
+        line-height: 1.5;
         color: var(--pb-muted);
-        margin-top: 1rem;
+        margin-top: 0.6rem;
     }
 
     div[data-testid="stTextInput"] {
@@ -614,26 +614,6 @@ st.markdown(
         min-height: 0;
     }
 
-    .demo-compact .tool-title {
-        font-size: clamp(2rem, 4vw, 2.65rem);
-    }
-
-    .demo-compact .tool-subtitle {
-        font-size: 0.94rem;
-        margin-top: 0.6rem;
-        line-height: 1.5;
-    }
-
-    .demo-compact.hero-banner,
-    .demo-compact.tool-header {
-        padding: 1.05rem 1.15rem 0.95rem;
-        margin-bottom: 1.1rem;
-    }
-
-    .demo-compact .block-container {
-        padding-top: 1.75rem;
-    }
-
     div[data-testid="stForm"] {
         margin-bottom: 0.85rem;
     }
@@ -967,12 +947,7 @@ def render_employer_search_bar() -> str:
     if pending_query is not None:
         input_kwargs["value"] = pending_query
 
-    if is_demo_mode():
-        search_copy = "Type a company name, then <strong>Enter</strong> or <strong>Search</strong>."
-    else:
-        search_copy = (
-            "Type a company name and press <strong>Enter</strong> or the gold Search button."
-        )
+    search_copy = "Type a company name, then <strong>Enter</strong> or <strong>Search</strong>."
     st.markdown(
         '<div class="search-panel-title">Employer lookup</div>'
         f'<p class="search-panel-copy">{search_copy}</p>',
@@ -1425,17 +1400,11 @@ if not st.session_state.get("runtime_cache_warmed"):
     st.session_state["runtime_cache_warmed"] = True
 
 _demo = is_demo_mode()
-_banner_class = "hero-banner tool-header demo-compact" if _demo else "hero-banner tool-header"
-_subtitle = (
-    "401(k) recordkeeper lookup from public DOL Form 5500 filings."
-    if _demo
-    else "Find the 401(k) recordkeeper for an employer using DOL Form 5500 data."
-)
 st.markdown(
-    f'<div class="{_banner_class}">'
+    '<div class="hero-banner tool-header">'
     '<div class="tool-kicker"><span class="tool-kicker-dot"></span>PensionBee internal</div>'
     '<h1 class="tool-title">5500 Recordkeeper Lookup</h1>'
-    f'<div class="tool-subtitle">{_subtitle}</div>'
+    '<div class="tool-subtitle">401(k) recordkeeper lookup from public DOL Form 5500 filings.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
