@@ -200,6 +200,22 @@ JPMC_401K_OVERRIDE = {
     ),
 }
 
+STATE_FARM_401K_OVERRIDE = {
+    "matched_employer_name": "STATE FARM MUTUAL AUTOMOBILE INSURANCE COMPANY",
+    "recordkeeper": "Alight Solutions",
+    "plan_name": "STATE FARM 401(K) SAVINGS PLAN",
+    "plan_year": 2024,
+    "plan_participants": 102869,
+    "ein": "370533100",
+    "plan_type_code": "2E2F2G2J2K2S2T3F3H",
+    "match_method": "curated_override",
+    "match_reason": (
+        "State Farm plan materials name Alight Solutions as recordkeeper via the "
+        "State Farm Benefits Center (1-866-935-4015). DOL Schedule C may list "
+        "Vanguard for investment platform services on the same plan."
+    ),
+}
+
 # Keep this list small: use it only where public filings or plan materials
 # identify the 401(k) provider but name matching or DOL rows are misleading.
 CURATED_EMPLOYER_OVERRIDES = {
@@ -207,6 +223,8 @@ CURATED_EMPLOYER_OVERRIDES = {
     "WALT DISNEY": DISNEY_2024_OVERRIDE,
     "JP MORGAN CHASE": JPMC_401K_OVERRIDE,
     "JPMORGAN CHASE": JPMC_401K_OVERRIDE,
+    "STATE FARM": STATE_FARM_401K_OVERRIDE,
+    "STATE FARM INSURANCE": STATE_FARM_401K_OVERRIDE,
     "BANK AMERICA": {
         "matched_employer_name": "BANK OF AMERICA CORPORATION",
         "recordkeeper": "Merrill Lynch",

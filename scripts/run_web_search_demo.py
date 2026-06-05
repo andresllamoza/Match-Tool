@@ -43,7 +43,7 @@ DEMO_CASES = [
     {
         "fortune_name": "State Farm Insurance Cos.",
         "search_query": "State Farm 401k recordkeeper",
-        "web_recordkeeper": "Vanguard (401k); Alight for benefits admin",
+        "web_recordkeeper": "Alight Solutions",
         "plan_name": "STATE FARM 401(K) SAVINGS PLAN",
         "why_miss": "Fortune label vs State Farm Mutual; alias STATE FARM INSURANCE → STATE FARM.",
         "source": "https://www.hicapitalize.com/find-my-401k/state-farm/",

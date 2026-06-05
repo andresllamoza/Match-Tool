@@ -43,7 +43,7 @@ class BatchMatchTest(unittest.TestCase):
             ("Alphabet", "Vanguard", "GOOGLE"),
             ("JP Morgan Chase", "Empower", "JPMORGAN CHASE BANK"),
             ("Fannie Mae", "Fidelity Investments", "FEDERAL NATIONAL MORTGAGE"),
-            ("State Farm Insurance Cos.", "Vanguard", "STATE FARM MUTUAL"),
+            ("State Farm Insurance Cos.", "Alight", "STATE FARM MUTUAL"),
             ("Express Scripts Holding", "Empower", "CIGNA"),
         ]
         for query, expected_rk, employer_fragment in cases:
