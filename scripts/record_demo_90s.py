@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""90-second demo: 5 lookups on ?demo=1 (auto-login, no batch chrome)."""
+"""Polished demo: one session, empty screen → type → Enter → result (no page reloads)."""
 
 from __future__ import annotations
 
@@ -19,42 +19,52 @@ SINGLE_LOOKUPS: list[tuple[str, str]] = [
     ("Walmart", "Merrill"),
 ]
 
-RESULT_HOLD_MS = 10_000
-INTRO_HOLD_MS = 2_500
+CHAR_DELAY_MS = 130
+EMPTY_HOLD_MS = 3_500
+RESULT_HOLD_MS = 8_000
+BETWEEN_MS = 500
 
 
-def run_lookup(page: Page, name: str, expect_text: str) -> None:
+def wait_for_app_ready(page: Page) -> None:
     page.goto(APP_URL, wait_until="networkidle")
-    page.get_by_role("textbox", name="Employer name").wait_for(timeout=20_000)
-    page.wait_for_timeout(400)
+    page.get_by_role("textbox", name="Employer name").wait_for(timeout=30_000)
+    page.wait_for_selector(".hero-banner, .tool-header", timeout=15_000)
+    page.wait_for_timeout(600)
+
+
+def type_and_search(page: Page, name: str, expect_text: str, *, show_empty_first: bool) -> None:
+    if show_empty_first:
+        page.wait_for_selector(".empty-state", timeout=10_000)
+        page.wait_for_timeout(EMPTY_HOLD_MS)
+
     page.evaluate("window.scrollTo(0, 0)")
     field = page.get_by_role("textbox", name="Employer name")
-    field.fill(name)
-    page.get_by_role("button", name="Search").click()
+    field.click()
+    page.wait_for_timeout(300)
+    field.press("Control+a")
+    field.press("Backspace")
+    page.wait_for_timeout(BETWEEN_MS)
+    page.keyboard.type(name, delay=CHAR_DELAY_MS)
+    page.wait_for_timeout(450)
+    field.press("Enter")
+
     page.locator(".result-recordkeeper").filter(has_text=expect_text).wait_for(timeout=60_000)
     page.wait_for_timeout(RESULT_HOLD_MS)
 
 
-def run_flow(page: Page, *, first_intro: bool = False) -> None:
-    if first_intro:
-        page.goto(APP_URL, wait_until="networkidle")
-        page.get_by_role("textbox", name="Employer name").wait_for(timeout=20_000)
-        page.wait_for_timeout(INTRO_HOLD_MS)
-        run_lookup(page, SINGLE_LOOKUPS[0][0], SINGLE_LOOKUPS[0][1])
-        lookups = SINGLE_LOOKUPS[1:]
-    else:
-        lookups = SINGLE_LOOKUPS
-    for name, expect in lookups:
-        run_lookup(page, name, expect)
+def run_flow(page: Page) -> None:
+    wait_for_app_ready(page)
+    for index, (name, expect) in enumerate(SINGLE_LOOKUPS):
+        type_and_search(page, name, expect, show_empty_first=index == 0)
     page.evaluate("window.scrollTo(0, 0)")
-    page.wait_for_timeout(800)
+    page.wait_for_timeout(1_000)
 
 
-def trim_video(src: Path, dst: Path, start_sec: float = 0.5) -> None:
+def trim_video(src: Path, dst: Path) -> None:
     subprocess.run(
         [
-            "ffmpeg", "-y", "-ss", str(start_sec), "-i", str(src),
-            "-c:v", "libx264", "-preset", "fast", "-crf", "22", "-pix_fmt", "yuv420p",
+            "ffmpeg", "-y", "-i", str(src),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "21", "-pix_fmt", "yuv420p",
             str(dst),
         ],
         check=True,
@@ -67,37 +77,28 @@ def record_with_ffmpeg(out_path: Path) -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page(viewport={"width": 1280, "height": 900})
-        page.goto(APP_URL, wait_until="networkidle")
-        page.get_by_role("textbox", name="Employer name").wait_for(timeout=20_000)
-        page.wait_for_timeout(INTRO_HOLD_MS)
+        wait_for_app_ready(page)
+        page.wait_for_selector(".empty-state", timeout=10_000)
+        page.wait_for_timeout(EMPTY_HOLD_MS)
         ffmpeg = subprocess.Popen(
             [
                 "ffmpeg", "-y",
-                "-f", "x11grab", "-video_size", "1280x900", "-framerate", "24",
+                "-f", "x11grab", "-video_size", "1280x900", "-framerate", "30",
                 "-i", ":1.0+0,0",
-                "-c:v", "libx264", "-preset", "fast", "-crf", "22", "-pix_fmt", "yuv420p",
+                "-c:v", "libx264", "-preset", "fast", "-crf", "21", "-pix_fmt", "yuv420p",
                 str(raw_path),
             ],
         )
-        time.sleep(0.4)
+        time.sleep(0.35)
         try:
-            for name, expect in SINGLE_LOOKUPS:
-                if name == SINGLE_LOOKUPS[0][0]:
-                    page.evaluate("window.scrollTo(0, 0)")
-                    field = page.get_by_role("textbox", name="Employer name")
-                    field.fill(name)
-                    page.get_by_role("button", name="Search").click()
-                    page.locator(".result-recordkeeper").filter(has_text=expect).wait_for(timeout=60_000)
-                    page.wait_for_timeout(RESULT_HOLD_MS)
-                else:
-                    run_lookup(page, name, expect)
-            page.evaluate("window.scrollTo(0, 0)")
-            page.wait_for_timeout(800)
+            for index, (name, expect) in enumerate(SINGLE_LOOKUPS):
+                type_and_search(page, name, expect, show_empty_first=False)
+            page.wait_for_timeout(1_000)
         finally:
             browser.close()
             ffmpeg.send_signal(subprocess.signal.SIGINT)
             ffmpeg.wait(timeout=30)
-    trim_video(raw_path, out_path, start_sec=0.3)
+    trim_video(raw_path, out_path)
     raw_path.unlink(missing_ok=True)
 
 
@@ -111,7 +112,7 @@ def main() -> None:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
-            page.goto(APP_URL, wait_until="networkidle")
+            wait_for_app_ready(page)
             browser.close()
         return
 

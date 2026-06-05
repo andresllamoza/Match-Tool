@@ -6,8 +6,8 @@
 
 | Time | Action |
 |------|--------|
-| 0:00–0:08 | Login → show gold PensionBee banner |
-| 0:08–1:25 | Five lookups (~14s each): type → **Search** → pause on result card |
+| 0:00–0:03 | Gold banner + **empty state** (no gray flash) |
+| 0:03–0:55 | Five lookups (~10s each): **type slowly** → **Enter** → pause on result card |
 
 | # | Type | Highlight |
 |---|------|-----------|

@@ -631,6 +631,32 @@ st.markdown(
     div[data-testid="stForm"] {
         margin-bottom: 0.85rem;
     }
+
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    section.main,
+    [data-testid="stMainBlockContainer"] {
+        background-color: #FFF8EA !important;
+    }
+
+    [data-testid="stStatusWidget"] {
+        display: none !important;
+    }
+
+    .result-card {
+        animation: pb-result-in 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes pb-result-in {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -896,10 +922,11 @@ def confirm_lookup(employer_name: str, *, sync_search_box: bool = False) -> None
     if sync_search_box:
         st.session_state["_pending_search_query"] = cleaned
     st.session_state["confirmed_lookup"] = cleaned
-    try:
-        st.query_params["selected_employer"] = cleaned
-    except AttributeError:
-        st.experimental_set_query_params(selected_employer=cleaned)
+    if not is_demo_mode():
+        try:
+            st.query_params["selected_employer"] = cleaned
+        except AttributeError:
+            st.experimental_set_query_params(selected_employer=cleaned)
 
 
 def sync_confirmed_lookup_from_params() -> None:
