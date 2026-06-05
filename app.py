@@ -625,9 +625,8 @@ def check_password() -> bool:
     if password:
         if password == expected_password:
             st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.error("Incorrect password.")
+            return True
+        st.error("Incorrect password.")
     return False
 
 
@@ -845,11 +844,6 @@ def confirm_lookup(employer_name: str) -> None:
         st.experimental_set_query_params(selected_employer=cleaned)
 
 
-def select_employer(employer_name: str) -> None:
-    confirm_lookup(employer_name)
-    st.rerun()
-
-
 def sync_confirmed_lookup_from_params() -> None:
     param_employer = selected_employer_from_query_params()
     if param_employer:
@@ -884,11 +878,9 @@ def render_employer_search_bar() -> str:
         st.session_state["employer_search_query"] = query
     if submitted and query:
         confirm_lookup(query)
-        st.rerun()
     return query
 
 
-@st.fragment
 def render_employer_suggestions(query: str, *, below_results: bool = False) -> None:
     """Filing-name suggestions — shown below the result card after Enter/Search."""
     if len(query) < 3:
@@ -948,13 +940,12 @@ def render_employer_suggestions(query: str, *, below_results: bool = False) -> N
                 unsafe_allow_html=True,
             )
         with action_col:
-            st.button(
+            if st.button(
                 "Select",
                 key=f"best_employer_suggestion_{top_suggestion.employer_name}",
-                on_click=select_employer,
-                args=(top_suggestion.employer_name,),
                 use_container_width=True,
-            )
+            ):
+                confirm_lookup(top_suggestion.employer_name)
     elif not below_results:
         st.warning("Press Enter to search this name, or pick a filing name below.")
 
@@ -979,13 +970,12 @@ def render_employer_suggestions(query: str, *, below_results: bool = False) -> N
                         unsafe_allow_html=True,
                     )
                 with action_col:
-                    st.button(
+                    if st.button(
                         "Select",
                         key=f"below_best_suggestion_{best.employer_name}",
-                        on_click=select_employer,
-                        args=(best.employer_name,),
                         use_container_width=True,
-                    )
+                    ):
+                        confirm_lookup(best.employer_name)
             for index, suggestion in enumerate(suggestion_slice):
                 name = html.escape(suggestion.employer_name)
                 details = html.escape(suggestion_detail(suggestion))
@@ -999,13 +989,12 @@ def render_employer_suggestions(query: str, *, below_results: bool = False) -> N
                         unsafe_allow_html=True,
                     )
                 with action_col:
-                    st.button(
+                    if st.button(
                         "Select",
                         key=f"employer_suggestion_{index}_{suggestion.employer_name}",
-                        on_click=select_employer,
-                        args=(suggestion.employer_name,),
                         use_container_width=True,
-                    )
+                    ):
+                        confirm_lookup(suggestion.employer_name)
 
 
 def render_lookup_results(lookup_employer: str) -> None:
