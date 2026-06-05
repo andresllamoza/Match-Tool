@@ -37,6 +37,26 @@ class BatchMatchTest(unittest.TestCase):
             "Fidelity Workplace Services, LLC",
         )
 
+    def test_fortune_brand_aliases_and_jpm_override(self):
+        """Five demo employers: aliases to DOL rows + JPMC Empower override."""
+        cases = [
+            ("Alphabet", "Vanguard", "GOOGLE"),
+            ("JP Morgan Chase", "Empower", "JPMORGAN CHASE BANK"),
+            ("Fannie Mae", "Fidelity Investments", "FEDERAL NATIONAL MORTGAGE"),
+            ("State Farm Insurance Cos.", "Vanguard", "STATE FARM MUTUAL"),
+            ("Express Scripts Holding", "Empower", "CIGNA"),
+        ]
+        for query, expected_rk, employer_fragment in cases:
+            results = match(query, top_n=1)
+            self.assertGreaterEqual(len(results), 1, msg=query)
+            top = results[0]
+            self.assertIn(expected_rk, top.recordkeeper, msg=query)
+            self.assertIn(
+                employer_fragment.upper(),
+                top.matched_employer_name.upper(),
+                msg=query,
+            )
+
     def test_batch_match_100_rows_under_30_seconds(self):
         names = [
             "Microsoft",

@@ -123,6 +123,11 @@ SUGGESTION_GENERIC_TOKENS = {
 }
 BRAND_ALIAS_TARGETS = {
     "CITI": ("CITIGROUP",),
+    # Fortune / brand names → legal DOL employer keys
+    "ALPHABET": ("GOOGLE",),
+    "FANNIE MAE": ("FEDERAL NATIONAL MORTGAGE ASSOCIATION",),
+    "STATE FARM INSURANCE": ("STATE FARM",),
+    "EXPRESS SCRIPTS": ("CIGNA",),
 }
 
 CANONICAL_MAP = [
@@ -179,11 +184,29 @@ DISNEY_2024_OVERRIDE = {
     ),
 }
 
+JPMC_401K_OVERRIDE = {
+    "matched_employer_name": "JPMORGAN CHASE BANK, NATIONAL ASSOCIATION",
+    "recordkeeper": "Empower",
+    "plan_name": "JPMORGAN CHASE 401(K) SAVINGS PLAN",
+    "plan_year": 2024,
+    "plan_participants": 299277,
+    "ein": "134994650",
+    "plan_type_code": "2E2F2G2J2K2S2T3F3H",
+    "match_method": "curated_override",
+    "match_reason": (
+        "The JPMorgan Chase 401(k) Savings Plan SPD names Empower as the third-party "
+        "recordkeeper. DOL Schedule C Item 1 can list investment managers such as "
+        "Fidelity without being the plan recordkeeper."
+    ),
+}
+
 # Keep this list small: use it only where public filings or plan materials
 # identify the 401(k) provider but name matching or DOL rows are misleading.
 CURATED_EMPLOYER_OVERRIDES = {
     "DISNEY": DISNEY_2024_OVERRIDE,
     "WALT DISNEY": DISNEY_2024_OVERRIDE,
+    "JP MORGAN CHASE": JPMC_401K_OVERRIDE,
+    "JPMORGAN CHASE": JPMC_401K_OVERRIDE,
     "BANK AMERICA": {
         "matched_employer_name": "BANK OF AMERICA CORPORATION",
         "recordkeeper": "Merrill Lynch",
