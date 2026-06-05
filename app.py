@@ -695,15 +695,22 @@ def check_password() -> bool:
         '</div>',
         unsafe_allow_html=True,
     )
-    password = st.text_input("Password", type="password", key="password_input")
     if not expected_password:
         st.warning("Set `app_password` in Streamlit Cloud secrets to enable sign-in.")
         return False
 
-    if password:
+    st.markdown(
+        '<p class="search-panel-copy">Enter the app password, then press <strong>Enter</strong> or <strong>Sign in</strong>.</p>',
+        unsafe_allow_html=True,
+    )
+    with st.form("login_form", clear_on_submit=False):
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+
+    if submitted:
         if password == expected_password:
             st.session_state["authenticated"] = True
-            return True
+            st.rerun()
         st.error("Incorrect password.")
     return False
 
