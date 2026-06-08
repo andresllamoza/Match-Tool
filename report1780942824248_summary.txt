@@ -1,0 +1,27 @@
+Batch comparison summary (updated provider equivalence rules)
+================================================================
+
+Input:  report1780942824248_9869.csv (4,811 employers)
+
+Provider equivalence applied:
+  - Schwab = Charles Schwab
+  - Prudential = Empower (Prudential 401(k) business sold to Empower)
+  - Also: Great-West → Empower, Fidelity variants, Merrill, Principal, etc.
+
+Match rate (our tool)
+  Matched:     4,265 / 4,811 (88.7%)
+  No match:      546 / 4,811 (11.3%)
+
+Provider comparison (their Provider vs Our_Recordkeeper)
+  Comparable rows:     4,806
+  Agreements:          3,396 (70.8%)
+  Discrepancies:       1,401 (29.2%)
+    - includes 546 rows where we found no match
+    - 855 rows where both have a provider but disagree
+
+Previous discrepancy count (before equivalence rules): 1,554
+
+Files
+  - report1780942824248_with_tool_results.csv
+  - report1780942824248_discrepancies.csv
+  - report1780942824248_batch_comparison.zip
