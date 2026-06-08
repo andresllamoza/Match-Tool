@@ -880,18 +880,38 @@ def warm_runtime_caches() -> None:
     load_cached_employer_index()
 
 
-def normalize_query_param_value(value: object) -> str:
-    if isinstance(value, list):
-        value = value[0] if value else ""
-    return str(value or "").strip()
-
-
-def selected_employer_from_query_params() -> str:
+def clear_legacy_employer_url_param() -> None:
+    """Remove deprecated ?selected_employer= from old shared links."""
+    if st.session_state.get("_legacy_employer_param_cleared"):
+        return
+    st.session_state["_legacy_employer_param_cleared"] = True
+    if is_demo_mode():
+        return
     try:
-        value = st.query_params.get("selected_employer", "")
+        if st.query_params.get("selected_employer"):
+            del st.query_params["selected_employer"]
+        return
     except AttributeError:
-        value = st.experimental_get_query_params().get("selected_employer", [""])[0]
-    return normalize_query_param_value(value)
+        pass
+    except Exception:
+        return
+    try:
+        legacy = st.experimental_get_query_params()
+        if "selected_employer" not in legacy:
+            return
+        preserved: dict[str, str] = {}
+        for key, raw_value in legacy.items():
+            if key == "selected_employer":
+                continue
+            if isinstance(raw_value, list):
+                value = str(raw_value[0]) if raw_value else ""
+            else:
+                value = str(raw_value or "")
+            if value:
+                preserved[key] = value
+        st.experimental_set_query_params(**preserved)
+    except Exception:
+        pass
 
 
 def reset_lookup_feedback() -> None:
@@ -914,42 +934,23 @@ def suggestion_detail(suggestion: EmployerSuggestion) -> str:
     return " | ".join(details)
 
 
-def confirm_lookup(employer_name: str, *, sync_search_box: bool = True) -> None:
+def confirm_lookup(employer_name: str) -> None:
     """Run a lookup for this employer (Enter, Search, or Select)."""
     cleaned = str(employer_name or "").strip()
     if not cleaned:
         return
     reset_lookup_feedback()
     st.session_state["confirmed_lookup"] = cleaned
-    if sync_search_box:
-        st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = cleaned
-
-
-def seed_lookup_from_url_if_needed() -> None:
-    """Apply ?selected_employer= once per session to support shared deep links."""
-    if st.session_state.get("_url_employer_seeded"):
-        return
-    st.session_state["_url_employer_seeded"] = True
-    param_employer = selected_employer_from_query_params()
-    if not param_employer:
-        return
-    st.session_state["confirmed_lookup"] = param_employer
-    st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = param_employer
+    st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = cleaned
 
 
 def select_employer_suggestion(employer_name: str) -> None:
     """Callback for filing-name Select buttons (runs before results render)."""
-    confirm_lookup(employer_name, sync_search_box=True)
+    confirm_lookup(employer_name)
 
 
 def render_employer_search_bar() -> str:
     """Search box; Enter or Search runs a lookup on the typed name."""
-    display_query = str(
-        st.session_state.get(EMPLOYER_SEARCH_INPUT_KEY)
-        or st.session_state.get("confirmed_lookup")
-        or ""
-    ).strip()
-
     search_copy = "Type a company name, then <strong>Enter</strong> or <strong>Search</strong>."
     st.markdown(
         '<div class="search-panel-title">Employer lookup</div>'
@@ -959,11 +960,8 @@ def render_employer_search_bar() -> str:
     with st.form("employer_lookup_form", clear_on_submit=False, border=False):
         input_col, button_col = st.columns([0.8, 0.2], vertical_alignment="bottom")
         with input_col:
-            # No session-state key inside the form: keyed form widgets fight
-            # submit handling and can take several Enter/Search presses to stick.
             query = st.text_input(
                 "Employer name",
-                value=display_query,
                 placeholder="e.g. Disney, Nike, Walmart",
                 label_visibility="visible",
             )
@@ -972,8 +970,7 @@ def render_employer_search_bar() -> str:
     if submitted:
         submitted_query = str(query or "").strip()
         if submitted_query:
-            st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = submitted_query
-            confirm_lookup(submitted_query, sync_search_box=False)
+            confirm_lookup(submitted_query)
     return str(st.session_state.get(EMPLOYER_SEARCH_INPUT_KEY, "") or "").strip()
 
 
@@ -1420,7 +1417,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-seed_lookup_from_url_if_needed()
+clear_legacy_employer_url_param()
 
 if not st.session_state.get("runtime_cache_warmed"):
     st.markdown(
