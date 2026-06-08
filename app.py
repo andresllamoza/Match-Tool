@@ -894,31 +894,6 @@ def selected_employer_from_query_params() -> str:
     return normalize_query_param_value(value)
 
 
-def set_selected_employer_param(employer: str) -> None:
-    """Update ?selected_employer= in the URL without dropping other query params."""
-    if is_demo_mode():
-        return
-    cleaned = str(employer or "").strip()
-    if not cleaned:
-        return
-    try:
-        st.query_params["selected_employer"] = cleaned
-        return
-    except AttributeError:
-        pass
-    except Exception:
-        pass
-    try:
-        legacy_params = st.experimental_get_query_params()
-        merged: dict[str, str] = {}
-        for key, raw_value in legacy_params.items():
-            merged[key] = normalize_query_param_value(raw_value)
-        merged["selected_employer"] = cleaned
-        st.experimental_set_query_params(**merged)
-    except Exception:
-        pass
-
-
 def reset_lookup_feedback() -> None:
     st.session_state.pop("last_logged_lookup_signature", None)
     st.session_state.pop("show_provider_feedback", None)
@@ -948,7 +923,6 @@ def confirm_lookup(employer_name: str, *, sync_search_box: bool = True) -> None:
     st.session_state["confirmed_lookup"] = cleaned
     if sync_search_box:
         st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = cleaned
-    set_selected_employer_param(cleaned)
 
 
 def seed_lookup_from_url_if_needed() -> None:
@@ -970,8 +944,11 @@ def select_employer_suggestion(employer_name: str) -> None:
 
 def render_employer_search_bar() -> str:
     """Search box; Enter or Search runs a lookup on the typed name."""
-    if EMPLOYER_SEARCH_INPUT_KEY not in st.session_state:
-        st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = ""
+    display_query = str(
+        st.session_state.get(EMPLOYER_SEARCH_INPUT_KEY)
+        or st.session_state.get("confirmed_lookup")
+        or ""
+    ).strip()
 
     search_copy = "Type a company name, then <strong>Enter</strong> or <strong>Search</strong>."
     st.markdown(
@@ -982,17 +959,20 @@ def render_employer_search_bar() -> str:
     with st.form("employer_lookup_form", clear_on_submit=False, border=False):
         input_col, button_col = st.columns([0.8, 0.2], vertical_alignment="bottom")
         with input_col:
+            # No session-state key inside the form: keyed form widgets fight
+            # submit handling and can take several Enter/Search presses to stick.
             query = st.text_input(
                 "Employer name",
-                key=EMPLOYER_SEARCH_INPUT_KEY,
+                value=display_query,
                 placeholder="e.g. Disney, Nike, Walmart",
                 label_visibility="visible",
             )
         with button_col:
             submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
     if submitted:
-        submitted_query = str(query or st.session_state.get(EMPLOYER_SEARCH_INPUT_KEY, "") or "").strip()
+        submitted_query = str(query or "").strip()
         if submitted_query:
+            st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = submitted_query
             confirm_lookup(submitted_query, sync_search_box=False)
     return str(st.session_state.get(EMPLOYER_SEARCH_INPUT_KEY, "") or "").strip()
 
