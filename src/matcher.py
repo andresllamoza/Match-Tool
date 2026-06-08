@@ -202,6 +202,22 @@ JPMC_401K_OVERRIDE = {
     ),
 }
 
+MCDONALDS_401K_OVERRIDE = {
+    "matched_employer_name": "MCDONALDS CORPORATION AND SUBSIDIARIES",
+    "recordkeeper": "Empower",
+    "plan_name": "MCDONALD'S CORPORATION 401(K) PLAN",
+    "plan_year": 2024,
+    "plan_participants": 32808,
+    "ein": "362361282",
+    "plan_type_code": "2E2F2G2I2J2K2P2S2T3H3F",
+    "match_method": "curated_override",
+    "match_reason": (
+        "McDonald's Corporation 401(k) plan materials and SEC filings name Empower "
+        "as recordkeeper (since January 2020). DOL Schedule C can still list legacy "
+        "providers such as Voya without reflecting the current recordkeeper."
+    ),
+}
+
 STATE_FARM_401K_OVERRIDE = {
     "matched_employer_name": "STATE FARM MUTUAL AUTOMOBILE INSURANCE COMPANY",
     "recordkeeper": "Alight Solutions",
@@ -223,6 +239,8 @@ STATE_FARM_401K_OVERRIDE = {
 CURATED_EMPLOYER_OVERRIDES = {
     "DISNEY": DISNEY_2024_OVERRIDE,
     "WALT DISNEY": DISNEY_2024_OVERRIDE,
+    "MCDONALDS": MCDONALDS_401K_OVERRIDE,
+    "MCDONALD S": MCDONALDS_401K_OVERRIDE,
     "JP MORGAN CHASE": JPMC_401K_OVERRIDE,
     "JPMORGAN CHASE": JPMC_401K_OVERRIDE,
     "JPMORGAN CHASE BANK NATIONAL ASSOCIATION": JPMC_401K_OVERRIDE,
@@ -329,7 +347,9 @@ def _read_csv_columns(path: Path, columns: list[str], required: list[str]) -> pd
 def _normalize_name(name: object) -> str:
     if pd.isna(name):
         return ""
-    cleaned = re.sub(r"[^\w\s&]", " ", str(name).upper())
+    text = str(name).upper()
+    text = re.sub(r"'S\b", "S", text)  # McDonald's → MCDONALDS (not MCDONALD S)
+    cleaned = re.sub(r"[^\w\s&]", " ", text)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     tokens = [
         token

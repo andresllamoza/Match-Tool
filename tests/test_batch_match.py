@@ -45,6 +45,9 @@ class BatchMatchTest(unittest.TestCase):
             ("Fannie Mae", "Fidelity Investments", "FEDERAL NATIONAL MORTGAGE"),
             ("State Farm Insurance Cos.", "Alight", "STATE FARM MUTUAL"),
             ("Express Scripts Holding", "Empower", "CIGNA"),
+            ("McDonald's", "Empower", "MCDONALDS CORPORATION"),
+            ("McDonalds", "Empower", "MCDONALDS CORPORATION"),
+            ("McDonald's Corporation", "Empower", "MCDONALDS CORPORATION"),
         ]
         for query, expected_rk, employer_fragment in cases:
             results = match(query, top_n=1)
