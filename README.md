@@ -121,7 +121,7 @@ Streamlit Community Cloud: point the app at `app.py`, set `app_password` in Secr
 
 ## Current limitations
 
-- Fortune 1000 reference set: **~666/1000** high-confidence matches on v4 logic (improvement is a separate project).
+- Fortune 1000 reference set: **~818/1000** high-confidence matches on v4 logic (improvement is a separate project).
 - Welfare or pension rows can still appear in edge cases; DC filters and curated overrides reduce but do not eliminate noise.
 - DOL releases update quarterly; refresh by deleting `data/recordkeeper_master.*` and restarting.
 
