@@ -26,6 +26,7 @@ from src.matcher import (
 
 
 SUGGESTION_LIMIT = 10
+EMPLOYER_SEARCH_INPUT_KEY = "employer_search_input"
 FEEDBACK_LOG_FILENAME = "provider_feedback.csv"
 FEEDBACK_COLUMNS = [
     "timestamp_utc",
@@ -879,14 +880,18 @@ def warm_runtime_caches() -> None:
     load_cached_employer_index()
 
 
+def normalize_query_param_value(value: object) -> str:
+    if isinstance(value, list):
+        value = value[0] if value else ""
+    return str(value or "").strip()
+
+
 def selected_employer_from_query_params() -> str:
     try:
         value = st.query_params.get("selected_employer", "")
     except AttributeError:
         value = st.experimental_get_query_params().get("selected_employer", [""])[0]
-    if isinstance(value, list):
-        value = value[0] if value else ""
-    return str(value).strip()
+    return normalize_query_param_value(value)
 
 
 def reset_lookup_feedback() -> None:
@@ -909,44 +914,41 @@ def suggestion_detail(suggestion: EmployerSuggestion) -> str:
     return " | ".join(details)
 
 
-def confirm_lookup(employer_name: str, *, sync_search_box: bool = False) -> None:
+def confirm_lookup(employer_name: str, *, sync_search_box: bool = True) -> None:
     """Run a lookup for this employer (Enter, Search, or Select)."""
     cleaned = str(employer_name or "").strip()
     if not cleaned:
         return
     reset_lookup_feedback()
-    if sync_search_box:
-        st.session_state["_pending_search_query"] = cleaned
     st.session_state["confirmed_lookup"] = cleaned
-    if not is_demo_mode():
-        try:
-            st.query_params["selected_employer"] = cleaned
-        except AttributeError:
-            st.experimental_set_query_params(selected_employer=cleaned)
+    if sync_search_box:
+        st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = cleaned
 
 
-def sync_confirmed_lookup_from_params() -> None:
+def seed_lookup_from_url_if_needed() -> None:
+    """Apply ?selected_employer= once per session to support shared deep links."""
+    if st.session_state.get("_url_employer_seeded"):
+        return
+    st.session_state["_url_employer_seeded"] = True
     param_employer = selected_employer_from_query_params()
     if not param_employer:
         return
-    signature = ("param", param_employer)
-    if st.session_state.get("_synced_param_lookup") == signature:
-        return
-    st.session_state["_synced_param_lookup"] = signature
     st.session_state["confirmed_lookup"] = param_employer
-    st.session_state["_pending_search_query"] = param_employer
+    st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = param_employer
+
+
+def select_employer_suggestion(employer_name: str) -> None:
+    """Callback for filing-name Select buttons (runs before results render)."""
+    confirm_lookup(employer_name, sync_search_box=True)
 
 
 def render_employer_search_bar() -> str:
     """Search box; Enter or Search runs a lookup on the typed name."""
-    sync_confirmed_lookup_from_params()
-    pending_query = st.session_state.pop("_pending_search_query", None)
-    input_kwargs: dict[str, object] = {
-        "placeholder": "e.g. Disney, Nike, Walmart",
-        "label_visibility": "visible",
-    }
-    if pending_query is not None:
-        input_kwargs["value"] = pending_query
+    display_query = str(
+        st.session_state.get(EMPLOYER_SEARCH_INPUT_KEY)
+        or st.session_state.get("confirmed_lookup")
+        or ""
+    ).strip()
 
     search_copy = "Type a company name, then <strong>Enter</strong> or <strong>Search</strong>."
     st.markdown(
@@ -957,13 +959,22 @@ def render_employer_search_bar() -> str:
     with st.form("employer_lookup_form", clear_on_submit=False, border=False):
         input_col, button_col = st.columns([0.8, 0.2], vertical_alignment="bottom")
         with input_col:
-            query = st.text_input("Employer name", **input_kwargs)
+            # No session-state key inside the form: keyed form widgets fight
+            # submit handling and can take several Enter/Search presses to stick.
+            query = st.text_input(
+                "Employer name",
+                value=display_query,
+                placeholder="e.g. Disney, Nike, Walmart",
+                label_visibility="visible",
+            )
         with button_col:
             submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
-    query = str(query or "").strip()
-    if submitted and query:
-        confirm_lookup(query)
-    return query
+    if submitted:
+        submitted_query = str(query or "").strip()
+        if submitted_query:
+            st.session_state[EMPLOYER_SEARCH_INPUT_KEY] = submitted_query
+            confirm_lookup(submitted_query, sync_search_box=False)
+    return str(st.session_state.get(EMPLOYER_SEARCH_INPUT_KEY, "") or "").strip()
 
 
 def render_employer_suggestions(query: str, *, below_results: bool = False) -> None:
@@ -1025,12 +1036,13 @@ def render_employer_suggestions(query: str, *, below_results: bool = False) -> N
                 unsafe_allow_html=True,
             )
         with action_col:
-            if st.button(
+            st.button(
                 "Select",
                 key=f"best_employer_suggestion_{top_suggestion.employer_name}",
+                on_click=select_employer_suggestion,
+                args=(top_suggestion.employer_name,),
                 use_container_width=True,
-            ):
-                confirm_lookup(top_suggestion.employer_name, sync_search_box=True)
+            )
     elif not below_results:
         st.warning("Press Enter to search this name, or pick a filing name below.")
 
@@ -1055,12 +1067,13 @@ def render_employer_suggestions(query: str, *, below_results: bool = False) -> N
                         unsafe_allow_html=True,
                     )
                 with action_col:
-                    if st.button(
+                    st.button(
                         "Select",
                         key=f"below_best_suggestion_{best.employer_name}",
+                        on_click=select_employer_suggestion,
+                        args=(best.employer_name,),
                         use_container_width=True,
-                    ):
-                        confirm_lookup(best.employer_name, sync_search_box=True)
+                    )
             for index, suggestion in enumerate(suggestion_slice):
                 name = html.escape(suggestion.employer_name)
                 details = html.escape(suggestion_detail(suggestion))
@@ -1074,12 +1087,13 @@ def render_employer_suggestions(query: str, *, below_results: bool = False) -> N
                         unsafe_allow_html=True,
                     )
                 with action_col:
-                    if st.button(
+                    st.button(
                         "Select",
                         key=f"employer_suggestion_{index}_{suggestion.employer_name}",
+                        on_click=select_employer_suggestion,
+                        args=(suggestion.employer_name,),
                         use_container_width=True,
-                    ):
-                        confirm_lookup(suggestion.employer_name, sync_search_box=True)
+                    )
 
 
 def render_lookup_results(lookup_employer: str) -> None:
@@ -1405,6 +1419,8 @@ st.markdown(
     '</div>',
     unsafe_allow_html=True,
 )
+
+seed_lookup_from_url_if_needed()
 
 if not st.session_state.get("runtime_cache_warmed"):
     st.markdown(
