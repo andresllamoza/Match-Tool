@@ -1,6 +1,12 @@
 """Employer search state must update on the first submit — no URL or stale value fights."""
 
-from app import EMPLOYER_SEARCH_INPUT_KEY, apply_lookup_submission, has_legacy_employer_url_param
+from app import (
+    EMPLOYER_SEARCH_INPUT_KEY,
+    SEARCH_BUILD_ID,
+    apply_lookup_submission,
+    has_legacy_employer_url_param,
+    migrate_stale_search_session,
+)
 
 
 def test_first_submit_sets_confirmed_lookup():
@@ -37,6 +43,34 @@ def test_empty_submit_is_ignored():
     result = apply_lookup_submission(True, "   ", state)
     assert result == "Target"
     assert state["confirmed_lookup"] == "Target"
+
+
+def test_migrate_stale_search_session_clears_legacy_keys():
+    state: dict[str, object] = {
+        "_synced_param_lookup": ("param", "Target"),
+        "_url_employer_seeded": True,
+        "_pending_search_query": "Target",
+        "confirmed_lookup": "Target",
+    }
+
+    class FakeSessionState(dict):
+        def pop(self, key, default=None):
+            return super().pop(key, default)
+
+    fake_state = FakeSessionState(state)
+    import app as app_module
+
+    original = app_module.st.session_state
+    app_module.st.session_state = fake_state
+    try:
+        migrate_stale_search_session()
+        assert fake_state["_search_session_migrated"] == SEARCH_BUILD_ID
+        assert "_synced_param_lookup" not in fake_state
+        assert "_url_employer_seeded" not in fake_state
+        assert "_pending_search_query" not in fake_state
+        assert fake_state["confirmed_lookup"] == "Target"
+    finally:
+        app_module.st.session_state = original
 
 
 def test_legacy_url_param_detection():

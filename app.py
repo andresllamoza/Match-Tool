@@ -27,6 +27,7 @@ from src.matcher import (
 
 SUGGESTION_LIMIT = 10
 EMPLOYER_SEARCH_INPUT_KEY = "employer_search_input"
+SEARCH_BUILD_ID = "2026-06-08-v3"
 FEEDBACK_LOG_FILENAME = "provider_feedback.csv"
 FEEDBACK_COLUMNS = [
     "timestamp_utc",
@@ -888,38 +889,18 @@ def has_legacy_employer_url_param(query_params: dict[str, object]) -> bool:
     return bool(str(raw or "").strip())
 
 
-def clear_legacy_employer_url_param() -> None:
-    """Remove deprecated ?selected_employer= from old shared links."""
-    if st.session_state.get("_legacy_employer_param_cleared"):
+def migrate_stale_search_session() -> None:
+    """Drop state from older builds that fought the search box."""
+    if st.session_state.get("_search_session_migrated") == SEARCH_BUILD_ID:
         return
-    st.session_state["_legacy_employer_param_cleared"] = True
-    if is_demo_mode():
-        return
-    try:
-        if st.query_params.get("selected_employer"):
-            del st.query_params["selected_employer"]
-        return
-    except AttributeError:
-        pass
-    except Exception:
-        return
-    try:
-        legacy = st.experimental_get_query_params()
-        if "selected_employer" not in legacy:
-            return
-        preserved: dict[str, str] = {}
-        for key, raw_value in legacy.items():
-            if key == "selected_employer":
-                continue
-            if isinstance(raw_value, list):
-                value = str(raw_value[0]) if raw_value else ""
-            else:
-                value = str(raw_value or "")
-            if value:
-                preserved[key] = value
-        st.experimental_set_query_params(**preserved)
-    except Exception:
-        pass
+    st.session_state["_search_session_migrated"] = SEARCH_BUILD_ID
+    for legacy_key in (
+        "_synced_param_lookup",
+        "_url_employer_seeded",
+        "_pending_search_query",
+        "_legacy_employer_param_cleared",
+    ):
+        st.session_state.pop(legacy_key, None)
 
 
 def reset_lookup_feedback() -> None:
@@ -975,19 +956,19 @@ def render_employer_search_bar() -> str:
         f'<p class="search-panel-copy">{search_copy}</p>',
         unsafe_allow_html=True,
     )
-    # clear_on_submit=True keeps the box empty after each search so a prior
-    # result never fights the next query. No URL params and no value= override.
     with st.form("employer_lookup_form", clear_on_submit=True, border=False):
-        input_col, button_col = st.columns([0.8, 0.2], vertical_alignment="bottom")
-        with input_col:
-            query = st.text_input(
-                "Employer name",
-                placeholder="e.g. Disney, Nike, Walmart",
-                label_visibility="visible",
-            )
-        with button_col:
-            submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
-    return apply_lookup_submission(submitted, str(query or ""), st.session_state)
+        query = st.text_input(
+            "Employer name",
+            placeholder="e.g. Disney, Nike, Walmart",
+            label_visibility="visible",
+        )
+        submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
+    if submitted:
+        submitted_query = str(query or "").strip()
+        if submitted_query:
+            apply_lookup_submission(True, submitted_query, st.session_state)
+            st.rerun()
+    return str(st.session_state.get(EMPLOYER_SEARCH_INPUT_KEY, "") or "").strip()
 
 
 def render_employer_suggestions(query: str, *, below_results: bool = False) -> None:
@@ -1433,7 +1414,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-clear_legacy_employer_url_param()
+migrate_stale_search_session()
 
 if not st.session_state.get("runtime_cache_warmed"):
     st.markdown(
@@ -1449,6 +1430,7 @@ if not st.session_state.get("runtime_cache_warmed"):
     st.rerun()
 
 search_query = render_employer_search_bar()
+st.caption(f"Search build {SEARCH_BUILD_ID}")
 confirmed_lookup = str(st.session_state.get("confirmed_lookup", "") or "").strip()
 
 if confirmed_lookup:
