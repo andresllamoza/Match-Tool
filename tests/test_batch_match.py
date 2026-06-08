@@ -48,6 +48,7 @@ class BatchMatchTest(unittest.TestCase):
             ("McDonald's", "Empower", "MCDONALDS CORPORATION"),
             ("McDonalds", "Empower", "MCDONALDS CORPORATION"),
             ("McDonald's Corporation", "Empower", "MCDONALDS CORPORATION"),
+            ("Subway", "Newport", "FRANCHISE WORLD HEADQUARTERS"),
         ]
         for query, expected_rk, employer_fragment in cases:
             results = match(query, top_n=1)
