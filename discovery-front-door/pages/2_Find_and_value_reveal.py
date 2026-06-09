@@ -103,7 +103,7 @@ if state == UiState.INPUT:
 elif state == UiState.RESULT:
     outcome = st.session_state.find_outcome
     disc = outcome.discovery
-    logo_mark()
+    brand_header("Find & value (optional)")
     headline("Likely match")
     provider_result_card(
         disc.resolved_provider or "your recordkeeper",
@@ -123,7 +123,7 @@ elif state == UiState.RESULT:
         st.rerun()
 
 else:
-    logo_mark()
+    brand_header("Find & value (optional)")
     headline("Something went wrong")
     error_card()
     if st.button("Try again"):
