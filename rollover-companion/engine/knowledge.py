@@ -113,6 +113,7 @@ def _parse_provider(data: dict) -> ProviderPlaybook:
     next_actions = {
         FunnelStage(stage): NextAction(
             action=action["action"],
+            customer_message=action["customer_message"],
             owner=_coerce_owner(action["owner"]),
             source_status=_coerce_source(action["source_status"]),
         )

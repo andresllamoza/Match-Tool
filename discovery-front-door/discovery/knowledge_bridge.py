@@ -8,7 +8,7 @@ from .models import NextStepResult
 
 
 class KnowledgeBridge:
-    """Reads the rollover playbook knowledge layer for next-step guidance."""
+    """Reads the rollover companion knowledge layer for customer-facing next steps."""
 
     def __init__(self, engine):
         self._engine = engine
@@ -16,15 +16,20 @@ class KnowledgeBridge:
     @classmethod
     def from_dir(cls, knowledge_dir: Path | None = None) -> KnowledgeBridge:
         repo_root = Path(__file__).resolve().parents[2]
-        playbook_root = (knowledge_dir or repo_root) / "rollover-playbook-engine"
-        if knowledge_dir and not playbook_root.exists():
-            playbook_root = repo_root / "rollover-playbook-engine"
-        if str(playbook_root) not in sys.path:
-            sys.path.insert(0, str(playbook_root))
-        from engine import FunnelStage, RolloverEngine  # noqa: WPS433
+        companion_root = repo_root / "rollover-companion"
+        if not companion_root.exists():
+            companion_root = repo_root / "rollover-playbook-engine"
+        if str(companion_root) not in sys.path:
+            sys.path.insert(0, str(companion_root))
+        from engine.knowledge import KnowledgeBase  # noqa: WPS433
+        from engine.models import FunnelStage  # noqa: WPS433
 
-        eng = RolloverEngine()
-        bridge = cls(eng)
+        kb = KnowledgeBase.from_dir(
+            companion_root / "rollover-knowledge-layer"
+            if (companion_root / "rollover-knowledge-layer").exists()
+            else None
+        )
+        bridge = cls(kb)
         bridge._FunnelStage = FunnelStage  # type: ignore[attr-defined]
         return bridge
 
@@ -33,12 +38,13 @@ class KnowledgeBridge:
             return None
         FunnelStage = self._FunnelStage  # noqa: N806
         try:
-            resp = self._engine.recommend(provider, FunnelStage.PROVIDER_IDENTIFIED)
+            playbook = self._engine.get(provider)
         except KeyError:
             return None
+        na = playbook.next_actions[FunnelStage.PROVIDER_IDENTIFIED]
         return NextStepResult(
-            action=resp.next_action.action,
-            owner=resp.next_action.owner.value,
-            source_status=resp.next_action.source_status.value,
-            provenance_warning=resp.provenance_warning,
+            action=na.customer_message,
+            owner=na.owner.value,
+            source_status=na.source_status.value,
+            provenance_warning=None,
         )

@@ -18,18 +18,22 @@ tax_routing_note: "Pre-tax → Traditional/Rollover IRA; Roth → Roth IRA. Pre-
 next_actions:
   provider_identified:
     action: "Guide the user to start a direct rollover in the Empower portal to the PensionBee IRA, and warn now that the check mails to THEM."
+    customer_message: "Start a direct rollover to your PensionBee IRA in the Empower portal. Important: Empower mails the check to your home address first — we'll send you a prepaid envelope to forward it to us."
     owner: user
     source_status: verified
   rollover_initiated:
     action: "Confirm Empower mails the check to the user's address on file; PensionBee sends a prepaid envelope for them to forward it."
+    customer_message: "Watch for a check in the mail at your address on file. We'll send a prepaid envelope — forward the check to PensionBee as soon as it arrives."
     owner: beekeeper
     source_status: verified
   in_flight:
     action: "BeeKeeper tracks the forwarded check until it is received and applied to the PensionBee IRA."
+    customer_message: "We're tracking your rollover. Once the check arrives at your address, forward it using the prepaid envelope we sent. This usually takes 2–4 weeks."
     owner: beekeeper
     source_status: verified
   completed:
     action: "Rollover complete — funds in the PensionBee IRA. No further action."
+    customer_message: "Your rollover is complete — your funds are in your PensionBee IRA."
     owner: system
     source_status: verified
 

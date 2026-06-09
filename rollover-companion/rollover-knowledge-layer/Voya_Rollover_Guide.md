@@ -19,18 +19,22 @@ tax_routing_note: "Pre-tax → Traditional/Rollover IRA; Roth → Roth IRA. Pre-
 next_actions:
   provider_identified:
     action: "Guide the user to start a direct rollover to the PensionBee IRA in the Voya portal; warn that a phone-verification step may gate the request."
+    customer_message: "Start a direct rollover to your PensionBee IRA in the Voya portal. Some plans require a quick phone call to verify your identity before the check is sent — we'll walk you through it if that comes up."
     owner: user
     source_status: verified
   rollover_initiated:
     action: "If the portal stalls pending verification, have the user call Voya to confirm identity/intent so the check is released."
+    customer_message: "Your rollover is in motion. If the Voya portal seems stuck, call Voya to confirm your identity — that unlocks the check."
     owner: user
     source_status: verified
   in_flight:
     action: "BeeKeeper tracks the direct check until received and applied; flag the slower historical SLA so the user isn't left waiting."
+    customer_message: "We're tracking your check. Voya can take a little longer than other providers — expect 2–4 weeks, sometimes more. We'll keep you updated."
     owner: beekeeper
     source_status: verified
   completed:
     action: "Rollover complete — funds in the PensionBee IRA. No further action."
+    customer_message: "Your rollover is complete — your funds are in your PensionBee IRA."
     owner: system
     source_status: verified
 

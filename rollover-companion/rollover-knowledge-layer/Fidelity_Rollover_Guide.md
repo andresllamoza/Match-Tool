@@ -26,18 +26,22 @@ tax_routing_note: "Pre-tax → Traditional/Rollover IRA; Roth → Roth IRA. Pre-
 next_actions:
   provider_identified:
     action: "Guide the user to start an Express rollover into a Fidelity Rollover IRA (Avenue 3 — no check)."
+    customer_message: "Start an Express rollover in Fidelity NetBenefits — roll your 401(k) into a Fidelity Rollover IRA first. No paper check needed; we'll pull the funds over electronically."
     owner: user
     source_status: verified
   rollover_initiated:
     action: "Have the user share their Fidelity Rollover IRA account info via Beehive chat to trigger the ACAT."
+    customer_message: "Share your Fidelity Rollover IRA account details with us in chat so we can start the electronic transfer into your PensionBee IRA."
     owner: user
     source_status: verified
   in_flight:
     action: "BeeKeeper monitors the ACAT leg until funds land in the PensionBee IRA."
+    customer_message: "Your transfer is in progress. Electronic transfers usually complete within a few weeks — we'll notify you when your funds arrive."
     owner: beekeeper
     source_status: verified
   completed:
     action: "Rollover complete — funds in the PensionBee IRA. No further action."
+    customer_message: "Your rollover is complete — your funds are in your PensionBee IRA."
     owner: system
     source_status: verified
 

@@ -73,6 +73,7 @@ class Step(BaseModel):
 
 class NextAction(BaseModel):
     action: str
+    customer_message: str
     owner: Owner
     source_status: SourceStatus
 

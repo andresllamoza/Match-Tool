@@ -18,18 +18,22 @@ tax_routing_note: "Pre-tax → Traditional/Rollover IRA; Roth → Roth IRA. Pre-
 next_actions:
   provider_identified:
     action: "Guide the user to start a direct rollover to an external IRA in the Vanguard portal, with the check mailed directly to PensionBee."
+    customer_message: "Start a direct rollover to your PensionBee IRA in the Vanguard portal. The check can usually be mailed directly to PensionBee — no need to forward it yourself."
     owner: user
     source_status: verified
   rollover_initiated:
     action: "Confirm the check is set payable per PensionBee instructions and mailed directly to PensionBee — no forward step needed."
+    customer_message: "Your rollover request is submitted. Vanguard will mail a check directly to PensionBee — this usually takes 2–4 weeks."
     owner: user
     source_status: verified
   in_flight:
     action: "BeeKeeper tracks the direct check until it is received and applied to the PensionBee IRA."
+    customer_message: "We're waiting for your check to arrive at PensionBee. Most Vanguard rollovers complete within 2–4 weeks."
     owner: beekeeper
     source_status: verified
   completed:
     action: "Rollover complete — funds in the PensionBee IRA. No further action."
+    customer_message: "Your rollover is complete — your funds are in your PensionBee IRA."
     owner: system
     source_status: verified
 

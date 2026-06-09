@@ -312,10 +312,12 @@ class JourneyEngine:
                 agent_notes.append(f"Escalation/failure active: {top.flag}")
 
         if ctx.state == JourneyState.PROVIDER_IDENTIFIED and playbook:
+            na = playbook.next_actions[FunnelStage.PROVIDER_IDENTIFIED]
             headline = f"Can you log in to {playbook.portal or playbook.provider}?"
-            body = playbook.preferred_path
+            body = na.customer_message
             primary = "Yes, I can log in"
             secondary = ["No — I need help getting access"]
+            agent_notes.append(f"Ops: {na.action}")
             for ec in edge_cases:
                 agent_notes.append(f"Edge case to surface: {ec}")
             return JourneyScreen(
@@ -455,9 +457,11 @@ class JourneyEngine:
             esc, fail = collect_triggered_actions(self.knowledge, playbook, ctx.flags)
             na = resolve_next_action(playbook, FunnelStage.ROLLOVER_INITIATED, esc, fail)
             headline = "Rollover initiated"
-            body = na.action
+            body = na.customer_message if not (esc or fail) else na.action
             primary = "Track my rollover"
             beekeeper_script = na.action if na.owner == Owner.BEEKEEPER else None
+            if not (esc or fail):
+                agent_notes.append(f"Ops: {na.action}")
             return JourneyScreen(
                 journey_id=ctx.journey_id,
                 state=ctx.state,
@@ -477,8 +481,10 @@ class JourneyEngine:
             esc, fail = collect_triggered_actions(self.knowledge, playbook, ctx.flags)
             na = resolve_next_action(playbook, FunnelStage.IN_FLIGHT, esc, fail)
             headline = "Your rollover is in progress"
-            body = na.action
+            body = na.customer_message if not (esc or fail) else na.action
             primary = "Mark as complete"
+            if not (esc or fail):
+                agent_notes.append(f"Ops: {na.action}")
             secondary = ["Nothing arrived yet — get help"]
             return JourneyScreen(
                 journey_id=ctx.journey_id,
