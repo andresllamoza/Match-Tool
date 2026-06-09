@@ -63,12 +63,23 @@ with st.sidebar:
 
 col_input, col_output = st.columns([1, 2], gap="large")
 
+general = kb.general_guide
+
 with col_input:
+    st.subheader("General guide (all providers)")
+    st.markdown(f"**Mail checks to:** {general.mailing_address}")
+    st.markdown(f"**Timeline:** {general.typical_processing_time}")
+    st.caption(general.account_numbers_policy)
+    with st.expander("Universal rollover steps"):
+        for i, step in enumerate(general.general_steps, 1):
+            st.markdown(f"{i}. {step.text}")
+
     st.subheader("Provider facts")
     playbook = kb.get(provider)
     st.markdown(f"**Portal:** {playbook.portal or '—'}")
     st.markdown(f"**Mechanism:** `{playbook.mechanism.value}`")
     st.markdown(f"**Check destination:** {playbook.check_destination}")
+    st.caption(general.employer_vs_provider_note)
     if playbook.edge_cases:
         with st.expander("Known edge cases"):
             for case in playbook.edge_cases:
@@ -96,7 +107,11 @@ with col_output:
 
     st.markdown(f"**Tax routing:** {resp.tax_routing_note}")
 
-    with st.expander("Full portal steps", expanded=False):
+    with st.expander("General steps (all providers)", expanded=False):
+        for i, step in enumerate(resp.general_steps, 1):
+            st.markdown(f"{i}. {step.text}")
+
+    with st.expander(f"{provider}-specific portal steps", expanded=stage.value == "provider_identified"):
         for i, step in enumerate(resp.steps, 1):
             st.markdown(
                 f"{i}. **{owner_badge(step.owner)}** "

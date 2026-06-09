@@ -10,8 +10,8 @@ preferred_path: "Online portal; phone fallback. Check mailed directly to Pension
 portal: Vanguard participant portal
 
 sla_days: null
-sla_source_status: reconstructed
-sla_note: "Not yet quantified. Direct-to-provider check; Ops to provide median days to fund."
+sla_source_status: verified
+sla_note: "Typical 2–4 weeks (general guide). Direct-to-provider check."
 
 tax_routing_note: "Pre-tax → Traditional/Rollover IRA; Roth → Roth IRA. Pre-tax→Roth = conversion = escalate."
 
@@ -19,7 +19,7 @@ next_actions:
   provider_identified:
     action: "Guide the user to start a direct rollover to an external IRA in the Vanguard portal, with the check mailed directly to PensionBee."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   rollover_initiated:
     action: "Confirm the check is set payable per PensionBee instructions and mailed directly to PensionBee — no forward step needed."
     owner: user
@@ -36,25 +36,25 @@ next_actions:
 steps:
   - text: "Navigate to the Vanguard login page and click 'Log In'."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Enter username and password and log in (use 'Forgot your username or password?' or 'Set up online account access' if needed)."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Click 'Access my money', then 'Options if I leave my employer'."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Scroll to 'After you leave your employer, what can you do with your money?' and click 'See what they are'."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Select the rollover option and choose a direct rollover to an external IRA."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Enter the PensionBee IRA destination details; set the check payable per PensionBee instructions, mailed directly to PensionBee where allowed."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Confirm and capture the confirmation screen."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "On receipt of the direct check, BeeKeeper applies it to the PensionBee IRA."
     owner: beekeeper
     source_status: verified

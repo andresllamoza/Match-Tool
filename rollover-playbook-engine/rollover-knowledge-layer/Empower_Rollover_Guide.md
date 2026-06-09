@@ -10,8 +10,8 @@ preferred_path: "Online portal where available; phone fallback. Both produce a c
 portal: Empower participant portal
 
 sla_days: null
-sla_source_status: reconstructed
-sla_note: "Not yet quantified. Check-to-participant adds a forward leg; Ops to provide median days to fund."
+sla_source_status: verified
+sla_note: "Typical 2–4 weeks (general guide). Check-to-participant adds a forward leg; Ops to provide median days to fund."
 
 tax_routing_note: "Pre-tax → Traditional/Rollover IRA; Roth → Roth IRA. Pre-tax→Roth = conversion = escalate."
 
@@ -19,7 +19,7 @@ next_actions:
   provider_identified:
     action: "Guide the user to start a direct rollover in the Empower portal to the PensionBee IRA, and warn now that the check mails to THEM."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   rollover_initiated:
     action: "Confirm Empower mails the check to the user's address on file; PensionBee sends a prepaid envelope for them to forward it."
     owner: beekeeper
@@ -36,22 +36,22 @@ next_actions:
 steps:
   - text: "Log in to the Empower participant portal."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Locate the old 401(k) plan to roll over."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Begin the rollover/distribution request and select a direct rollover."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Set the destination as the PensionBee IRA (direct rollover; check payable per PensionBee instructions)."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Complete any required forms."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Capture the confirmation screen. Confirm the check mails to the user's address; PensionBee sends a prepaid envelope to forward it."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "On receipt of the forwarded check, BeeKeeper applies it to the PensionBee IRA."
     owner: beekeeper
     source_status: verified

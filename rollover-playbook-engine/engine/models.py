@@ -125,6 +125,17 @@ class GlobalRules(BaseModel):
     global_failure_modes: list[GlobalFailureMode] = Field(default_factory=list)
 
 
+class GeneralGuide(BaseModel):
+    destination_name: str
+    mailing_address: str
+    typical_processing_time: str
+    account_numbers_policy: str
+    employer_vs_provider_note: str
+    general_steps: list[Step]
+    portal_menu_aliases: list[str] = Field(default_factory=list)
+    destination_dropdown_aliases: list[str] = Field(default_factory=list)
+
+
 class TriggeredAction(BaseModel):
     id: str
     flag: str
@@ -147,6 +158,8 @@ class RecommendationResponse(BaseModel):
     sla_note: Optional[str]
     sla_gap: bool
     steps: list[Step]
+    general_steps: list[Step] = Field(default_factory=list)
+    general_guide: Optional[GeneralGuide] = None
     edge_cases: list[str]
     active_escalations: list[TriggeredAction]
     active_failure_modes: list[TriggeredAction]

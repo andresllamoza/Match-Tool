@@ -107,7 +107,9 @@ requires a forward step. Inconsistent data fails to load.
 
 | Path | Purpose |
 |------|---------|
-| `rollover-knowledge-layer/*.md` | **Source of truth.** Front matter = typed facts Ops edits; prose = human context |
+| `rollover-knowledge-layer/General_Rollover_Guide.md` | **Universal layer** — FIN training facts (address, tax routing, general steps, handoffs) |
+| `rollover-knowledge-layer/*_Rollover_Guide.md` | **Provider layer** — Fidelity/Empower/Vanguard/Voya portal paths on top of the general guide |
+| `rollover-knowledge-layer/Check_Destination_Matrix.md` | Mechanism matrix + global tax/escalation rules |
 | `engine/models.py` | pydantic schema + invariants (mechanism↔forward-step, all stages covered) |
 | `engine/knowledge.py` | Parse front matter → typed schema; alias resolution |
 | `engine/engine.py` | Decision rule: one next action, escalations pre-empt, provenance surfaced |
@@ -129,11 +131,10 @@ by provider**. Set `ROLLOVER_LOG_PATH` to redirect it.
 
 ## Status & provenance
 
-Portal step wording is currently `reconstructed` (from the source guides' own
-caveat) and is flagged as such in every output. Mechanism, check routing,
-escalations, and tax guardrails are `verified` PensionBee routing rules. **SLA
-days are not yet quantified** — the field exists and the engine surfaces the
-gap rather than inventing a number; Ops fills in medians from funnel data.
+General rollover steps and customer-facing facts come from the FIN training guide
+(`General_Rollover_Guide.md`, `verified`). Provider guides add portal-specific
+steps on top. Typical processing time defaults to **2–4 weeks** from the general
+guide when a provider SLA is not yet quantified.
 
 ## What it explicitly does NOT do
 

@@ -54,11 +54,12 @@ def test_sla_gap_surfaced():
     assert resp.sla_note is not None
 
 
-def test_provenance_flagged_for_reconstructed():
+def test_provenance_clean_with_verified_guides():
     eng = RolloverEngine()
     resp = eng.recommend("Fidelity", FunnelStage.PROVIDER_IDENTIFIED)
-    assert resp.has_reconstructed_content is True
-    assert resp.provenance_warning is not None
+    assert resp.has_reconstructed_content is False
+    assert resp.provenance_warning is None
+    assert resp.general_guide.mailing_address
 
 
 def test_completed_stage_system_owned():

@@ -99,8 +99,10 @@ class RolloverEngine:
         else:
             next_action = playbook.next_actions[funnel_stage]
 
+        general = self.knowledge.general_guide
+        all_steps = general.general_steps + playbook.steps
         has_reconstructed = any(
-            s.source_status == SourceStatus.RECONSTRUCTED for s in playbook.steps
+            s.source_status == SourceStatus.RECONSTRUCTED for s in all_steps
         ) or next_action.source_status == SourceStatus.RECONSTRUCTED
 
         provenance_warning = None
@@ -108,6 +110,11 @@ class RolloverEngine:
             provenance_warning = (
                 "Some portal step wording is reconstructed — spot-check against the live Scribe."
             )
+
+        sla_note = playbook.sla_note
+        sla_gap = playbook.sla_days is None
+        if sla_gap and not sla_note:
+            sla_note = f"Typical timeline (all providers): {general.typical_processing_time}."
 
         response = RecommendationResponse(
             provider=playbook.provider,
@@ -119,9 +126,11 @@ class RolloverEngine:
             forward_step_required=playbook.forward_step_required,
             tax_routing_note=playbook.tax_routing_note,
             sla_days=playbook.sla_days,
-            sla_note=playbook.sla_note,
-            sla_gap=playbook.sla_days is None,
+            sla_note=sla_note,
+            sla_gap=sla_gap,
             steps=playbook.steps,
+            general_steps=general.general_steps,
+            general_guide=general,
             edge_cases=playbook.edge_cases,
             active_escalations=active_escalations,
             active_failure_modes=active_failures,

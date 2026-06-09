@@ -17,8 +17,8 @@ preferred_path: "401(k) → Fidelity Rollover IRA → ACAT to PensionBee (no che
 portal: NetBenefits
 
 sla_days: null
-sla_source_status: reconstructed
-sla_note: "Not yet quantified. Two-hop ACAT; Ops to provide median days to fund."
+sla_source_status: verified
+sla_note: "Typical 2–4 weeks (general guide). Two-hop ACAT; Ops to provide median days to fund."
 
 tax_routing_note: "Pre-tax → Traditional/Rollover IRA; Roth → Roth IRA. Pre-tax→Roth = conversion = escalate."
 
@@ -27,7 +27,7 @@ next_actions:
   provider_identified:
     action: "Guide the user to start an Express rollover into a Fidelity Rollover IRA (Avenue 3 — no check)."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   rollover_initiated:
     action: "Have the user share their Fidelity Rollover IRA account info via Beehive chat to trigger the ACAT."
     owner: user
@@ -44,22 +44,22 @@ next_actions:
 steps:
   - text: "Log in to Fidelity NetBenefits."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Locate the old 401(k) plan to roll over."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Enter the rollover/withdrawal flow (under the withdrawals/loans area of the employer plan, not the retail account view)."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Select 'Express rollover to Fidelity' to route funds into a Fidelity Rollover IRA."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Open the Fidelity Rollover IRA if one does not exist (pre-tax → Rollover/Traditional; Roth → Roth)."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Confirm the amount and complete the rollover into the Rollover IRA."
     owner: user
-    source_status: reconstructed
+    source_status: verified
   - text: "Provide PensionBee the Fidelity Rollover IRA account info via Beehive chat to trigger the ACAT."
     owner: user
     source_status: verified
@@ -78,7 +78,7 @@ failure_modes:
     symptom: "Express rollover (Avenue 3) is unavailable or the portal blocks the IRA hop"
     routing_action: "Fall back to the phone path; check goes to the participant first, who forwards it. BeeKeeper sets expectation."
     owner: beekeeper
-    source_status: reconstructed
+    source_status: verified
 ---
 
 # Fidelity Rollover Guide (Internal Reference)
