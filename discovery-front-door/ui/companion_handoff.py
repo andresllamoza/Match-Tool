@@ -25,14 +25,11 @@ def render_companion_handoff(
     )
 
     try:
-        st.page_link(
-            "pages/1_Guided_rollover.py",
-            label="Continue in Streamlit (embedded companion)",
-            icon="🐝",
-            use_container_width=True,
-        )
+        if st.button("Continue in Rollover Companion (Home)", use_container_width=True):
+            st.session_state.pending_lookup = employer
+            st.switch_page("app.py")
     except Exception:
-        st.markdown(f"[Continue in Streamlit (embedded companion)]({tab_url})")
+        st.markdown(f"[Continue in Rollover Companion]({tab_url})")
 
     with st.expander("Copy link or embed URL"):
         st.code(tab_url, language=None)

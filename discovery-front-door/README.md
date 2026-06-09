@@ -1,4 +1,16 @@
-# Ungated Discovery & Value-Reveal Front Door
+# PensionBee Rollover Companion (Streamlit)
+
+## `app.py` = the full product
+
+**Streamlit Cloud entrypoint `discovery-front-door/app.py` is now the real guided rollover:**
+find → access → roll over → track. It runs the same `JourneyEngine` and knowledge
+layer as `rollover-companion/web` (`/customer`).
+
+Sidebar **Find & value reveal** is optional pre-signup teaser (employer + $ match).
+
+---
+
+# Ungated Discovery & Value-Reveal (sidebar page)
 
 A pre-signup flow that shows a prospect **concrete value before asking for
 commitment** — their likely 401(k) provider, a quantified dollar match, and one
