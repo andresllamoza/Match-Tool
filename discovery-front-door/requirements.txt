@@ -1,4 +1,3 @@
-pydantic>=2
-pyyaml
-pytest
-streamlit
+# Inherit repo-root deps (pandas, rapidfuzz, …). Streamlit Cloud prefers this
+# file over the root one when the entrypoint is discovery-front-door/app.py.
+-r ../requirements.txt

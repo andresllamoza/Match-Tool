@@ -1,5 +1,6 @@
 streamlit
 pandas
+numpy
 rapidfuzz
 jinja2
 pydantic>=2

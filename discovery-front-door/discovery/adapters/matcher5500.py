@@ -39,9 +39,26 @@ class Local5500Adapter:
         return cls(_lookup)
 
     @classmethod
+    def matcher_deps_available(cls) -> tuple[bool, str | None]:
+        try:
+            import numpy  # noqa: F401
+            import pandas  # noqa: F401
+            import rapidfuzz  # noqa: F401
+        except ImportError as exc:
+            return False, exc.name
+        return True, None
+
+    @classmethod
     def from_matcher(cls, repo_root: Path | None = None) -> Local5500Adapter:
         if os.environ.get("USE_SYNTHETIC") == "1":
             return cls.from_synthetic()
+
+        ok, missing = cls.matcher_deps_available()
+        if not ok:
+            raise ModuleNotFoundError(
+                f"Matcher dependency {missing!r} is not installed. "
+                "Set USE_SYNTHETIC=1 or fix discovery-front-door/requirements.txt."
+            )
 
         root = repo_root or Path(__file__).resolve().parents[3]
         if str(root) not in sys.path:

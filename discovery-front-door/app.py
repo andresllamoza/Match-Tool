@@ -23,9 +23,18 @@ st.title("Add a transfer")
 st.caption("Internal demo — 401(k) employer lookup → recordkeeper → next step")
 
 use_synthetic = os.environ.get("USE_SYNTHETIC") == "1"
-if use_synthetic:
+matcher_ready, missing_dep = Local5500Adapter.matcher_deps_available()
+
+if use_synthetic or not matcher_ready:
     lookup = Local5500Adapter.from_synthetic()
-    st.info("Synthetic mode (`USE_SYNTHETIC=1`) — fake employers, no DOL download.")
+    if use_synthetic:
+        st.info("Synthetic mode (`USE_SYNTHETIC=1`) — fake employers, no DOL download.")
+    elif missing_dep:
+        st.warning(
+            f"5500 matcher dependencies not installed (missing `{missing_dep}`). "
+            "Running in **synthetic mode** — redeploy after pulling latest `main`, "
+            "or set `USE_SYNTHETIC=1` in Advanced settings."
+        )
 else:
     repo_root = ROOT.parent
     lookup = Local5500Adapter.from_matcher(repo_root)

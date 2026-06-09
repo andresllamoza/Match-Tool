@@ -70,10 +70,24 @@ Site URL: `https://andresllamoza.github.io/RecordKeeper-Match-Tool/`
 
 This does **not** host the Streamlit app — only README-style documentation for reviewers.
 
+## Discovery front door (`discovery-front-door/app.py`)
+
+Separate Streamlit app for the add-a-transfer demo.
+
+1. **Main file path:** `discovery-front-door/app.py`
+2. **Dependencies:** `discovery-front-door/requirements.txt` includes `-r ../requirements.txt` so `pandas`, `rapidfuzz`, etc. are installed.
+3. **Instant demo:** set env var `USE_SYNTHETIC=1` (no DOL download).
+4. After changing requirements, use **Manage app → Reboot app** so Cloud reinstalls packages.
+
+## Rollover playbook (`rollover-playbook-engine/app.py`)
+
+Standalone — no DOL cache, no matcher deps. Main file: `rollover-playbook-engine/app.py`.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---------|----------------|-----|
+| `ModuleNotFoundError: rapidfuzz` on discovery app | Subfolder requirements missing matcher deps | Pull latest `main`; reboot app |
 | “Set app_password in secrets” | Missing secret | Add `app_password` in Streamlit Secrets |
 | Spinner > 5 min then error | DOL download timeout | Warm app; reduce `DOL_YEARS`; retry |
 | No suggestions | Query &lt; 3 chars | Type at least 3 letters |
