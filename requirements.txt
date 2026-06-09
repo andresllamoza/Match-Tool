@@ -2,3 +2,5 @@ streamlit
 pandas
 rapidfuzz
 jinja2
+pydantic>=2
+pyyaml

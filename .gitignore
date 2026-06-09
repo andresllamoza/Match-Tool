@@ -1,6 +1,10 @@
 # Data — never commit real DOL files or any client-adjacent data
 data/*
 !data/.gitkeep
+discovery-front-door/data/*
+!discovery-front-door/data/.gitkeep
+rollover-playbook-engine/data/*
+!rollover-playbook-engine/data/.gitkeep
 
 # Secrets — real values go in Streamlit Cloud's Secrets UI, not in the repo
 .streamlit/secrets.toml
