@@ -17,6 +17,18 @@ PROVIDER_EQUIVALENCE_GROUPS: tuple[frozenset[str], ...] = (
     frozenset({"TRANSAMERICA", "WESTERN NATIONAL"}),
     frozenset({"NEWPORT", "NEWPORT GROUP"}),
     frozenset({"LINCOLN", "LINCOLN FINANCIAL"}),
+    frozenset({"VANGUARD"}),
+)
+
+# Matcher output → rollover playbook canonical provider (four supported guides).
+PLAYBOOK_PROVIDER_HINTS: tuple[tuple[frozenset[str], str], ...] = (
+    (frozenset({"FIDELITY", "FIDELITY INVESTMENTS", "FIDELITY WORKPLACE"}), "Fidelity"),
+    (
+        frozenset({"EMPOWER", "EMPOWER RETIREMENT", "GREAT WEST", "GREAT-WEST", "PRUDENTIAL", "PRIAC"}),
+        "Empower",
+    ),
+    (frozenset({"VOYA", "ING", "RELIASTAR"}), "Voya"),
+    (frozenset({"VANGUARD"}), "Vanguard"),
 )
 
 IGNORED_PROVIDER_VALUES = frozenset(
@@ -66,6 +78,32 @@ def providers_equivalent(left: str, right: str) -> bool:
     if left_tokens & right_tokens:
         return True
     return False
+
+
+def playbook_provider_hint(recordkeeper: str) -> str | None:
+    """
+    Map a DOL matcher recordkeeper label to a rollover-playbook provider name.
+
+    Returns None when the label does not map to Fidelity, Empower, Vanguard, or Voya.
+    """
+    text = _tokenize_provider(recordkeeper)
+    if not text or text in IGNORED_PROVIDER_VALUES:
+        return None
+
+    tokens = provider_tokens(recordkeeper)
+    for group, canonical in PLAYBOOK_PROVIDER_HINTS:
+        if tokens & group:
+            return canonical
+        for label in sorted(group, key=len, reverse=True):
+            if label in text:
+                return canonical
+    return None
+
+
+def normalize_for_playbook(recordkeeper: str) -> str:
+    """Prefer playbook-canonical provider names; otherwise return the matcher label."""
+    hint = playbook_provider_hint(recordkeeper)
+    return hint or str(recordkeeper or "").strip()
 
 
 def compare_providers(their_provider: str, our_recordkeeper: str) -> tuple[bool | None, str]:

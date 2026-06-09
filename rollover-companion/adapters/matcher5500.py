@@ -64,6 +64,7 @@ class Local5500Adapter:
 
         try:
             from src.matcher import match as matcher_match  # noqa: WPS433
+            from src.provider_equiv import normalize_for_playbook  # noqa: WPS433
         except ImportError:
             return cls.from_synthetic()
 
@@ -74,7 +75,7 @@ class Local5500Adapter:
             best = results[0]
             return LookupResult(
                 source="matcher5500",
-                provider=best.recordkeeper,
+                provider=normalize_for_playbook(best.recordkeeper),
                 confidence=best.confidence,
                 matched_employer_name=best.matched_employer_name,
                 raw_confidence_label=best.confidence_label,

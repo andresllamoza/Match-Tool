@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from engine.journey import JourneyEngine
+from adapters.factory import build_journey_engine
 from engine.models import JourneyContext
 
-_engine = JourneyEngine()
+_engine = build_journey_engine()
 _sessions: dict[str, JourneyContext] = {}
 
 

@@ -56,7 +56,11 @@ No secrets or DOL cache required.
 |---|---|---|
 | **This playbook** | `rollover-playbook-engine/app.py` | Recordkeeper known → next action |
 | 5500 matcher | `app.py` (repo root) | Employer name → recordkeeper |
-| Add-a-transfer demo | `discovery-front-door/app.py` | Full flow: lookup + playbook |
+| Discovery front door | `discovery-front-door/app.py` | Employer lookup + value reveal + **this engine** via `KnowledgeBridge` |
+| Rollover companion | `rollover-companion/api/server.py` | Full journey; matcher via `adapters/factory.py` |
+
+Matcher output is normalized through `src/provider_equiv.normalize_for_playbook()` before
+`RolloverEngine.recommend()` is called in discovery flows.
 
 As a library:
 

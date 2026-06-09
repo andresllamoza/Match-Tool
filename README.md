@@ -59,15 +59,26 @@ Open `http://localhost:8501`, sign in, type an employer name (at least 3 letters
 
 Theme and Streamlit config: [`.streamlit/config.toml`](.streamlit/config.toml).
 
-### Related tools (separate Streamlit apps)
+### Related tools (integrated transfer playbook stack)
 
-| App | Run locally | Needs DOL cache? |
-|-----|-------------|------------------|
-| **5500 matcher** (this folder) | `streamlit run app.py` | Yes (first run) |
-| **Rollover playbook** | `cd rollover-playbook-engine && streamlit run app.py` | No |
-| **Add-a-transfer demo** | `cd discovery-front-door && USE_SYNTHETIC=1 streamlit run app.py` | Only without `USE_SYNTHETIC` |
+```
+employer name ──▶ src/matcher.py (5500) ──▶ recordkeeper ──▶ rollover playbook next action
+                      ▲                           │
+                      │                           ▼
+              discovery-front-door          rollover-companion
+              (value reveal + bridge)       (FIND → ACCESS → ROLLOVER journey)
+```
 
-The playbook and matcher can be developed and deployed independently.
+| App | Run locally | 5500 matcher | Playbook |
+|-----|-------------|--------------|----------|
+| **5500 matcher** (this folder) | `streamlit run app.py` | Direct | — |
+| **Rollover playbook** | `cd rollover-playbook-engine && streamlit run app.py` | — | Engine only |
+| **Discovery front door** | `cd discovery-front-door && streamlit run app.py` | `Local5500Adapter.from_matcher` | `KnowledgeBridge` → playbook engine |
+| **Rollover companion** | `cd rollover-companion && ./scripts/dev.sh` | `adapters/factory.py` | Companion knowledge + journey |
+
+**Integration:** `src/provider_equiv.py` maps matcher labels (e.g. `Fidelity Investments`) to playbook provider names (`Fidelity`). Both discovery and companion call the same `src.matcher.match` via `Local5500Adapter`.
+
+Set `USE_SYNTHETIC=1` to run playbook flows without the DOL cache (fixtures only).
 
 ---
 

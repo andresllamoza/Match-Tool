@@ -154,8 +154,8 @@ class AdvizorProAdapter:
 ```
 
 Nothing else changes — `DiscoveryFlow` and the harness depend only on
-`ProviderLookupPort`. Likewise, wire the **real 5500 matcher** with
-`Local5500Adapter.from_matcher()` (wraps `src.matcher.match`), instead of
+`ProviderLookupPort`. `build_adapters()` (in `discovery/synthetic.py`) wires the **real 5500 matcher** via
+`Local5500Adapter.from_matcher()` when deps are installed and `USE_SYNTHETIC` is unset, instead of
 `from_synthetic(...)`.
 
 ---
