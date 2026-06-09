@@ -23,6 +23,9 @@ class FunnelSummary(BaseModel):
     by_channel: dict[str, int] = Field(default_factory=dict)
     stall_points: list[StallPoint] = Field(default_factory=list)
     completion_rate: float = 0.0
+    provider_not_covered_count: int = 0
+    handoff_offered_count: int = 0
+    handoff_taken_count: int = 0
 
 
 STALL_STATES = {"stuck", "escalated", "access_blocked"}
@@ -39,6 +42,9 @@ def load_funnel_summary(log_path: Path | None = None) -> FunnelSummary:
     by_channel: Counter[str] = Counter()
     stall_counter: Counter[tuple[str, str | None, str | None]] = Counter()
     completed_journeys: set[str] = set()
+    provider_not_covered_count = 0
+    handoff_offered_count = 0
+    handoff_taken_count = 0
 
     with path.open(encoding="utf-8") as fh:
         for line in fh:
@@ -48,9 +54,16 @@ def load_funnel_summary(log_path: Path | None = None) -> FunnelSummary:
             record = json.loads(line)
             jid = record.get("metadata", {}).get("journey_id")
             state = record.get("state", "unknown")
+            action = record.get("action", "")
             provider = record.get("provider")
             channel = record.get("channel")
             by_state[state] += 1
+            if state == "provider_not_covered":
+                provider_not_covered_count += 1
+            if action == "handoff_offered":
+                handoff_offered_count += 1
+            if action == "handoff_taken":
+                handoff_taken_count += 1
             if provider:
                 by_provider[provider] += 1
             if channel:
@@ -76,4 +89,7 @@ def load_funnel_summary(log_path: Path | None = None) -> FunnelSummary:
         by_channel=dict(by_channel),
         stall_points=stall_points,
         completion_rate=round(completion, 3),
+        provider_not_covered_count=provider_not_covered_count,
+        handoff_offered_count=handoff_offered_count,
+        handoff_taken_count=handoff_taken_count,
     )

@@ -134,6 +134,10 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "escalate", reason: "stuck_on_step" });
       return;
     }
+    if (s === "provider_not_covered" && primary.includes("beekeeper")) {
+      await act({ type: "handoff", reason: "provider_not_covered" });
+      return;
+    }
   }
 
   async function handleSecondary(label: string) {
@@ -215,6 +219,28 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
         <p className="mb-5 whitespace-pre-line text-base leading-relaxed text-bee-ink lg:text-lg">
           {screen.body}
         </p>
+      )}
+
+      {screen.state === "provider_not_covered" && (
+        <div className="mb-5 rounded-card border border-bee-yellow/60 bg-bee-yellow/15 p-4 lg:p-5">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-bee-muted">
+            BeeKeeper handoff
+          </p>
+          <p className="text-sm leading-relaxed text-bee-ink lg:text-base">
+            {context.uncovered_provider
+              ? `Your plan appears to be with ${context.uncovered_provider}. We don't have a guided path for that provider yet — a BeeKeeper can still walk you through it.`
+              : "This provider isn't in our guided library yet. A rollover specialist can still help you move your account."}
+          </p>
+        </div>
+      )}
+
+      {screen.state === "provider_unknown" && screen.body.includes("1%") && (
+        <div className="mb-5 rounded-card bg-bee-blue-light/70 p-4 lg:p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-bee-muted">PensionBee perk</p>
+          <p className="mt-1 text-sm font-semibold text-bee-blue lg:text-base">
+            Roll your old 401(k) to PensionBee and get a 1% match on eligible transfers.
+          </p>
+        </div>
       )}
 
       <EdgeCaseAlerts items={screen.edge_cases} />
@@ -344,6 +370,11 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
         <div className="mt-4 rounded-card bg-bee-blue-light p-6 text-center lg:p-8">
           <p className="text-4xl lg:text-5xl">🎉</p>
           <p className="mt-2 text-lg font-bold text-bee-blue lg:text-xl">You&apos;re all set!</p>
+          {screen.body.includes("1%") && (
+            <p className="mt-2 text-sm text-bee-muted lg:text-base">
+              You earned your 1% match — welcome to PensionBee.
+            </p>
+          )}
         </div>
       )}
 

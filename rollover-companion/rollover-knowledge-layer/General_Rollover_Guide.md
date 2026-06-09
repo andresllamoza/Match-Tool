@@ -7,6 +7,11 @@ mailing_address: "PO Box 72, New York, NY 10272"
 typical_processing_time: "2 to 4 weeks for check issuance and receipt"
 account_numbers_policy: "Customer-specific. Never auto-surface — route to BeeKeeper."
 
+promo:
+  match_rate: 0.01
+  find_message: "Roll your old 401(k) to PensionBee and get a 1% match on eligible transfers."
+  complete_message: "You earned your 1% match — welcome to PensionBee."
+
 track_guidance:
   follow_up_days: 28
   nothing_arrived_message: "If nothing has arrived by day 28, a BeeKeeper can trace your rollover with the provider — don't worry, we'll figure it out together."

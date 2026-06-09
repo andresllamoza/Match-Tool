@@ -28,7 +28,10 @@ class InvalidTransitionError(ValueError):
 
 TRANSITIONS: dict[tuple[JourneyState, str], JourneyState] = {
     (JourneyState.PROVIDER_UNKNOWN, "lookup_high_confidence"): JourneyState.PROVIDER_IDENTIFIED,
+    (JourneyState.PROVIDER_UNKNOWN, "lookup_not_covered"): JourneyState.PROVIDER_NOT_COVERED,
     (JourneyState.PROVIDER_UNKNOWN, "lookup_low_confidence"): JourneyState.PROVIDER_UNKNOWN,
+    (JourneyState.PROVIDER_NOT_COVERED, "handoff"): JourneyState.ESCALATED,
+    (JourneyState.PROVIDER_NOT_COVERED, "escalate"): JourneyState.ESCALATED,
     (JourneyState.PROVIDER_UNKNOWN, "provider_direct"): JourneyState.PROVIDER_IDENTIFIED,
     (JourneyState.PROVIDER_UNKNOWN, "disambiguate"): JourneyState.PROVIDER_IDENTIFIED,
     (JourneyState.PROVIDER_IDENTIFIED, "can_access_yes"): JourneyState.ACCESS_RECOVERED,
@@ -63,7 +66,7 @@ TRANSITIONS: dict[tuple[JourneyState, str], JourneyState] = {
 
 
 def _phase_for_state(state: JourneyState) -> JourneyPhase:
-    if state == JourneyState.PROVIDER_UNKNOWN:
+    if state in {JourneyState.PROVIDER_UNKNOWN, JourneyState.PROVIDER_NOT_COVERED}:
         return JourneyPhase.FIND
     if state in {JourneyState.PROVIDER_IDENTIFIED, JourneyState.ACCESS_BLOCKED, JourneyState.ACCESS_RECOVERED}:
         return JourneyPhase.ACCESS
@@ -141,7 +144,12 @@ class JourneyEngine:
         ctx.disambiguation_options = outcome.disambiguation_options
 
         ctx.lookup_confidence_tier = outcome.confidence_tier
-        if outcome.disambiguation_question and not outcome.resolved_provider:
+        if outcome.uncovered_provider:
+            ctx.uncovered_provider = outcome.uncovered_provider
+            ctx.provider = None
+            self._transition(ctx, "lookup_not_covered", outcome.uncovered_provider)
+            self.log_handoff_offered(ctx, "provider_not_covered")
+        elif outcome.disambiguation_question and not outcome.resolved_provider:
             self._transition(ctx, "lookup_low_confidence", "disambiguation_required")
         elif outcome.confidence_tier == ConfidenceTier.LOW:
             self._transition(ctx, "lookup_low_confidence", "disambiguation_required")
@@ -223,8 +231,31 @@ class JourneyEngine:
         self._transition(ctx, action_map[channel], channel.value)
         return self.render(ctx)
 
+    def log_handoff_offered(self, ctx: JourneyContext, reason: str) -> None:
+        self.event_logger.log_journey(
+            state=ctx.state,
+            provider=ctx.provider or ctx.uncovered_provider,
+            channel=ctx.channel,
+            action="handoff_offered",
+            outcome=reason,
+            journey_id=ctx.journey_id,
+        )
+
+    def log_handoff_taken(self, ctx: JourneyContext, reason: str) -> None:
+        self.event_logger.log_journey(
+            state=ctx.state,
+            provider=ctx.provider or ctx.uncovered_provider,
+            channel=ctx.channel,
+            action="handoff_taken",
+            outcome=reason,
+            journey_id=ctx.journey_id,
+        )
+
     def advance_step(self, ctx: JourneyContext, outcome: str) -> JourneyScreen:
         if outcome == "stuck":
+            ctx.stuck_count += 1
+            if ctx.stuck_count >= 2:
+                return self.escalate(ctx, "stuck_twice")
             prev_channel = ctx.channel
             self._transition(ctx, "step_stuck", "user_stuck")
             ctx.channel = prev_channel
@@ -256,7 +287,15 @@ class JourneyEngine:
 
     def escalate(self, ctx: JourneyContext, reason: str) -> JourneyScreen:
         ctx.flags["escalated"] = True
+        self.log_handoff_taken(ctx, reason)
         self._transition(ctx, "escalate", reason)
+        return self.render(ctx)
+
+    def take_handoff(self, ctx: JourneyContext, reason: str = "provider_not_covered") -> JourneyScreen:
+        if ctx.state != JourneyState.PROVIDER_NOT_COVERED:
+            raise InvalidTransitionError("handoff only valid from provider_not_covered")
+        self.log_handoff_taken(ctx, reason)
+        self._transition(ctx, "handoff", reason)
         return self.render(ctx)
 
     def set_flag(self, ctx: JourneyContext, flag: str, value: bool = True) -> JourneyScreen:
@@ -301,8 +340,9 @@ class JourneyEngine:
         confidence: ConfidenceTier | None = None
 
         if ctx.state == JourneyState.PROVIDER_UNKNOWN:
+            promo = self.knowledge.general_guide.promo
             headline = "Let's find your old 401(k)"
-            body = self.knowledge.general_guide.employer_vs_provider_note
+            body = f"{promo.find_message}\n\n{self.knowledge.general_guide.employer_vs_provider_note}"
             primary = "Search by employer or provider"
             secondary = ["I know my 401(k) provider"]
             return JourneyScreen(
@@ -551,7 +591,30 @@ class JourneyEngine:
                 sla_note=sla_note,
             )
 
+        if ctx.state == JourneyState.PROVIDER_NOT_COVERED:
+            name = ctx.uncovered_provider or "your recordkeeper"
+            headline = "We found your plan — here's what's next"
+            body = (
+                f"Your 401(k) appears to be with {name}. We don't have a guided rollover path "
+                f"for that provider yet — but a BeeKeeper can walk you through it live."
+            )
+            agent_notes.append(f"Documentation priority: add playbook for {name}")
+            return JourneyScreen(
+                journey_id=ctx.journey_id,
+                state=ctx.state,
+                phase=JourneyPhase.FIND,
+                provider=None,
+                channel=ctx.channel,
+                headline=headline,
+                body=body,
+                primary_action="Talk to a BeeKeeper",
+                secondary_actions=[],
+                agent_notes=agent_notes,
+                next_beekeeper_script=f"Warm handoff — uncovered provider {name}. Log as documentation priority.",
+            )
+
         if ctx.state == JourneyState.COMPLETE:
+            promo = self.knowledge.general_guide.promo
             return JourneyScreen(
                 journey_id=ctx.journey_id,
                 state=ctx.state,
@@ -559,7 +622,7 @@ class JourneyEngine:
                 provider=ctx.provider,
                 channel=ctx.channel,
                 headline="Rollover complete",
-                body="Funds are in your PensionBee IRA.",
+                body=f"Funds are in your PensionBee IRA. {promo.complete_message}",
                 primary_action="Done",
             )
 

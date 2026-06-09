@@ -3,6 +3,7 @@ export type JourneyPhase = "find" | "access" | "rollover" | "track";
 export type JourneyState =
   | "provider_unknown"
   | "provider_identified"
+  | "provider_not_covered"
   | "access_blocked"
   | "access_recovered"
   | "online_in_progress"
@@ -99,6 +100,7 @@ export interface JourneyContext {
   disambiguation_options: string[];
   tax_fund_type?: string | null;
   lookup_confidence_tier?: string | null;
+  uncovered_provider?: string | null;
 }
 
 export interface JourneyResponse {

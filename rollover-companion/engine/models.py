@@ -20,6 +20,7 @@ class JourneyState(str, Enum):
     COMPLETE = "complete"
     STUCK = "stuck"
     ESCALATED = "escalated"
+    PROVIDER_NOT_COVERED = "provider_not_covered"
 
 
 class JourneyPhase(str, Enum):
@@ -204,6 +205,12 @@ class GlobalRules(BaseModel):
     global_failure_modes: list[GlobalFailureMode] = Field(default_factory=list)
 
 
+class Promo(BaseModel):
+    match_rate: float
+    find_message: str
+    complete_message: str
+
+
 class TrackGuidance(BaseModel):
     follow_up_days: int
     nothing_arrived_message: str
@@ -226,6 +233,7 @@ class GeneralGuide(BaseModel):
     general_steps: list[Step]
     portal_menu_aliases: list[str] = Field(default_factory=list)
     destination_dropdown_aliases: list[str] = Field(default_factory=list)
+    promo: Promo
     track_guidance: TrackGuidance
     tax_routing_customer: TaxRoutingCustomer
 
@@ -281,6 +289,8 @@ class JourneyContext(BaseModel):
     disambiguation_options: list[str] = Field(default_factory=list)
     tax_fund_type: Optional[str] = None
     lookup_confidence_tier: Optional[ConfidenceTier] = None
+    uncovered_provider: Optional[str] = None
+    stuck_count: int = 0
 
 
 class GuidanceItem(BaseModel):

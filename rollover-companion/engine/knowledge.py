@@ -27,6 +27,7 @@ from .models import (
     Step,
     TaxRouting,
     TaxRoutingCustomer,
+    Promo,
     TrackGuidance,
 )
 
@@ -207,6 +208,17 @@ def _parse_general_guide(data: dict) -> GeneralGuide:
         general_steps=_parse_steps(data.get("general_steps", [])),
         portal_menu_aliases=data.get("portal_menu_aliases", []),
         destination_dropdown_aliases=data.get("destination_dropdown_aliases", []),
+        promo=Promo(
+            match_rate=float(data.get("promo", {}).get("match_rate", 0.01)),
+            find_message=data.get("promo", {}).get(
+                "find_message",
+                "Roll your old 401(k) to PensionBee.",
+            ),
+            complete_message=data.get("promo", {}).get(
+                "complete_message",
+                "Welcome to PensionBee.",
+            ),
+        ),
         track_guidance=TrackGuidance(
             follow_up_days=int(tg.get("follow_up_days", 28)),
             nothing_arrived_message=tg.get(

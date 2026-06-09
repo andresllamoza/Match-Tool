@@ -52,6 +52,7 @@ class ActionRequest(BaseModel):
         "resume",
         "ask",
         "tax_type",
+        "handoff",
     ]
     tax_type: Optional[Literal["pre_tax", "roth", "both", "pre_tax_to_roth"]] = None
     employer: Optional[str] = None
@@ -194,6 +195,8 @@ def journey_action(journey_id: str, body: ActionRequest, agent: bool = False):
             screen = engine.mark_complete(ctx)
         elif body.type == "escalate":
             screen = engine.escalate(ctx, body.reason or "user_requested")
+        elif body.type == "handoff":
+            screen = engine.take_handoff(ctx, body.reason or "provider_not_covered")
         elif body.type == "resume":
             screen = engine.resume_from_stuck(ctx)
         elif body.type == "ask":

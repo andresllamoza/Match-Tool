@@ -10,7 +10,7 @@ def kb() -> KnowledgeBase:
 
 
 def test_loads_all_providers(kb: KnowledgeBase):
-    assert set(kb.list_providers()) == {"Empower", "Fidelity", "Vanguard", "Voya"}
+    assert set(kb.list_providers()) == {"Citi", "Empower", "Fidelity", "Vanguard", "Voya"}
 
 
 def test_alias_resolution(kb: KnowledgeBase):

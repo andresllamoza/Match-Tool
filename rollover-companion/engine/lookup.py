@@ -53,6 +53,7 @@ class LookupOutcome:
     matcher_result: LookupResult
     advizorpro_result: LookupResult
     agreement: bool
+    uncovered_provider: str | None = None
 
 
 class LookupService:
@@ -109,17 +110,16 @@ class LookupService:
             resolved = None
             tier = ConfidenceTier.MEDIUM
 
+        uncovered: str | None = None
         if resolved:
             try:
                 self.knowledge.resolve_provider(resolved)
             except KeyError:
+                uncovered = resolved
                 resolved = None
-                tier = ConfidenceTier.LOW
-                disambiguation_question = (
-                    f"We found {matcher_result.provider or advizor_result.provider}, "
-                    "but need to confirm — which company manages your old 401(k)?"
-                )
-                disambiguation_options = self.knowledge.list_providers()
+                tier = ConfidenceTier.HIGH
+                disambiguation_question = None
+                disambiguation_options = []
 
         return LookupOutcome(
             employer_query=employer_name,
@@ -130,6 +130,7 @@ class LookupService:
             matcher_result=matcher_result,
             advizorpro_result=advizor_result,
             agreement=agreement,
+            uncovered_provider=uncovered,
         )
 
     def resolve_provider_direct(self, provider_name: str) -> str:

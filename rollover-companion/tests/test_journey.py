@@ -73,6 +73,14 @@ def test_stuck_then_escalate(engine):
     assert ctx.state == JourneyState.ESCALATED
 
 
+def test_provider_not_covered_screen(engine):
+    ctx = engine.start()
+    screen = engine.lookup_employer(ctx, "Walmart Inc")
+    assert ctx.state == JourneyState.PROVIDER_NOT_COVERED
+    assert ctx.uncovered_provider == "Merrill Lynch"
+    assert "BeeKeeper" in screen.primary_action
+
+
 def test_reconstructed_steps_flagged(engine):
     ctx = engine.start()
     engine.set_provider_direct(ctx, "Vanguard")

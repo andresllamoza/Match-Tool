@@ -54,3 +54,19 @@ def test_assistant_endpoint():
 
 def test_funnel_endpoint():
     assert "by_state" in client.get("/api/funnel").json()
+
+
+def test_provider_not_covered_handoff():
+    start = client.post("/api/journey/start").json()
+    jid = start["context"]["journey_id"]
+    r = client.post(
+        f"/api/journey/{jid}/action",
+        json={"type": "lookup", "employer": "Walmart"},
+    ).json()
+    assert r["screen"]["state"] == "provider_not_covered"
+    assert r["context"]["uncovered_provider"] == "Merrill Lynch"
+    r = client.post(
+        f"/api/journey/{jid}/action",
+        json={"type": "handoff", "reason": "provider_not_covered"},
+    ).json()
+    assert r["screen"]["state"] == "escalated"
