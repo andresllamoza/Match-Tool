@@ -112,7 +112,7 @@ class JourneyEngine:
 
             lookup_service = LookupService(
                 self.knowledge,
-                Local5500Adapter.from_synthetic(),
+                Local5500Adapter.from_matcher(),
                 AdvizorProAdapter(),
                 self.event_logger,
             )
