@@ -28,14 +28,35 @@ user hits them. That's the step that converts an acquired user into funded AUM.
 ## Quick start
 
 ```bash
+cd rollover-playbook-engine
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-pytest -q                                   # 20 tests
+pytest -q                                   # engine + UI helper tests
 python cli.py --demo                        # three contrasting mechanisms
 python cli.py --provider Empower --flag notary_required
 python cli.py --provider Voya --stage rollover_initiated --flag phone_verify_required
 ```
+
+### Streamlit (standalone — no 5500 matcher)
+
+This tool is **independent** of the DOL employer lookup. Use it to iterate on
+provider playbooks, funnel stages, and escalation flags while someone else
+tests the 5500 matcher.
+
+```bash
+cd rollover-playbook-engine
+streamlit run app.py
+```
+
+**Streamlit Cloud:** main file `rollover-playbook-engine/app.py` on any branch.
+No secrets or DOL cache required.
+
+| Repo tool | Streamlit entry | Purpose |
+|---|---|---|
+| **This playbook** | `rollover-playbook-engine/app.py` | Recordkeeper known → next action |
+| 5500 matcher | `app.py` (repo root) | Employer name → recordkeeper |
+| Add-a-transfer demo | `discovery-front-door/app.py` | Full flow: lookup + playbook |
 
 As a library:
 
@@ -120,7 +141,7 @@ gap rather than inventing a number; Ops fills in medians from funnel data.
   say it, the engine doesn't claim it. Unknown provider → raises, never guesses.
 - No user PII, no live provider API calls, no account data — public/static only.
 - No tax advice. Conversions and notary requirements route to a BeeKeeper.
-- No UI yet — typed library + CLI first.
+- Streamlit explorer (`app.py`) for Ops/product testing; production UI TBD.
 
 ---
 

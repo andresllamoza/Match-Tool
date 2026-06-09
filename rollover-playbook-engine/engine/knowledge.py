@@ -174,3 +174,50 @@ class KnowledgeBase:
 
     def list_providers(self) -> list[str]:
         return sorted(self._providers)
+
+    def available_flags(self, provider: str | None = None) -> list[dict]:
+        """Escalation and failure-mode flags for UI/CLI (global + optional provider)."""
+        flags: list[dict] = []
+        for esc in self.global_rules.global_escalations:
+            flags.append(
+                {
+                    "flag": esc.flag,
+                    "kind": "escalation",
+                    "scope": "global",
+                    "provider": None,
+                    "description": esc.trigger,
+                }
+            )
+        for fail in self.global_rules.global_failure_modes:
+            flags.append(
+                {
+                    "flag": fail.flag,
+                    "kind": "failure_mode",
+                    "scope": "global",
+                    "provider": None,
+                    "description": fail.symptom,
+                }
+            )
+        if provider:
+            playbook = self.get(provider)
+            for esc in playbook.escalation_triggers:
+                flags.append(
+                    {
+                        "flag": esc.flag,
+                        "kind": "escalation",
+                        "scope": "provider",
+                        "provider": playbook.provider,
+                        "description": esc.trigger,
+                    }
+                )
+            for fail in playbook.failure_modes:
+                flags.append(
+                    {
+                        "flag": fail.flag,
+                        "kind": "failure_mode",
+                        "scope": "provider",
+                        "provider": playbook.provider,
+                        "description": fail.symptom,
+                    }
+                )
+        return flags
