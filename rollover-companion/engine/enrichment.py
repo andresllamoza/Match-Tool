@@ -23,6 +23,7 @@ def build_enrichment(
     enrichment = ScreenEnrichment(
         mailing_address=general.mailing_address,
         destination_name=general.destination_name,
+        general_path=knowledge.is_general_path(ctx),
         requires_tax_selection=_needs_tax_selection(ctx),
         tax_options=_tax_options(knowledge) if _needs_tax_selection(ctx) else [],
     )
@@ -48,7 +49,9 @@ def build_enrichment(
             JourneyState.PHONE_IN_PROGRESS,
             JourneyState.FORMS_IN_PROGRESS,
         }:
-            enrichment.channel_context = _channel_context(ctx, pb, general.mailing_address)
+            enrichment.channel_context = _channel_context(
+                ctx, pb, general, knowledge.is_general_path(ctx)
+            )
 
         if screen.phase.value == "track" or screen.state in {
             JourneyState.INITIATED,
@@ -80,10 +83,35 @@ def _tax_options(knowledge: KnowledgeBase) -> list[dict[str, str]]:
     ]
 
 
-def _channel_context(ctx: JourneyContext, playbook, mailing_address: str) -> ChannelContext:
+def _general_hints(general, step_text: str) -> tuple[list[str], list[str]]:
+    lower = step_text.lower()
+    portal_hints = (
+        general.portal_menu_aliases
+        if any(w in lower for w in ("withdrawal", "rollover", "distribution", "transfer"))
+        else []
+    )
+    destination_hints = (
+        general.destination_dropdown_aliases
+        if any(w in lower for w in ("other", "pensionbee", "not listed", "provider"))
+        else []
+    )
+    return portal_hints, destination_hints
+
+
+def _channel_context(
+    ctx: JourneyContext,
+    playbook,
+    general,
+    is_general_path: bool,
+) -> ChannelContext:
+    mailing_address = general.mailing_address
+    payable = general_payable(playbook, mailing_address)
     cs = playbook.call_script
     if ctx.channel == JourneyChannel.PHONE:
         step_text = cs.steps[ctx.step_index].text if ctx.step_index < len(cs.steps) else ""
+        portal_hints, destination_hints = (
+            _general_hints(general, step_text) if is_general_path else ([], [])
+        )
         return ChannelContext(
             channel="phone",
             say_this=step_text,
@@ -95,6 +123,8 @@ def _channel_context(ctx: JourneyContext, playbook, mailing_address: str) -> Cha
                 RepQuestionView(question=q.question, answer=q.answer) for q in cs.rep_questions
             ],
             step_label=f"Step {ctx.step_index + 1}",
+            portal_menu_hints=portal_hints,
+            destination_hints=destination_hints,
         )
     if ctx.channel == JourneyChannel.FORMS:
         field = playbook.form_guidance.fields[ctx.step_index]
@@ -102,19 +132,24 @@ def _channel_context(ctx: JourneyContext, playbook, mailing_address: str) -> Cha
             channel="forms",
             say_this=field.instruction,
             form_field_label=field.label,
-            check_payable=general_payable(playbook, mailing_address),
+            check_payable=payable,
             mailing_address=mailing_address,
             rep_questions=[],
             step_label=field.label,
         )
     step = playbook.steps[ctx.step_index]
+    portal_hints, destination_hints = (
+        _general_hints(general, step.text) if is_general_path else ([], [])
+    )
     return ChannelContext(
         channel="online",
         say_this=step.text,
         mailing_address=mailing_address,
-        check_payable=general_payable(playbook, mailing_address),
+        check_payable=payable,
         rep_questions=[],
         step_label=f"Step {ctx.step_index + 1}",
+        portal_menu_hints=portal_hints,
+        destination_hints=destination_hints,
     )
 
 

@@ -90,14 +90,40 @@ function OnlineWalkthrough({
 }) {
   return (
     <div className="mb-5 space-y-3">
+      {enrichment.general_path && (
+        <p className="rounded-card bg-bee-blue-light/50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-bee-blue">
+          General rollover guide — look for Withdrawals / Rollovers in your provider portal
+        </p>
+      )}
+
       <div className="rounded-card border-2 border-bee-blue/20 bg-white p-5 lg:p-6">
         <p className="text-xs font-bold uppercase tracking-wide text-bee-blue">Do this now</p>
         <p className="mt-2 text-lg font-semibold leading-relaxed text-bee-ink lg:text-xl">
           {ctx.say_this}
         </p>
       </div>
+
+      {ctx.portal_menu_hints && ctx.portal_menu_hints.length > 0 && (
+        <div className="rounded-card bg-cream px-4 py-3">
+          <p className="text-xs font-bold uppercase text-bee-muted">Look for these menu labels</p>
+          <p className="mt-1 text-sm text-bee-ink lg:text-base">
+            {ctx.portal_menu_hints.join(" · ")}
+          </p>
+        </div>
+      )}
+
+      {ctx.destination_hints && ctx.destination_hints.length > 0 && (
+        <div className="rounded-card bg-cream px-4 py-3">
+          <p className="text-xs font-bold uppercase text-bee-muted">Destination dropdown options</p>
+          <p className="mt-1 text-sm text-bee-ink lg:text-base">
+            {ctx.destination_hints.join(" · ")}
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2">
         <CopyChip label="Destination" value={enrichment.destination_name} />
+        {ctx.check_payable && <CopyChip label="Check payable to" value={ctx.check_payable} />}
         <CopyChip label="Mailing address" value={enrichment.mailing_address} />
       </div>
       {enrichment.forward_step_required && (

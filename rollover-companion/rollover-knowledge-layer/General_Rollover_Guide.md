@@ -41,6 +41,9 @@ general_steps:
   - text: "For receiving provider, choose Other / Add My Own / Not Listed and enter PensionBee."
     owner: user
     source_status: verified
+  - text: "When prompted for check payable-to, enter: PensionBee FBO [your name]."
+    owner: user
+    source_status: verified
   - text: "Mailing address: PO Box 72, New York, NY 10272."
     owner: user
     source_status: verified
@@ -79,7 +82,7 @@ general_access_recovery:
 
 general_call_script:
   phone: "Call the number on your 401(k) statement or employer benefits site"
-  intro: "Say you want a direct rollover to an external IRA at PensionBee."
+  intro: "Call and say you want a direct rollover to an external IRA at PensionBee."
   steps:
     - text: "Confirm your identity and request a direct rollover distribution."
       owner: user
@@ -87,10 +90,19 @@ general_call_script:
     - text: "When asked for the receiving provider, say PensionBee."
       owner: user
       source_status: verified
-    - text: "Provide the check payable-to and mailing address from your PensionBee rollover instructions."
+    - text: "When asked how to make the check payable, say: PensionBee FBO [your name]."
+      owner: user
+      source_status: verified
+    - text: "When asked for the mailing address, say: PO Box 72, New York, NY 10272."
+      owner: user
+      source_status: verified
+    - text: "Confirm pre-tax vs Roth routing if asked (pre-tax → Traditional IRA, Roth → Roth IRA)."
       owner: user
       source_status: verified
   rep_questions:
+    - question: "Pre-tax or Roth?"
+      answer: "Pre-tax → Traditional IRA. Roth → Roth IRA."
+      source_status: verified
     - question: "Check payable to?"
       answer: "PensionBee FBO [your name]"
       source_status: verified

@@ -18,6 +18,26 @@ def test_phone_channel_enrichment_has_rep_questions():
     assert enrichment.channel_context.check_payable
 
 
+def test_general_online_enrichment_has_payable_and_menu_hints():
+    engine = JourneyEngine()
+    ctx = engine.start()
+    engine.lookup_employer(ctx, "Walmart")
+    engine.submit_access(ctx, can_login=True)
+    engine.submit_tax_type(ctx, "pre_tax")
+    engine.choose_channel(ctx, JourneyChannel.ONLINE)
+    screen = engine.render(ctx)
+    enrichment = build_enrichment(engine.knowledge, ctx, screen)
+    assert enrichment.general_path is True
+    assert enrichment.channel_context is not None
+    assert enrichment.channel_context.check_payable
+    assert "PensionBee FBO" in enrichment.channel_context.check_payable
+    # Step 1 is login — step 2 should surface withdrawal menu hints
+    engine.advance_step(ctx, "done")
+    screen = engine.render(ctx)
+    enrichment = build_enrichment(engine.knowledge, ctx, screen)
+    assert enrichment.channel_context.portal_menu_hints
+
+
 def test_track_enrichment_follow_up_days():
     engine = JourneyEngine()
     ctx = engine.start()

@@ -37,6 +37,8 @@ export interface ChannelContext {
   form_field_label?: string | null;
   rep_questions: RepQuestionView[];
   step_label?: string | null;
+  portal_menu_hints?: string[];
+  destination_hints?: string[];
 }
 
 export interface TrackContext {
@@ -58,6 +60,7 @@ export interface ScreenEnrichment {
   mechanism?: string | null;
   check_destination?: string | null;
   forward_step_required: boolean;
+  general_path?: boolean;
   requires_tax_selection: boolean;
   tax_options: { id: string; label: string; hint: string }[];
   channel_context?: ChannelContext | null;

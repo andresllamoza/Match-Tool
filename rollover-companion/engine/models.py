@@ -319,6 +319,8 @@ class ChannelContext(BaseModel):
     form_field_label: Optional[str] = None
     rep_questions: list[RepQuestionView] = Field(default_factory=list)
     step_label: Optional[str] = None
+    portal_menu_hints: list[str] = Field(default_factory=list)
+    destination_hints: list[str] = Field(default_factory=list)
 
 
 class TrackContext(BaseModel):
@@ -340,6 +342,7 @@ class ScreenEnrichment(BaseModel):
     mechanism: Optional[str] = None
     check_destination: Optional[str] = None
     forward_step_required: bool = False
+    general_path: bool = False
     requires_tax_selection: bool = False
     tax_options: list[dict[str, str]] = Field(default_factory=list)
     channel_context: Optional[ChannelContext] = None

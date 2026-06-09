@@ -35,6 +35,16 @@ def test_walk_walmart_general_online_path(engine):
     assert result["state"] == "complete"
     assert "Merrill Lynch" in result["rendered_text"]
     assert "Log in to the old 401(k) provider" in result["rendered_text"]
+    assert "Withdrawals" in result["rendered_text"]
+    assert "PensionBee FBO" in result["rendered_text"]
+
+
+def test_walk_walmart_general_phone_path(engine):
+    result = walk_employer(engine, "Walmart", channel=JourneyChannel.PHONE, verbose=False)
+    assert result["uncovered_provider"] == "Merrill Lynch"
+    assert result["channel"] == "phone"
+    assert result["state"] == "complete"
+    assert "Check payable to?" in result["rendered_text"] or "PensionBee FBO" in result["rendered_text"]
 
 
 def test_walk_citi_forms_verbatim_strings(engine):
