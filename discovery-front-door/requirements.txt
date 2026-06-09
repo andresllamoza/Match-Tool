@@ -1,3 +1,10 @@
-# Inherit repo-root deps (pandas, rapidfuzz, …). Streamlit Cloud prefers this
-# file over the root one when the entrypoint is discovery-front-door/app.py.
+# Streamlit Cloud installs this file when entrypoint is discovery-front-door/app.py.
 -r ../requirements.txt
+# Explicit pins so matcher imports never fail even if -r resolution breaks on Cloud.
+streamlit>=1.28
+pydantic>=2
+pyyaml
+pandas>=2.0
+numpy>=1.24
+rapidfuzz>=3.0.0
+jinja2
