@@ -89,7 +89,11 @@ Set `API_URL` when building Next.js if the API is on a different host.
 ## Swapping AdvizorPro
 
 Edit `adapters/advizorpro.py` — replace `lookup()` body with the real API call.
-For 5500 matcher: `USE_SYNTHETIC=0` + repo-root `src/matcher.py` deps installed.
+For 5500 matcher (default when deps installed): run from repo root with `pip install -r requirements.txt`.
+The API (`api/sessions.py`) builds `JourneyEngine` via `adapters/factory.py`, which wires
+`Local5500Adapter.from_matcher()` → `src.matcher.match` → `normalize_for_playbook()` → playbook guides.
+
+Set `USE_SYNTHETIC=1` to force fixture employers (no DOL download).
 
 ---
 

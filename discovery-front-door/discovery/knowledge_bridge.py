@@ -7,6 +7,25 @@ from typing import Optional
 from .models import NextStepResult
 
 
+def _import_playbook_engine(playbook_root: Path):
+    """Import rollover-playbook-engine even when sibling `engine` packages exist."""
+    playbook_root = playbook_root.resolve()
+    for name in list(sys.modules):
+        if name != "engine" and not name.startswith("engine."):
+            continue
+        module_file = getattr(sys.modules[name], "__file__", "") or ""
+        if module_file and str(playbook_root) not in module_file:
+            del sys.modules[name]
+
+    playbook_path = str(playbook_root)
+    if playbook_path in sys.path:
+        sys.path.remove(playbook_path)
+    sys.path.insert(0, playbook_path)
+    from engine import FunnelStage, RolloverEngine  # noqa: WPS433
+
+    return FunnelStage, RolloverEngine
+
+
 class KnowledgeBridge:
     """Reads the rollover playbook knowledge layer for next-step guidance."""
 
@@ -19,10 +38,7 @@ class KnowledgeBridge:
         playbook_root = (knowledge_dir or repo_root) / "rollover-playbook-engine"
         if knowledge_dir and not playbook_root.exists():
             playbook_root = repo_root / "rollover-playbook-engine"
-        if str(playbook_root) not in sys.path:
-            sys.path.insert(0, str(playbook_root))
-        from engine import FunnelStage, RolloverEngine  # noqa: WPS433
-
+        FunnelStage, RolloverEngine = _import_playbook_engine(playbook_root)
         eng = RolloverEngine()
         bridge = cls(eng)
         bridge._FunnelStage = FunnelStage  # type: ignore[attr-defined]

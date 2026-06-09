@@ -20,7 +20,6 @@ from discovery.flow import DiscoveryFlow  # noqa: E402
 from discovery.knowledge_bridge import KnowledgeBridge  # noqa: E402
 from discovery.models import BalanceRange  # noqa: E402
 from discovery.synthetic import build_adapters  # noqa: E402
-from discovery.adapters.matcher5500 import Local5500Adapter  # noqa: E402
 from ui.brand import inject_brand_css  # noqa: E402
 from ui.components import (  # noqa: E402
     error_card,
@@ -49,15 +48,7 @@ BALANCE_OPTIONS = [(br, format_balance_label(br.value)) for br in BalanceRange]
 
 @st.cache_resource
 def _build_flow() -> DiscoveryFlow:
-    use_synthetic = os.environ.get("USE_SYNTHETIC") == "1"
-    matcher_ready, _ = Local5500Adapter.matcher_deps_available()
-    if use_synthetic or not matcher_ready:
-        adv, matcher = build_adapters()
-    else:
-        from discovery.adapters.advizorpro import AdvizorProAdapter
-
-        adv = AdvizorProAdapter()
-        matcher = Local5500Adapter.from_matcher(ROOT.parent)
+    adv, matcher = build_adapters(ROOT.parent)
     knowledge = KnowledgeBridge.from_dir(ROOT)
     return DiscoveryFlow(adv, matcher, knowledge)
 

@@ -97,15 +97,9 @@ class JourneyEngine:
         self.knowledge = knowledge or KnowledgeBase.from_dir()
         self.event_logger = event_logger or EventLogger()
         if lookup_service is None:
-            from adapters.advizorpro import AdvizorProAdapter
-            from adapters.matcher5500 import Local5500Adapter
+            from adapters.factory import build_lookup_service
 
-            lookup_service = LookupService(
-                self.knowledge,
-                Local5500Adapter.from_synthetic(),
-                AdvizorProAdapter(),
-                self.event_logger,
-            )
+            lookup_service = build_lookup_service(self.knowledge, self.event_logger)
         self.lookup_service = lookup_service
 
     def start(self) -> JourneyContext:
