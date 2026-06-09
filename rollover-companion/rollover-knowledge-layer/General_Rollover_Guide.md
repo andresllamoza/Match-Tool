@@ -7,6 +7,17 @@ mailing_address: "PO Box 72, New York, NY 10272"
 typical_processing_time: "2 to 4 weeks for check issuance and receipt"
 account_numbers_policy: "Customer-specific. Never auto-surface — route to BeeKeeper."
 
+track_guidance:
+  follow_up_days: 28
+  nothing_arrived_message: "If nothing has arrived by day 28, a BeeKeeper can trace your rollover with the provider — don't worry, we'll figure it out together."
+  check_payable_template: "PensionBee FBO [your name]"
+
+tax_routing_customer:
+  pre_tax: "Pre-tax 401(k) funds go to your Traditional (Rollover) IRA."
+  roth: "Roth 401(k) funds go to your Roth IRA."
+  both: "Mixed funds need two separate rollovers — one check per account type."
+  conversion_warning: "Moving pre-tax funds into a Roth IRA is a taxable Roth conversion — a BeeKeeper must help with that."
+
 employer_vs_provider_note: >
   The employer (e.g. Five Below) is not the recordkeeper. Confirm whether the
   customer means their former employer or the financial institution (Fidelity,

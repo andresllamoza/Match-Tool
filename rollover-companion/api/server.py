@@ -15,8 +15,15 @@ if str(ROOT) not in sys.path:
 from api.sessions import create_session, get_engine, get_session, save_session  # noqa: E402
 from engine.assistant import ScopedAssistant  # noqa: E402
 from engine.funnel import load_funnel_summary  # noqa: E402
+from engine.enrichment import build_enrichment  # noqa: E402
 from engine.journey import InvalidTransitionError  # noqa: E402
-from engine.models import JourneyChannel, JourneyContext, JourneyScreen, JourneyState  # noqa: E402
+from engine.models import (  # noqa: E402
+    JourneyChannel,
+    JourneyContext,
+    JourneyScreen,
+    JourneyState,
+    ScreenEnrichment,
+)
 
 app = FastAPI(title="Rollover Companion API", version="1.0.0")
 app.add_middleware(
@@ -44,7 +51,9 @@ class ActionRequest(BaseModel):
         "escalate",
         "resume",
         "ask",
+        "tax_type",
     ]
+    tax_type: Optional[Literal["pre_tax", "roth", "both", "pre_tax_to_roth"]] = None
     employer: Optional[str] = None
     provider: Optional[str] = None
     answer: Optional[str] = None
@@ -60,6 +69,7 @@ class JourneyResponse(BaseModel):
     screen: JourneyScreen
     step_index: int = 0
     total_steps: int = 0
+    enrichment: ScreenEnrichment = Field(default_factory=ScreenEnrichment)
     provider_intel: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -95,12 +105,14 @@ def _step_totals(ctx: JourneyContext) -> tuple[int, int]:
 
 
 def _wrap(ctx: JourneyContext, screen: JourneyScreen, include_intel: bool = False) -> JourneyResponse:
+    engine = get_engine()
     step_index, total_steps = _step_totals(ctx)
     return JourneyResponse(
         context=ctx,
         screen=screen,
         step_index=step_index,
         total_steps=total_steps,
+        enrichment=build_enrichment(engine.knowledge, ctx, screen),
         provider_intel=_enrich_intel(ctx, screen) if include_intel else {},
     )
 
@@ -164,6 +176,10 @@ def journey_action(journey_id: str, body: ActionRequest, agent: bool = False):
             screen = engine.submit_access(ctx, body.can_login)
         elif body.type == "access_recovered":
             screen = engine.submit_access_recovered(ctx)
+        elif body.type == "tax_type":
+            if not body.tax_type:
+                raise HTTPException(400, "tax_type required")
+            screen = engine.submit_tax_type(ctx, body.tax_type)
         elif body.type == "channel":
             if not body.channel:
                 raise HTTPException(400, "channel required")

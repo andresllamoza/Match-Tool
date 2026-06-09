@@ -66,6 +66,9 @@ def run_demo(engine: JourneyEngine) -> None:
     screen = engine.submit_access(ctx, can_login=True)
     _print_screen(screen)
 
+    screen = engine.submit_tax_type(ctx, "pre_tax")
+    _print_screen(screen)
+
     screen = engine.choose_channel(ctx, JourneyChannel.ONLINE)
     _print_screen(screen)
 

@@ -30,6 +30,12 @@ def test_journey_lifecycle():
         json={"type": "access", "can_login": True},
     ).json()
     assert r["screen"]["state"] == "access_recovered"
+    r = client.post(
+        f"/api/journey/{jid}/action",
+        json={"type": "tax_type", "tax_type": "pre_tax"},
+    ).json()
+    assert r["context"]["tax_fund_type"] == "pre_tax"
+    assert "enrichment" in r
 
 
 def test_assistant_endpoint():

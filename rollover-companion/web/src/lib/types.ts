@@ -21,6 +21,49 @@ export interface GuidanceItem {
   reconstructed: boolean;
 }
 
+export interface RepQuestionView {
+  question: string;
+  answer: string;
+}
+
+export interface ChannelContext {
+  channel: string;
+  say_this: string;
+  phone?: string | null;
+  intro?: string | null;
+  check_payable?: string | null;
+  mailing_address?: string | null;
+  form_field_label?: string | null;
+  rep_questions: RepQuestionView[];
+  step_label?: string | null;
+}
+
+export interface TrackContext {
+  typical_timeline: string;
+  check_destination: string;
+  follow_up_days: number;
+  nothing_arrived_message: string;
+  mechanism_note?: string | null;
+}
+
+export interface LookupContext {
+  employer_query: string;
+  matched_provider: string;
+}
+
+export interface ScreenEnrichment {
+  mailing_address: string;
+  destination_name: string;
+  mechanism?: string | null;
+  check_destination?: string | null;
+  forward_step_required: boolean;
+  requires_tax_selection: boolean;
+  tax_options: { id: string; label: string; hint: string }[];
+  channel_context?: ChannelContext | null;
+  track?: TrackContext | null;
+  lookup?: LookupContext | null;
+}
+
 export interface JourneyScreen {
   journey_id: string;
   state: JourneyState;
@@ -54,6 +97,8 @@ export interface JourneyContext {
   employer_query: string | null;
   disambiguation_question: string | null;
   disambiguation_options: string[];
+  tax_fund_type?: string | null;
+  lookup_confidence_tier?: string | null;
 }
 
 export interface JourneyResponse {
@@ -61,6 +106,7 @@ export interface JourneyResponse {
   screen: JourneyScreen;
   step_index: number;
   total_steps: number;
+  enrichment: ScreenEnrichment;
   provider_intel: Record<string, unknown>;
 }
 

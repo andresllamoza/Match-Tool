@@ -12,6 +12,7 @@ def test_complete_journey_all_channels(engine: JourneyEngine, provider: str):
         ctx = engine.start()
         engine.set_provider_direct(ctx, provider)
         engine.submit_access(ctx, can_login=True)
+        engine.submit_tax_type(ctx, "pre_tax")
         engine.choose_channel(ctx, channel)
         in_progress = {
             JourneyChannel.ONLINE: JourneyState.ONLINE_IN_PROGRESS,

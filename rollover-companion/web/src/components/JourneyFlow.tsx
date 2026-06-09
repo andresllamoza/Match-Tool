@@ -5,8 +5,12 @@ import { journeyAction, startJourney } from "@/lib/api";
 import type { JourneyResponse } from "@/lib/types";
 import { AgentPanel } from "./AgentPanel";
 import { AssistantDrawer } from "./AssistantDrawer";
+import { ChannelWalkthrough } from "./ChannelWalkthrough";
+import { EdgeCaseAlerts } from "./EdgeCaseAlerts";
+import { LookupBanner } from "./LookupBanner";
 import { ProgressSteps } from "./ProgressSteps";
 import { ProvenanceBadge } from "./ProvenanceBadge";
+import { TrackPanel } from "./TrackPanel";
 import { Button } from "./ui/Button";
 
 interface JourneyFlowProps {
@@ -14,6 +18,13 @@ interface JourneyFlowProps {
   theme?: "default" | "minimal";
   onPhaseChange?: (phase: import("@/lib/types").JourneyPhase) => void;
 }
+
+const TAX_MAP: Record<string, string> = {
+  "pre-tax (traditional ira)": "pre_tax",
+  "roth (roth ira)": "roth",
+  "both pre-tax and roth": "both",
+  "pre-tax into a roth ira": "pre_tax_to_roth",
+};
 
 export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChange }: JourneyFlowProps) {
   const isAgent = mode === "agent";
@@ -75,8 +86,12 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
     );
   }
 
-  const { screen, context, step_index, total_steps } = data;
+  const { screen, context, step_index, total_steps, enrichment } = data;
   const showProgress = screen.state !== "complete" && screen.state !== "escalated";
+  const inChannel = ["online_in_progress", "phone_in_progress", "forms_in_progress"].includes(
+    screen.state
+  );
+  const taxPending = enrichment.requires_tax_selection;
 
   async function handlePrimary() {
     const s = screen.state;
@@ -87,6 +102,10 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "lookup", employer: employerInput.trim() });
       return;
     }
+    if (taxPending && primary.includes("pre-tax")) {
+      await act({ type: "tax_type", tax_type: "pre_tax" });
+      return;
+    }
     if (s === "provider_identified" && primary.includes("yes")) {
       await act({ type: "access", can_login: true });
       return;
@@ -95,14 +114,11 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "access_recovered" });
       return;
     }
-    if (s === "access_recovered" && primary.includes("online")) {
+    if (s === "access_recovered" && !taxPending && primary.includes("online")) {
       await act({ type: "channel", channel: "online" });
       return;
     }
-    if (
-      ["online_in_progress", "phone_in_progress", "forms_in_progress"].includes(s) &&
-      primary.includes("done")
-    ) {
+    if (inChannel && primary.includes("done")) {
       await act({ type: "step", outcome: "done" });
       return;
     }
@@ -118,15 +134,19 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "escalate", reason: "stuck_on_step" });
       return;
     }
-    if (s === "escalated") {
-      return;
-    }
   }
 
   async function handleSecondary(label: string) {
     const lower = label.toLowerCase();
     const s = screen.state;
 
+    if (taxPending) {
+      const taxType = TAX_MAP[lower] || Object.entries(TAX_MAP).find(([k]) => lower.includes(k))?.[1];
+      if (taxType) {
+        await act({ type: "tax_type", tax_type: taxType });
+        return;
+      }
+    }
     if (lower.includes("provider") && s === "provider_unknown") {
       setShowProviderPicker(true);
       return;
@@ -135,7 +155,7 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "access", can_login: false });
       return;
     }
-    if (lower.includes("locked out") || lower.includes("beekeeper")) {
+    if (lower.includes("locked out") || (lower.includes("beekeeper") && s === "access_blocked")) {
       await act({ type: "escalate", reason: "access_lockout" });
       return;
     }
@@ -155,7 +175,7 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "resume" });
       return;
     }
-    if (lower.includes("nothing arrived") || lower.includes("help")) {
+    if (lower.includes("nothing arrived") || lower.includes("get help")) {
       await act({ type: "escalate", reason: "tracking_delay" });
       return;
     }
@@ -173,12 +193,14 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
   const journeyCard = (
     <div
       className={`rounded-card bg-white p-6 shadow-card lg:p-10 ${
-        theme === "minimal" ? "shadow-none border border-bee-border" : "lg:shadow-card-lg"
+        theme === "minimal" ? "border border-bee-border shadow-none" : "lg:shadow-card-lg"
       }`}
     >
       {showProgress && <ProgressSteps current={screen.phase} />}
 
-      {screen.provider && (
+      <LookupBanner data={data} />
+
+      {screen.provider && screen.state !== "provider_identified" && (
         <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-bee-muted lg:text-base">
           {screen.provider}
           {screen.channel && ` · ${screen.channel}`}
@@ -189,18 +211,51 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
         {screen.headline}
       </h1>
 
-      {screen.body && (
-        <p className="mb-5 text-base leading-relaxed text-bee-ink lg:text-lg lg:leading-relaxed">
+      {screen.body && !inChannel && (
+        <p className="mb-5 whitespace-pre-line text-base leading-relaxed text-bee-ink lg:text-lg">
           {screen.body}
         </p>
       )}
 
+      <EdgeCaseAlerts items={screen.edge_cases} />
+
       <ProvenanceBadge warning={screen.provenance_warning} />
 
-      {total_steps > 0 && (
+      {inChannel && <ChannelWalkthrough enrichment={enrichment} />}
+
+      {screen.state === "access_blocked" && screen.guidance?.length > 0 && (
+        <ol className="mb-5 space-y-2">
+          {screen.guidance.map((g, i) => (
+            <li
+              key={i}
+              className={`flex gap-3 rounded-card px-4 py-3 text-sm lg:text-base ${
+                g.reconstructed
+                  ? "border border-dashed border-amber-300 bg-amber-50/50"
+                  : "bg-cream"
+              }`}
+            >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bee-blue text-xs font-bold text-white">
+                {i + 1}
+              </span>
+              <span>
+                {g.text}
+                {g.reconstructed && (
+                  <span className="ml-1 text-xs font-semibold text-amber-700">· double-check</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {(screen.phase === "track" || screen.state === "initiated") && (
+        <TrackPanel enrichment={enrichment} />
+      )}
+
+      {total_steps > 0 && inChannel && (
         <div className="mb-5">
           <div className="mb-2 flex justify-between text-xs font-medium text-bee-muted lg:text-sm">
-            <span>Progress</span>
+            <span>Step progress</span>
             <span>
               {step_index + 1} of {total_steps}
             </span>
@@ -212,28 +267,6 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
             />
           </div>
         </div>
-      )}
-
-      {screen.guidance?.length > 0 && (
-        <ul className="mb-5 space-y-2">
-          {screen.guidance.map((g, i) => (
-            <li
-              key={i}
-              className={`rounded-card px-4 py-3 text-sm lg:text-base ${
-                g.reconstructed
-                  ? "border border-dashed border-amber-300 bg-amber-50/50"
-                  : "bg-cream"
-              }`}
-            >
-              {g.text}
-              {g.reconstructed && (
-                <span className="ml-2 text-xs font-semibold text-amber-700">
-                  · double-check
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
       )}
 
       {screen.disambiguation_question && (
@@ -276,19 +309,13 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
         </div>
       )}
 
-      {screen.sla_note && screen.phase === "track" && (
-        <p className="mb-4 text-sm text-bee-muted lg:text-base">
-          <span className="font-semibold">Timeline:</span> {screen.sla_note}
-        </p>
-      )}
-
       {error && (
         <div className="mb-4 rounded-card bg-red-50 px-4 py-3 text-sm text-red-800 lg:text-base">
           {error} A BeeKeeper can help.
         </div>
       )}
 
-      {screen.state !== "complete" && (
+      {screen.state !== "complete" && screen.state !== "escalated" && (
         <div className="space-y-3">
           <Button onClick={handlePrimary} disabled={loading}>
             {screen.primary_action}
@@ -296,22 +323,20 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
           {screen.secondary_actions.map((action) => (
             <Button
               key={action}
-              variant="secondary"
+              variant={action.toLowerCase().includes("stuck") ? "danger" : "secondary"}
               onClick={() => handleSecondary(action)}
               disabled={loading}
             >
               {action}
             </Button>
           ))}
-          {screen.state !== "escalated" && (
-            <button
-              type="button"
-              onClick={() => setAssistantOpen(true)}
-              className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-blue lg:text-base"
-            >
-              Ask a question
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setAssistantOpen(true)}
+            className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-blue lg:text-base"
+          >
+            Ask a question
+          </button>
         </div>
       )}
 
@@ -319,6 +344,13 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
         <div className="mt-4 rounded-card bg-bee-blue-light p-6 text-center lg:p-8">
           <p className="text-4xl lg:text-5xl">🎉</p>
           <p className="mt-2 text-lg font-bold text-bee-blue lg:text-xl">You&apos;re all set!</p>
+        </div>
+      )}
+
+      {screen.state === "escalated" && (
+        <div className="mt-4 rounded-card bg-bee-yellow/20 p-6 text-center lg:p-8">
+          <p className="text-lg font-bold text-bee-ink">A BeeKeeper will take it from here</p>
+          <p className="mt-2 text-sm text-bee-muted lg:text-base">{screen.body}</p>
         </div>
       )}
     </div>

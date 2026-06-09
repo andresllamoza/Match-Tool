@@ -23,6 +23,7 @@ def test_full_online_journey(engine):
     ctx = engine.start()
     engine.set_provider_direct(ctx, "Fidelity")
     engine.submit_access(ctx, can_login=True)
+    engine.submit_tax_type(ctx, "pre_tax")
     engine.choose_channel(ctx, JourneyChannel.ONLINE)
     while ctx.state == JourneyState.ONLINE_IN_PROGRESS:
         engine.advance_step(ctx, "done")
@@ -52,10 +53,19 @@ def test_tax_routing_escalation(engine):
     assert "BeeKeeper" in screen.body or screen.next_beekeeper_script
 
 
+def test_pre_tax_to_roth_tax_selection_escalates(engine):
+    ctx = engine.start()
+    engine.set_provider_direct(ctx, "Vanguard")
+    engine.submit_access(ctx, can_login=True)
+    screen = engine.submit_tax_type(ctx, "pre_tax_to_roth")
+    assert ctx.state == JourneyState.ESCALATED
+
+
 def test_stuck_then_escalate(engine):
     ctx = engine.start()
     engine.set_provider_direct(ctx, "Voya")
     engine.submit_access(ctx, can_login=True)
+    engine.submit_tax_type(ctx, "pre_tax")
     engine.choose_channel(ctx, JourneyChannel.PHONE)
     engine.advance_step(ctx, "stuck")
     assert ctx.state == JourneyState.STUCK

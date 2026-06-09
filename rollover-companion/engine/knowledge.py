@@ -26,6 +26,8 @@ from .models import (
     SourceStatus,
     Step,
     TaxRouting,
+    TaxRoutingCustomer,
+    TrackGuidance,
 )
 
 _FRONT_MATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
@@ -194,6 +196,8 @@ def _parse_global_failures(data: dict) -> list[GlobalFailureMode]:
 
 
 def _parse_general_guide(data: dict) -> GeneralGuide:
+    tg = data.get("track_guidance", {})
+    tr = data.get("tax_routing_customer", {})
     return GeneralGuide(
         destination_name=data["destination_name"],
         mailing_address=data["mailing_address"],
@@ -203,6 +207,23 @@ def _parse_general_guide(data: dict) -> GeneralGuide:
         general_steps=_parse_steps(data.get("general_steps", [])),
         portal_menu_aliases=data.get("portal_menu_aliases", []),
         destination_dropdown_aliases=data.get("destination_dropdown_aliases", []),
+        track_guidance=TrackGuidance(
+            follow_up_days=int(tg.get("follow_up_days", 28)),
+            nothing_arrived_message=tg.get(
+                "nothing_arrived_message",
+                "If nothing has arrived by the expected date, a BeeKeeper can help trace it.",
+            ),
+            check_payable_template=tg.get("check_payable_template", "PensionBee FBO [your name]"),
+        ),
+        tax_routing_customer=TaxRoutingCustomer(
+            pre_tax=tr.get("pre_tax", "Pre-tax → Traditional IRA"),
+            roth=tr.get("roth", "Roth → Roth IRA"),
+            both=tr.get("both", "Mixed → two separate rollovers"),
+            conversion_warning=tr.get(
+                "conversion_warning",
+                "Pre-tax into Roth is a taxable conversion — escalate to BeeKeeper.",
+            ),
+        ),
     )
 
 

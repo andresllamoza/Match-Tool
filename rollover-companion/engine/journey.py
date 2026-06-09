@@ -140,6 +140,7 @@ class JourneyEngine:
         ctx.disambiguation_question = outcome.disambiguation_question
         ctx.disambiguation_options = outcome.disambiguation_options
 
+        ctx.lookup_confidence_tier = outcome.confidence_tier
         if outcome.disambiguation_question and not outcome.resolved_provider:
             self._transition(ctx, "lookup_low_confidence", "disambiguation_required")
         elif outcome.confidence_tier == ConfidenceTier.LOW:
@@ -192,7 +193,26 @@ class JourneyEngine:
         self._transition(ctx, "access_recovered", "credentials_restored")
         return self.render(ctx)
 
+    def submit_tax_type(self, ctx: JourneyContext, tax_type: str) -> JourneyScreen:
+        if ctx.state != JourneyState.ACCESS_RECOVERED:
+            raise InvalidTransitionError("tax_type only valid from access_recovered")
+        if tax_type == "pre_tax_to_roth":
+            ctx.flags["pre_tax_to_roth"] = True
+            return self.escalate(ctx, "pre_tax_to_roth_conversion")
+        ctx.tax_fund_type = tax_type
+        self.event_logger.log_journey(
+            state=ctx.state,
+            provider=ctx.provider,
+            channel=ctx.channel,
+            action="tax_type_selected",
+            outcome=tax_type,
+            journey_id=ctx.journey_id,
+        )
+        return self.render(ctx)
+
     def choose_channel(self, ctx: JourneyContext, channel: JourneyChannel) -> JourneyScreen:
+        if not ctx.tax_fund_type:
+            raise InvalidTransitionError("Select fund type before choosing a channel")
         ctx.channel = channel
         ctx.step_index = 0
         action_map = {
@@ -320,6 +340,7 @@ class JourneyEngine:
             agent_notes.append(f"Ops: {na.action}")
             for ec in edge_cases:
                 agent_notes.append(f"Edge case to surface: {ec}")
+            confidence = ctx.lookup_confidence_tier
             return JourneyScreen(
                 journey_id=ctx.journey_id,
                 state=ctx.state,
@@ -333,6 +354,7 @@ class JourneyEngine:
                 edge_cases=edge_cases,
                 agent_notes=agent_notes,
                 sla_note=sla_note,
+                confidence_tier=confidence,
                 disambiguation_question=ctx.disambiguation_question,
                 disambiguation_options=ctx.disambiguation_options,
             )
@@ -376,6 +398,32 @@ class JourneyEngine:
             )
 
         if ctx.state == JourneyState.ACCESS_RECOVERED and playbook:
+            if not ctx.tax_fund_type:
+                tr = self.knowledge.general_guide.tax_routing_customer
+                headline = "What type of funds are you rolling over?"
+                body = f"{tr.pre_tax} {tr.roth}"
+                primary = "Pre-tax (Traditional IRA)"
+                secondary = [
+                    "Roth (Roth IRA)",
+                    "Both pre-tax and Roth",
+                    "Pre-tax into a Roth IRA",
+                ]
+                for ec in edge_cases:
+                    agent_notes.append(f"Pre-empt: {ec}")
+                return JourneyScreen(
+                    journey_id=ctx.journey_id,
+                    state=ctx.state,
+                    phase=JourneyPhase.ROLLOVER,
+                    provider=ctx.provider,
+                    channel=ctx.channel,
+                    headline=headline,
+                    body=body,
+                    primary_action=primary,
+                    secondary_actions=secondary,
+                    edge_cases=edge_cases,
+                    agent_notes=agent_notes,
+                    sla_note=sla_note,
+                )
             headline = "How would you like to do your rollover?"
             body = playbook.check_destination
             primary = "Online portal"
@@ -485,7 +533,9 @@ class JourneyEngine:
             primary = "Mark as complete"
             if not (esc or fail):
                 agent_notes.append(f"Ops: {na.action}")
-            secondary = ["Nothing arrived yet — get help"]
+            tg = self.knowledge.general_guide.track_guidance
+            secondary = [f"Nothing arrived by day {tg.follow_up_days} — get help"]
+            track_body = f"{body}\n\n{tg.nothing_arrived_message}"
             return JourneyScreen(
                 journey_id=ctx.journey_id,
                 state=ctx.state,
@@ -493,7 +543,7 @@ class JourneyEngine:
                 provider=ctx.provider,
                 channel=ctx.channel,
                 headline=headline,
-                body=body,
+                body=track_body,
                 primary_action=primary,
                 secondary_actions=secondary,
                 edge_cases=edge_cases,

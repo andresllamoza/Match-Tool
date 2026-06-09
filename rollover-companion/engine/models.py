@@ -204,6 +204,19 @@ class GlobalRules(BaseModel):
     global_failure_modes: list[GlobalFailureMode] = Field(default_factory=list)
 
 
+class TrackGuidance(BaseModel):
+    follow_up_days: int
+    nothing_arrived_message: str
+    check_payable_template: str
+
+
+class TaxRoutingCustomer(BaseModel):
+    pre_tax: str
+    roth: str
+    both: str
+    conversion_warning: str
+
+
 class GeneralGuide(BaseModel):
     destination_name: str
     mailing_address: str
@@ -213,6 +226,8 @@ class GeneralGuide(BaseModel):
     general_steps: list[Step]
     portal_menu_aliases: list[str] = Field(default_factory=list)
     destination_dropdown_aliases: list[str] = Field(default_factory=list)
+    track_guidance: TrackGuidance
+    tax_routing_customer: TaxRoutingCustomer
 
 
 class TriggeredAction(BaseModel):
@@ -264,6 +279,8 @@ class JourneyContext(BaseModel):
     employer_query: Optional[str] = None
     disambiguation_question: Optional[str] = None
     disambiguation_options: list[str] = Field(default_factory=list)
+    tax_fund_type: Optional[str] = None
+    lookup_confidence_tier: Optional[ConfidenceTier] = None
 
 
 class GuidanceItem(BaseModel):
@@ -271,6 +288,49 @@ class GuidanceItem(BaseModel):
     owner: Owner
     source_status: SourceStatus
     reconstructed: bool = False
+
+
+class RepQuestionView(BaseModel):
+    question: str
+    answer: str
+
+
+class ChannelContext(BaseModel):
+    channel: str
+    say_this: str
+    phone: Optional[str] = None
+    intro: Optional[str] = None
+    check_payable: Optional[str] = None
+    mailing_address: Optional[str] = None
+    form_field_label: Optional[str] = None
+    rep_questions: list[RepQuestionView] = Field(default_factory=list)
+    step_label: Optional[str] = None
+
+
+class TrackContext(BaseModel):
+    typical_timeline: str
+    check_destination: str
+    follow_up_days: int
+    nothing_arrived_message: str
+    mechanism_note: Optional[str] = None
+
+
+class LookupContext(BaseModel):
+    employer_query: str
+    matched_provider: str
+
+
+class ScreenEnrichment(BaseModel):
+    mailing_address: str = ""
+    destination_name: str = ""
+    mechanism: Optional[str] = None
+    check_destination: Optional[str] = None
+    forward_step_required: bool = False
+    requires_tax_selection: bool = False
+    tax_options: list[dict[str, str]] = Field(default_factory=list)
+    channel_context: Optional[ChannelContext] = None
+    track: Optional[TrackContext] = None
+    lookup: Optional[LookupContext] = None
 
 
 class JourneyScreen(BaseModel):
