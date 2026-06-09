@@ -19,13 +19,13 @@ export function CopyChip({ label, value }: { label: string; value: string }) {
     <button
       type="button"
       onClick={copy}
-      className="flex w-full items-start justify-between gap-3 rounded-card border border-bee-border bg-cream px-4 py-3 text-left transition-colors hover:border-bee-blue/40 hover:bg-bee-blue-light/30"
+      className="flex w-full items-start justify-between gap-3 rounded-card border border-bee-border bg-cream-dark/40 px-4 py-3 text-left transition-all hover:border-bee-yellow/60 hover:bg-bee-yellow-soft/40 active:scale-[0.98]"
     >
       <div className="min-w-0 flex-1">
         <p className="text-xs font-bold uppercase tracking-wide text-bee-muted">{label}</p>
         <p className="mt-1 break-words text-sm font-medium text-bee-ink lg:text-base">{value}</p>
       </div>
-      <span className="shrink-0 text-xs font-semibold text-bee-blue">
+      <span className="shrink-0 text-xs font-semibold text-bee-charcoal">
         {copied ? "Copied!" : "Copy"}
       </span>
     </button>

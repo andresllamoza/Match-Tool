@@ -6,7 +6,7 @@ export function TrackPanel({ enrichment }: { enrichment: ScreenEnrichment }) {
 
   return (
     <div className="mb-5 space-y-3 rounded-card border border-bee-border bg-cream-dark/50 p-5 lg:p-6">
-      <h3 className="text-sm font-bold uppercase tracking-wide text-bee-blue">What to expect</h3>
+      <h3 className="text-sm font-bold uppercase tracking-wide text-bee-charcoal">What to expect</h3>
       <dl className="space-y-3 text-sm lg:text-base">
         <div>
           <dt className="font-semibold text-bee-muted">Timeline</dt>
@@ -23,8 +23,8 @@ export function TrackPanel({ enrichment }: { enrichment: ScreenEnrichment }) {
           </div>
         )}
       </dl>
-      <div className="rounded-card bg-white px-4 py-3 text-sm text-bee-ink lg:text-base">
-        <span className="font-semibold text-bee-blue">Day {track.follow_up_days}:</span>{" "}
+      <div className="rounded-card border border-bee-border bg-white px-4 py-3 text-sm text-bee-ink lg:text-base">
+        <span className="font-semibold text-bee-charcoal">Day {track.follow_up_days}:</span>{" "}
         {track.nothing_arrived_message}
       </div>
     </div>

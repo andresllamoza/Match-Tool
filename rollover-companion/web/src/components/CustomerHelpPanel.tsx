@@ -23,8 +23,8 @@ export function CustomerHelpPanel({ phase }: { phase: JourneyPhase }) {
   return (
     <aside className="hidden lg:block">
       <div className="sticky top-8 space-y-4">
-        <div className="rounded-card border border-bee-border/60 bg-white/80 p-6 backdrop-blur-sm">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-bee-blue">
+        <div className="pb-card p-6">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-bee-charcoal">
             Good to know
           </h2>
           <ul className="space-y-3 text-sm leading-relaxed text-bee-ink">
@@ -36,9 +36,9 @@ export function CustomerHelpPanel({ phase }: { phase: JourneyPhase }) {
             ))}
           </ul>
         </div>
-        <div className="rounded-card bg-bee-blue p-6 text-white">
-          <p className="font-bold">Real humans, real help</p>
-          <p className="mt-2 text-sm text-white/90">
+        <div className="rounded-card border-2 border-bee-yellow bg-bee-yellow-soft p-6">
+          <p className="font-bold text-bee-charcoal">Real humans, real help</p>
+          <p className="mt-2 text-sm text-bee-ink">
             Your BeeKeeper is available on phone, chat, and email — Mon–Fri 9:30am–5pm ET.
           </p>
         </div>

@@ -15,7 +15,7 @@ export default function FunnelPage() {
   return (
     <main className="mx-auto min-h-dvh max-w-desktop px-4 py-6 lg:px-8 lg:py-10">
       <BrandHeader mode="customer" />
-      <h1 className="mb-2 text-2xl font-bold text-bee-blue lg:text-3xl">Funnel view</h1>
+      <h1 className="mb-2 text-2xl font-bold text-bee-charcoal lg:text-3xl">Funnel view</h1>
       <p className="mb-8 text-bee-muted lg:text-lg">
         Stall points by provider and channel — powered by JourneyEvent JSONL.
       </p>
@@ -35,17 +35,17 @@ export default function FunnelPage() {
           />
 
           <div className="rounded-card bg-white p-6 shadow-card lg:col-span-2 lg:p-8">
-            <h2 className="mb-4 font-bold text-bee-blue">By state</h2>
+            <h2 className="mb-4 font-bold text-bee-charcoal">By state</h2>
             <BarChart data={data.by_state} />
           </div>
 
           <div className="rounded-card bg-white p-6 shadow-card lg:p-8">
-            <h2 className="mb-4 font-bold text-bee-blue">By provider</h2>
+            <h2 className="mb-4 font-bold text-bee-charcoal">By provider</h2>
             <BarChart data={data.by_provider} />
           </div>
 
           <div className="rounded-card bg-white p-6 shadow-card lg:col-span-2 lg:p-8">
-            <h2 className="mb-4 font-bold text-bee-blue">Stall points</h2>
+            <h2 className="mb-4 font-bold text-bee-charcoal">Stall points</h2>
             {data.stall_points.length === 0 ? (
               <p className="text-bee-muted">No stalls recorded yet.</p>
             ) : (
@@ -73,14 +73,14 @@ export default function FunnelPage() {
           </div>
 
           <div className="rounded-card bg-white p-6 shadow-card lg:p-8">
-            <h2 className="mb-4 font-bold text-bee-blue">By channel</h2>
+            <h2 className="mb-4 font-bold text-bee-charcoal">By channel</h2>
             <BarChart data={data.by_channel} />
           </div>
         </div>
       )}
 
       <p className="mt-8 text-center">
-        <Link href="/" className="font-semibold text-bee-blue hover:underline">
+        <Link href="/" className="font-semibold text-bee-charcoal hover:underline">
           ← Back to customer flow
         </Link>
       </p>
@@ -92,7 +92,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-card bg-white p-6 shadow-card lg:p-8">
       <p className="text-sm font-medium text-bee-muted lg:text-base">{label}</p>
-      <p className="mt-1 text-3xl font-bold text-bee-blue lg:text-4xl">{value}</p>
+      <p className="mt-1 text-3xl font-bold text-bee-charcoal lg:text-4xl">{value}</p>
     </div>
   );
 }
@@ -110,7 +110,7 @@ function BarChart({ data }: { data: Record<string, number> }) {
           </div>
           <div className="h-2 rounded-pill bg-cream-dark">
             <div
-              className="h-full rounded-pill bg-bee-blue"
+              className="h-full rounded-pill bg-bee-yellow"
               style={{ width: `${(val / max) * 100}%` }}
             />
           </div>

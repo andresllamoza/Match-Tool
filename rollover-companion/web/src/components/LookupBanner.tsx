@@ -14,13 +14,13 @@ export function LookupBanner({ data }: { data: JourneyResponse }) {
   const employer = enrichment.lookup?.employer_query || context.employer_query;
 
   return (
-    <div className="mb-5 rounded-card border-2 border-bee-blue/15 bg-bee-blue-light/40 p-5 lg:p-6">
+    <div className="mb-5 rounded-card border-2 border-bee-yellow/40 bg-bee-yellow-soft/50 p-5 lg:p-6">
       {tier && (
-        <span className="mb-2 inline-block rounded-pill bg-bee-blue px-2.5 py-0.5 text-xs font-bold text-white">
+        <span className="mb-2 inline-block rounded-pill bg-bee-charcoal px-2.5 py-0.5 text-xs font-bold text-white">
           {TIER_LABEL[tier] || tier}
         </span>
       )}
-      <p className="text-lg font-bold text-bee-blue lg:text-xl">
+      <p className="text-lg font-bold text-bee-charcoal lg:text-xl">
         Your 401(k) is most likely with {screen.provider}
       </p>
       {employer && (

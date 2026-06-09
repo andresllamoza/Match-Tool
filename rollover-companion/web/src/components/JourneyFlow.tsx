@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { journeyAction, startJourney } from "@/lib/api";
+import { deriveSourceStatus } from "@/lib/sourceStatus";
 import type { JourneyResponse } from "@/lib/types";
 import { AgentPanel } from "./AgentPanel";
 import { AssistantDrawer } from "./AssistantDrawer";
@@ -12,6 +13,9 @@ import { ProgressSteps } from "./ProgressSteps";
 import { ProvenanceBadge } from "./ProvenanceBadge";
 import { TrackPanel } from "./TrackPanel";
 import { Button } from "./ui/Button";
+import { InputField } from "./ui/InputField";
+import { SelectionBlock } from "./ui/SelectionBlock";
+import { SourceStatusBadge } from "./ui/SourceStatusBadge";
 
 interface JourneyFlowProps {
   mode?: "customer" | "agent" | "embed";
@@ -19,12 +23,50 @@ interface JourneyFlowProps {
   onPhaseChange?: (phase: import("@/lib/types").JourneyPhase) => void;
 }
 
-const TAX_MAP: Record<string, string> = {
-  "pre-tax (traditional ira)": "pre_tax",
-  "roth (roth ira)": "roth",
-  "both pre-tax and roth": "both",
-  "pre-tax into a roth ira": "pre_tax_to_roth",
-};
+type DecisionMode =
+  | "tax"
+  | "employer"
+  | "provider_pick"
+  | "disambiguation"
+  | "access"
+  | "channel"
+  | "channel_step"
+  | "track"
+  | "stuck"
+  | "confirm"
+  | "done";
+
+function resolveDecisionMode(
+  data: JourneyResponse,
+  showProviderPicker: boolean
+): DecisionMode {
+  const { screen, enrichment } = data;
+  const inChannel = ["online_in_progress", "phone_in_progress", "forms_in_progress"].includes(
+    screen.state
+  );
+
+  if (screen.state === "complete" || screen.state === "escalated") return "done";
+  if (enrichment.requires_tax_selection) return "tax";
+  if (showProviderPicker) return "provider_pick";
+  if (screen.disambiguation_question && screen.disambiguation_options.length > 0) {
+    return "disambiguation";
+  }
+  if (screen.state === "provider_unknown") return "employer";
+  if (screen.state === "provider_identified" || screen.state === "provider_not_covered") {
+    return "access";
+  }
+  if (
+    screen.state === "access_recovered" &&
+    screen.secondary_actions.some((a) => /phone|form/i.test(a))
+  ) {
+    return "channel";
+  }
+  if (inChannel) return "channel_step";
+  if (screen.state === "stuck") return "stuck";
+  if (screen.state === "initiated" || screen.state === "in_flight") return "track";
+  if (screen.state === "access_blocked" || screen.state === "access_recovered") return "confirm";
+  return "confirm";
+}
 
 export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChange }: JourneyFlowProps) {
   const isAgent = mode === "agent";
@@ -73,14 +115,14 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
   if (loading && !data) {
     return (
       <div className="flex min-h-[50dvh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-bee-blue/20 border-t-bee-blue" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-bee-yellow/30 border-t-bee-yellow" />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="rounded-card bg-red-50 p-6 text-center text-red-800">
+      <div className="pb-card p-6 text-center text-red-800">
         {error || "Unable to start journey."}
       </div>
     );
@@ -91,7 +133,8 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
   const inChannel = ["online_in_progress", "phone_in_progress", "forms_in_progress"].includes(
     screen.state
   );
-  const taxPending = enrichment.requires_tax_selection;
+  const decision = resolveDecisionMode(data, showProviderPicker);
+  const sourceStatus = deriveSourceStatus(screen);
 
   async function handlePrimary() {
     const s = screen.state;
@@ -102,20 +145,8 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "lookup", employer: employerInput.trim() });
       return;
     }
-    if (taxPending && primary.includes("pre-tax")) {
-      await act({ type: "tax_type", tax_type: "pre_tax" });
-      return;
-    }
-    if ((s === "provider_identified" || s === "provider_not_covered") && primary.includes("yes")) {
-      await act({ type: "access", can_login: true });
-      return;
-    }
     if (s === "access_blocked" && primary.includes("in now")) {
       await act({ type: "access_recovered" });
-      return;
-    }
-    if (s === "access_recovered" && !taxPending && primary.includes("online")) {
-      await act({ type: "channel", channel: "online" });
       return;
     }
     if (inChannel && primary.includes("done")) {
@@ -134,55 +165,21 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "escalate", reason: "stuck_on_step" });
       return;
     }
+    if (s === "access_recovered" && primary.includes("online")) {
+      await act({ type: "channel", channel: "online" });
+    }
   }
 
-  async function handleSecondary(label: string) {
-    const lower = label.toLowerCase();
-    const s = screen.state;
+  async function handleTaxPick(taxType: string) {
+    await act({ type: "tax_type", tax_type: taxType });
+  }
 
-    if (taxPending) {
-      const taxType = TAX_MAP[lower] || Object.entries(TAX_MAP).find(([k]) => lower.includes(k))?.[1];
-      if (taxType) {
-        await act({ type: "tax_type", tax_type: taxType });
-        return;
-      }
-    }
-    if (lower.includes("provider") && s === "provider_unknown") {
-      setShowProviderPicker(true);
-      return;
-    }
-    if (lower.includes("no") && (s === "provider_identified" || s === "provider_not_covered")) {
-      await act({ type: "access", can_login: false });
-      return;
-    }
-    if (lower.includes("beekeeper") && s === "provider_not_covered") {
-      await act({ type: "handoff", reason: "provider_not_covered" });
-      return;
-    }
-    if (lower.includes("locked out") || (lower.includes("beekeeper") && s === "access_blocked")) {
-      await act({ type: "escalate", reason: "access_lockout" });
-      return;
-    }
-    if (lower === "phone") {
-      await act({ type: "channel", channel: "phone" });
-      return;
-    }
-    if (lower.includes("form")) {
-      await act({ type: "channel", channel: "forms" });
-      return;
-    }
-    if (lower.includes("stuck")) {
-      await act({ type: "step", outcome: "stuck" });
-      return;
-    }
-    if (lower.includes("try again")) {
-      await act({ type: "resume" });
-      return;
-    }
-    if (lower.includes("nothing arrived") || lower.includes("get help")) {
-      await act({ type: "escalate", reason: "tracking_delay" });
-      return;
-    }
+  async function handleAccess(canLogin: boolean) {
+    await act({ type: "access", can_login: canLogin });
+  }
+
+  async function handleChannel(channel: "online" | "phone" | "forms") {
+    await act({ type: "channel", channel });
   }
 
   async function handleDisambiguation(option: string) {
@@ -194,37 +191,302 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
     await act({ type: "provider_direct", provider });
   }
 
+  async function handleEscalate(reason: string) {
+    await act({ type: "escalate", reason });
+  }
+
+  async function handleHandoff() {
+    await act({ type: "handoff", reason: "provider_not_covered" });
+  }
+
+  function renderDecision() {
+    if (decision === "done") return null;
+
+    if (decision === "tax") {
+      const options =
+        enrichment.tax_options.length > 0
+          ? enrichment.tax_options
+          : [
+              { id: "pre_tax", label: "Pre-tax (Traditional IRA)", hint: "Most common 401(k) balance" },
+              { id: "roth", label: "Roth (Roth IRA)", hint: "After-tax contributions and earnings" },
+              { id: "both", label: "Both pre-tax and Roth", hint: "Split across two IRA types" },
+            ];
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-bee-charcoal lg:text-base">
+            How is your old 401(k) taxed?
+          </p>
+          {options.map((opt) => (
+            <SelectionBlock
+              key={opt.id}
+              label={opt.label}
+              description={opt.hint}
+              onClick={() => handleTaxPick(opt.id)}
+              disabled={loading}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (decision === "employer") {
+      return (
+        <div className="space-y-4">
+          <InputField
+            label="Former employer or plan provider"
+            helper="We need your former employer's name to match the exact distribution address required by your old custodian."
+            value={employerInput}
+            onChange={setEmployerInput}
+            onSubmit={handlePrimary}
+            placeholder="e.g. Target, Citigroup, Walmart"
+            disabled={loading}
+          />
+          <Button onClick={handlePrimary} disabled={loading || !employerInput.trim()}>
+            {screen.primary_action}
+          </Button>
+          {screen.secondary_actions.some((a) => a.toLowerCase().includes("provider")) && (
+            <button
+              type="button"
+              onClick={() => setShowProviderPicker(true)}
+              className="w-full py-2 text-center text-sm font-semibold text-bee-muted transition-colors hover:text-bee-charcoal"
+            >
+              I already know my 401(k) provider →
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    if (decision === "provider_pick") {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-bee-charcoal lg:text-base">
+            Select your 401(k) provider
+          </p>
+          {providers.map((p) => (
+            <SelectionBlock
+              key={p}
+              label={p}
+              onClick={() => handleProviderPick(p)}
+              disabled={loading}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => setShowProviderPicker(false)}
+            className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+          >
+            ← Search by employer instead
+          </button>
+        </div>
+      );
+    }
+
+    if (decision === "disambiguation") {
+      return (
+        <div className="space-y-3">
+          <p className="text-base font-semibold text-bee-charcoal lg:text-lg">
+            {screen.disambiguation_question}
+          </p>
+          {screen.disambiguation_options.map((opt) => (
+            <SelectionBlock
+              key={opt}
+              label={opt}
+              onClick={() => handleDisambiguation(opt)}
+              disabled={loading}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (decision === "access") {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-bee-charcoal lg:text-base">
+            Can you log in to your old 401(k) account right now?
+          </p>
+          <SelectionBlock
+            label="Yes, I can log in"
+            description="We'll walk you through the rollover in your provider portal or by phone."
+            onClick={() => handleAccess(true)}
+            disabled={loading}
+          />
+          <SelectionBlock
+            label="No, I'm locked out or never had access"
+            description="We'll help you recover access or connect you with a BeeKeeper."
+            onClick={() => handleAccess(false)}
+            disabled={loading}
+          />
+          {screen.state === "provider_not_covered" && (
+            <button
+              type="button"
+              onClick={handleHandoff}
+              disabled={loading}
+              className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+            >
+              Talk to a BeeKeeper about this provider →
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    if (decision === "channel") {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-bee-charcoal lg:text-base">
+            How would you like to start your rollover?
+          </p>
+          <SelectionBlock
+            label="Online"
+            description="Fastest when you can log in to your provider's website."
+            onClick={() => handleChannel("online")}
+            disabled={loading}
+          />
+          <SelectionBlock
+            label="By phone"
+            description="We'll give you the number and exactly what to say."
+            onClick={() => handleChannel("phone")}
+            disabled={loading}
+          />
+          <SelectionBlock
+            label="Paper forms"
+            description="Download, fill out, and mail a distribution form."
+            onClick={() => handleChannel("forms")}
+            disabled={loading}
+          />
+        </div>
+      );
+    }
+
+    if (decision === "channel_step") {
+      return (
+        <div className="space-y-3">
+          <Button onClick={handlePrimary} disabled={loading}>
+            {screen.primary_action}
+          </Button>
+          <button
+            type="button"
+            onClick={() => act({ type: "step", outcome: "stuck" })}
+            disabled={loading}
+            className="w-full py-2 text-center text-sm font-semibold text-red-700 hover:underline"
+          >
+            I&apos;m stuck on this step
+          </button>
+        </div>
+      );
+    }
+
+    if (decision === "stuck") {
+      return (
+        <div className="space-y-3">
+          <Button onClick={handlePrimary} disabled={loading}>
+            {screen.primary_action}
+          </Button>
+          <button
+            type="button"
+            onClick={() => act({ type: "resume" })}
+            disabled={loading}
+            className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+          >
+            Try this step again →
+          </button>
+        </div>
+      );
+    }
+
+    if (decision === "track") {
+      return (
+        <div className="space-y-3">
+          <Button onClick={handlePrimary} disabled={loading}>
+            {screen.primary_action}
+          </Button>
+          {screen.secondary_actions.map((action) => {
+            const lower = action.toLowerCase();
+            if (lower.includes("nothing arrived") || lower.includes("get help")) {
+              return (
+                <button
+                  key={action}
+                  type="button"
+                  onClick={() => handleEscalate("tracking_delay")}
+                  disabled={loading}
+                  className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+                >
+                  {action} →
+                </button>
+              );
+            }
+            return null;
+          })}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <Button onClick={handlePrimary} disabled={loading}>
+          {screen.primary_action}
+        </Button>
+        {screen.state === "access_blocked" &&
+          screen.secondary_actions.map((action) => {
+            const lower = action.toLowerCase();
+            if (lower.includes("locked out") || lower.includes("beekeeper")) {
+              return (
+                <button
+                  key={action}
+                  type="button"
+                  onClick={() => handleEscalate("access_lockout")}
+                  disabled={loading}
+                  className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+                >
+                  {action} →
+                </button>
+              );
+            }
+            return null;
+          })}
+      </div>
+    );
+  }
+
   const journeyCard = (
     <div
-      className={`rounded-card bg-white p-6 shadow-card lg:p-10 ${
-        theme === "minimal" ? "border border-bee-border shadow-none" : "lg:shadow-card-lg"
+      className={`pb-card p-6 lg:p-10 ${
+        theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"
       }`}
     >
       {showProgress && <ProgressSteps current={screen.phase} />}
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <SourceStatusBadge status={sourceStatus} />
+      </div>
+
       <LookupBanner data={data} />
 
       {(screen.provider || context.uncovered_provider) &&
-        !["provider_identified", "provider_not_covered"].includes(screen.state) && (
-        <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-bee-muted lg:text-base">
-          {screen.provider || context.uncovered_provider}
-          {screen.channel && ` · ${screen.channel}`}
-          {!screen.provider && context.uncovered_provider && " · general guide"}
-        </p>
-      )}
+        !["provider_identified", "provider_not_covered", "provider_unknown"].includes(
+          screen.state
+        ) && (
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-bee-muted lg:text-base">
+            {screen.provider || context.uncovered_provider}
+            {screen.channel && ` · ${screen.channel}`}
+            {!screen.provider && context.uncovered_provider && " · general guide"}
+          </p>
+        )}
 
-      <h1 className="mb-3 text-2xl font-bold leading-tight text-bee-blue lg:text-3xl lg:leading-snug">
+      <h1 className="mb-3 text-2xl font-bold leading-tight text-bee-charcoal lg:text-3xl lg:leading-snug">
         {screen.headline}
       </h1>
 
-      {screen.body && !inChannel && (
+      {screen.body && !inChannel && decision !== "disambiguation" && (
         <p className="mb-5 whitespace-pre-line text-base leading-relaxed text-bee-ink lg:text-lg">
           {screen.body}
         </p>
       )}
 
-      {screen.state === "provider_not_covered" && (
-        <div className="mb-5 rounded-card border border-bee-blue/20 bg-bee-blue-light/40 p-4 lg:p-5">
+      {screen.state === "provider_not_covered" && decision === "access" && (
+        <div className="mb-5 rounded-card border border-bee-yellow/50 bg-bee-yellow-soft/60 p-4 lg:p-5">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-bee-muted">
             General rollover guide
           </p>
@@ -237,16 +499,17 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       )}
 
       {screen.state === "provider_unknown" && screen.body.includes("1%") && (
-        <div className="mb-5 rounded-card bg-bee-blue-light/70 p-4 lg:p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-bee-muted">PensionBee perk</p>
-          <p className="mt-1 text-sm font-semibold text-bee-blue lg:text-base">
+        <div className="mb-5 rounded-card border border-bee-yellow/40 bg-bee-yellow-soft/80 p-4 lg:p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-bee-muted">
+            PensionBee perk
+          </p>
+          <p className="mt-1 text-sm font-semibold text-bee-charcoal lg:text-base">
             Roll your old 401(k) to PensionBee and get a 1% match on eligible transfers.
           </p>
         </div>
       )}
 
       <EdgeCaseAlerts items={screen.edge_cases} />
-
       <ProvenanceBadge warning={screen.provenance_warning} />
 
       {inChannel && <ChannelWalkthrough enrichment={enrichment} />}
@@ -258,17 +521,19 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
               key={i}
               className={`flex gap-3 rounded-card px-4 py-3 text-sm lg:text-base ${
                 g.reconstructed
-                  ? "border border-dashed border-amber-300 bg-amber-50/50"
-                  : "bg-cream"
+                  ? "border-2 border-amber-400/80 bg-amber-50/80"
+                  : "border border-bee-border bg-cream-dark/40"
               }`}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bee-blue text-xs font-bold text-white">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bee-charcoal text-xs font-bold text-white">
                 {i + 1}
               </span>
               <span>
                 {g.text}
                 {g.reconstructed && (
-                  <span className="ml-1 text-xs font-semibold text-amber-700">· double-check</span>
+                  <span className="mt-1 block text-xs font-semibold text-amber-800">
+                    Double-check — phone menus can vary.
+                  </span>
                 )}
               </span>
             </li>
@@ -288,90 +553,38 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
               {step_index + 1} of {total_steps}
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-pill bg-cream-dark">
+          <div className="h-2 overflow-hidden rounded-pill bg-cream-deeper">
             <div
-              className="h-full rounded-pill bg-bee-blue transition-all duration-300"
+              className="h-full rounded-pill bg-bee-yellow transition-all duration-300"
               style={{ width: `${((step_index + 1) / total_steps) * 100}%` }}
             />
           </div>
         </div>
       )}
 
-      {screen.disambiguation_question && (
-        <div className="mb-5 rounded-card bg-bee-blue-light/50 p-4 lg:p-5">
-          <p className="mb-3 font-semibold text-bee-blue lg:text-lg">
-            {screen.disambiguation_question}
-          </p>
-          <div className="space-y-2">
-            {screen.disambiguation_options.map((opt) => (
-              <Button key={opt} variant="secondary" onClick={() => handleDisambiguation(opt)}>
-                {opt}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {showProviderPicker && (
-        <div className="mb-5 space-y-2">
-          <p className="font-semibold text-bee-blue">Select your 401(k) provider</p>
-          {providers.map((p) => (
-            <Button key={p} variant="secondary" onClick={() => handleProviderPick(p)}>
-              {p}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {(screen.state === "provider_unknown" ||
-        (screen.disambiguation_question?.toLowerCase().includes("employer") &&
-          screen.disambiguation_options.length === 0)) && (
-        <div className="mb-5">
-          <input
-            value={employerInput}
-            onChange={(e) => setEmployerInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handlePrimary()}
-            placeholder="Former employer or provider name"
-            className="mb-3 w-full rounded-card border border-bee-border bg-cream px-4 py-3.5 text-base outline-none focus:border-bee-blue focus:ring-2 focus:ring-bee-blue/20 lg:py-4 lg:text-lg"
-          />
-        </div>
-      )}
-
       {error && (
-        <div className="mb-4 rounded-card bg-red-50 px-4 py-3 text-sm text-red-800 lg:text-base">
-          {error} A BeeKeeper can help.
+        <div className="mb-4 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 lg:text-base">
+          {error}
         </div>
       )}
 
-      {screen.state !== "complete" && screen.state !== "escalated" && (
+      {decision !== "done" && (
         <div className="space-y-3">
-          <Button onClick={handlePrimary} disabled={loading}>
-            {screen.primary_action}
-          </Button>
-          {screen.secondary_actions.map((action) => (
-            <Button
-              key={action}
-              variant={action.toLowerCase().includes("stuck") ? "danger" : "secondary"}
-              onClick={() => handleSecondary(action)}
-              disabled={loading}
-            >
-              {action}
-            </Button>
-          ))}
+          {renderDecision()}
           <button
             type="button"
             onClick={() => setAssistantOpen(true)}
-            className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-blue lg:text-base"
+            className="w-full py-3 text-center text-sm font-semibold text-bee-muted transition-colors hover:text-bee-charcoal lg:text-base"
           >
-            Ask a question
+            Ask a question about this step
           </button>
         </div>
       )}
 
       {screen.state === "complete" && (
-        <div className="mt-4 rounded-card bg-bee-blue-light p-6 text-center lg:p-8">
+        <div className="mt-4 rounded-card border border-bee-yellow/50 bg-bee-yellow-soft p-6 text-center lg:p-8">
           <p className="text-4xl lg:text-5xl">🎉</p>
-          <p className="mt-2 text-lg font-bold text-bee-blue lg:text-xl">You&apos;re all set!</p>
+          <p className="mt-2 text-lg font-bold text-bee-charcoal lg:text-xl">You&apos;re all set!</p>
           {screen.body.includes("1%") && (
             <p className="mt-2 text-sm text-bee-muted lg:text-base">
               You earned your 1% match — welcome to PensionBee.
@@ -381,8 +594,8 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       )}
 
       {screen.state === "escalated" && (
-        <div className="mt-4 rounded-card bg-bee-yellow/20 p-6 text-center lg:p-8">
-          <p className="text-lg font-bold text-bee-ink">A BeeKeeper will take it from here</p>
+        <div className="mt-4 rounded-card border border-bee-yellow bg-bee-yellow-soft p-6 text-center lg:p-8">
+          <p className="text-lg font-bold text-bee-charcoal">A BeeKeeper will take it from here</p>
           <p className="mt-2 text-sm text-bee-muted lg:text-base">{screen.body}</p>
         </div>
       )}
@@ -393,6 +606,7 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
     <>
       <AssistantDrawer
         journeyId={context.journey_id}
+        screen={screen}
         open={assistantOpen}
         onClose={() => setAssistantOpen(false)}
         onEscalate={() => {

@@ -10,7 +10,7 @@ export function CustomerPageClient() {
   const [phase, setPhase] = useState<JourneyPhase>("find");
 
   return (
-    <main className="mx-auto min-h-dvh max-w-journey px-4 py-6 sm:px-6 lg:max-w-desktop lg:px-8 lg:py-12">
+    <main className="mx-auto min-h-dvh max-w-journey bg-canvas px-4 py-6 sm:px-6 lg:max-w-desktop lg:px-8 lg:py-12">
       <BrandHeader mode="customer" />
       <p className="mb-6 hidden text-center text-bee-muted lg:mb-8 lg:block lg:text-lg">
         Roll your old 401(k) into a PensionBee IRA — one step at a time.

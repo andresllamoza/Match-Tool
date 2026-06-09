@@ -10,8 +10,8 @@ export function AgentPanel({ data }: AgentPanelProps) {
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-8 lg:max-h-[calc(100dvh-4rem)] lg:overflow-y-auto">
-      <div className="rounded-card border border-bee-blue/15 bg-white p-5 shadow-card lg:p-6">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-bee-blue">
+      <div className="pb-card p-5 lg:p-6">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-bee-charcoal">
           BeeKeeper intel
         </h2>
         <dl className="space-y-2 text-sm lg:text-base">
@@ -45,19 +45,19 @@ export function AgentPanel({ data }: AgentPanelProps) {
       </div>
 
       {screen.next_beekeeper_script && (
-        <div className="rounded-card border-2 border-bee-yellow bg-bee-yellow/10 p-5 lg:p-6">
-          <h3 className="mb-2 font-bold text-bee-ink">Say this next</h3>
+        <div className="rounded-card border-2 border-bee-yellow bg-bee-yellow-soft p-5 lg:p-6">
+          <h3 className="mb-2 font-bold text-bee-charcoal">Say this next</h3>
           <p className="text-sm leading-relaxed lg:text-base">{screen.next_beekeeper_script}</p>
         </div>
       )}
 
       {screen.agent_notes.length > 0 && (
-        <div className="rounded-card bg-white p-5 shadow-card lg:p-6">
-          <h3 className="mb-2 font-bold text-bee-blue">Agent notes</h3>
+        <div className="pb-card p-5 lg:p-6">
+          <h3 className="mb-2 font-bold text-bee-charcoal">Agent notes</h3>
           <ul className="space-y-2 text-sm lg:text-base">
             {screen.agent_notes.map((note, i) => (
               <li key={i} className="flex gap-2 text-bee-ink">
-                <span className="text-bee-blue">•</span>
+                <span className="text-bee-yellow">•</span>
                 {note}
               </li>
             ))}
@@ -77,8 +77,8 @@ export function AgentPanel({ data }: AgentPanelProps) {
       )}
 
       {repQuestions.length > 0 && (
-        <div className="rounded-card bg-white p-5 shadow-card lg:p-6">
-          <h3 className="mb-2 font-bold text-bee-blue">Rep will ask</h3>
+        <div className="pb-card p-5 lg:p-6">
+          <h3 className="mb-2 font-bold text-bee-charcoal">Rep will ask</h3>
           <dl className="space-y-3 text-sm lg:text-base">
             {repQuestions.map((q, i) => (
               <div key={i}>
@@ -91,7 +91,7 @@ export function AgentPanel({ data }: AgentPanelProps) {
       )}
 
       {typeof provider_intel.mechanism === "string" && (
-        <div className="rounded-card bg-bee-blue-light/40 p-5 text-sm lg:p-6 lg:text-base">
+        <div className="rounded-card border border-bee-border bg-bee-yellow-soft/50 p-5 text-sm lg:p-6 lg:text-base">
           <p>
             <span className="font-semibold">Mechanism:</span>{" "}
             {provider_intel.mechanism.replace(/_/g, " ")}
