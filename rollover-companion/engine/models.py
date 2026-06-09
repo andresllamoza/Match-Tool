@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 
 class JourneyState(str, Enum):
@@ -138,7 +138,7 @@ class FormGuidance(BaseModel):
 
 
 class ProviderPlaybook(BaseModel):
-    provider: str
+    provider: str  # YAML key `provider`; exposed as provider_name in API/CLI dumps
     aliases: list[str] = Field(default_factory=list)
     mechanism: Mechanism
     check_destination: str
@@ -157,6 +157,11 @@ class ProviderPlaybook(BaseModel):
     access_recovery: AccessRecovery
     call_script: CallScript
     form_guidance: FormGuidance
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def provider_name(self) -> str:
+        return self.provider
 
     @model_validator(mode="after")
     def validate_mechanism_forward_step(self) -> ProviderPlaybook:

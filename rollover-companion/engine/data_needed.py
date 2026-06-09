@@ -23,9 +23,9 @@ DATA_NEEDED: dict[str, DataNeededEntry] = {
     "BRAND_HEX_BLUE": DataNeededEntry(
         key="BRAND_HEX_BLUE",
         status="needed",
-        fallback="#1B4F9C",
-        usage="Primary actions and headlines",
-        note="[pending verification]",
+        fallback="#0A2540",
+        usage="Primary actions and headlines (PensionBee US primary)",
+        note="[pending verification] — spec primary brand blue",
     ),
     "BRAND_HEX_INK": DataNeededEntry(
         key="BRAND_HEX_INK",

@@ -220,7 +220,7 @@ class JourneyEngine:
             raise InvalidTransitionError("tax_type only valid from access_recovered")
         if tax_type == "pre_tax_to_roth":
             ctx.flags["pre_tax_to_roth"] = True
-            return self.escalate(ctx, "pre_tax_to_roth_conversion")
+            return self.escalate(ctx, "taxable_conversion_block")
         ctx.tax_fund_type = tax_type
         self.event_logger.log_journey(
             state=ctx.state,
@@ -316,7 +316,7 @@ class JourneyEngine:
     def set_flag(self, ctx: JourneyContext, flag: str, value: bool = True) -> JourneyScreen:
         ctx.flags[flag] = value
         if flag == "pre_tax_to_roth" and value:
-            return self.escalate(ctx, "pre_tax_to_roth_conversion")
+            return self.escalate(ctx, "taxable_conversion_block")
         return self.render(ctx)
 
     def resume_from_stuck(self, ctx: JourneyContext) -> JourneyScreen:

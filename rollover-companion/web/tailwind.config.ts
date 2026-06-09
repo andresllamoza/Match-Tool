@@ -15,9 +15,9 @@ const config: Config = {
           deeper: "#EBE0C8",
         },
         bee: {
-          blue: "#1B4F9C",
-          "blue-hover": "#163F7D",
-          "blue-light": "#E8F0FA",
+          blue: "#0A2540",
+          "blue-hover": "#061A2E",
+          "blue-light": "#E8EEF4",
           yellow: "#F5C518",
           ink: "#1A1A1A",
           muted: "#5C5C5C",
@@ -30,11 +30,12 @@ const config: Config = {
       },
       borderRadius: {
         card: "16px",
+        "2xl": "16px",
         pill: "999px",
       },
       boxShadow: {
-        card: "0 4px 24px rgba(27, 79, 156, 0.08)",
-        "card-lg": "0 8px 40px rgba(27, 79, 156, 0.12)",
+        card: "0 4px 24px rgba(10, 37, 64, 0.08)",
+        "card-lg": "0 8px 40px rgba(10, 37, 64, 0.12)",
       },
       maxWidth: {
         journey: "28rem",

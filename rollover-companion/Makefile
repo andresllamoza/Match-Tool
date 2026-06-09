@@ -1,4 +1,7 @@
-.PHONY: test data-needed walk-amazon walk-walmart walk-citi funnel
+.PHONY: test data-needed walk-amazon walk-walmart walk-citi funnel cli
+
+cli:
+	python3 engine_cli.py demo
 
 test:
 	python3 -m pytest -q

@@ -23,7 +23,7 @@ export function BrandHeader({ mode = "customer", compact = false }: BrandHeaderP
       </div>
       {mode !== "embed" && (
         <nav className="hidden items-center gap-4 text-sm font-medium text-bee-muted md:flex">
-          <Link href="/" className="hover:text-bee-blue">
+          <Link href="/customer" className="hover:text-bee-blue">
             Customer
           </Link>
           <Link href="/agent" className="hover:text-bee-blue">
