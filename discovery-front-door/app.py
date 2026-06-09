@@ -28,8 +28,17 @@ if use_synthetic:
     st.info("Synthetic mode (`USE_SYNTHETIC=1`) — fake employers, no DOL download.")
 else:
     repo_root = ROOT.parent
-    lookup = Local5500Adapter.from_matcher(repo_root)
-    st.caption("Lookup source: DOL Form 5500 matcher")
+    try:
+        lookup = Local5500Adapter.from_matcher(repo_root)
+        st.caption("Lookup source: DOL Form 5500 matcher")
+    except ModuleNotFoundError as exc:
+        st.error(
+            f"Missing dependency for the 5500 matcher: `{exc.name}`. "
+            "Redeploy after updating `discovery-front-door/requirements.txt`, "
+            "or set **`USE_SYNTHETIC=1`** in Streamlit Advanced settings for an instant demo."
+        )
+        lookup = Local5500Adapter.from_synthetic()
+        st.warning("Falling back to synthetic employers until dependencies are installed.")
 
 knowledge = KnowledgeBridge.from_dir(ROOT)
 

@@ -1,4 +1,9 @@
+# Streamlit Cloud uses this file when main entry is discovery-front-door/app.py
+streamlit
 pydantic>=2
 pyyaml
-pytest
-streamlit
+# Required when USE_SYNTHETIC is unset (real 5500 matcher via src.matcher)
+pandas
+numpy
+rapidfuzz
+jinja2

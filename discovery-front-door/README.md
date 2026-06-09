@@ -91,7 +91,7 @@ The app's lookup source is pluggable via `ProviderLookupPort`:
 | Goal | How |
 |------|-----|
 | **Show the flow now (no data)** | `USE_SYNTHETIC=1 streamlit run app.py`, or deploy with that env var set |
-| **Real 5500 lookups** | Deploy from the **Match-Tool repo** on Streamlit Cloud, main file `discovery-front-door/app.py`. Root `requirements.txt` includes `pydantic`/`pyyaml` (added). Warm the DOL cache first (see the matcher's `DEPLOYMENT.md`). |
+| **Real 5500 lookups** | Deploy from the **Match-Tool repo** on Streamlit Cloud, main file `discovery-front-door/app.py`. Streamlit installs **`discovery-front-door/requirements.txt`** (includes `pandas`, `rapidfuzz`, etc.). Warm the DOL cache first (see the matcher's `DEPLOYMENT.md`). |
 
 ### Separate internal tooling (not the product surface)
 
