@@ -13,4 +13,4 @@ gatherUsageStats = false
 
 [client]
 toolbarMode = "hidden"
-showSidebarNavigation = false
+showSidebarNavigation = true

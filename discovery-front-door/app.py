@@ -2,13 +2,18 @@
 PensionBee Discovery Front Door — customer-facing "Find your old 401(k)" flow.
 
 Presentation layer over discovery.DiscoveryFlow. Matcher logic unchanged.
+
+After discovery, hand off to the rollover companion:
+  - st.link_button → /customer?employer=…
+  - Sidebar page "Guided rollover" → embedded iframe (/embed?employer=…)
+
+Set ROLLOVER_COMPANION_URL (env or .streamlit/secrets.toml) to your companion host.
 """
 
 from __future__ import annotations
 
 import os
 import sys
-import urllib.parse
 from pathlib import Path
 
 import streamlit as st
@@ -17,12 +22,14 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from companion_link import customer_url  # noqa: E402
 from discovery.flow import DiscoveryFlow  # noqa: E402
 from discovery.knowledge_bridge import KnowledgeBridge  # noqa: E402
 from discovery.models import BalanceRange  # noqa: E402
 from discovery.synthetic import build_adapters  # noqa: E402
 from discovery.adapters.matcher5500 import Local5500Adapter  # noqa: E402
 from ui.brand import inject_brand_css  # noqa: E402
+from ui.companion_handoff import render_companion_handoff  # noqa: E402
 from ui.components import (  # noqa: E402
     error_card,
     format_balance_label,
@@ -46,17 +53,6 @@ US_STATES = [
 ]
 
 BALANCE_OPTIONS = [(br, format_balance_label(br.value)) for br in BalanceRange]
-
-ROLLOVER_COMPANION_URL = os.environ.get(
-    "ROLLOVER_COMPANION_URL", "http://localhost:3000/customer"
-).rstrip("/")
-
-
-def _rollover_companion_url(employer: str, provider: str | None = None) -> str:
-    params: dict[str, str] = {"employer": employer}
-    if provider:
-        params["provider"] = provider
-    return f"{ROLLOVER_COMPANION_URL}?{urllib.parse.urlencode(params)}"
 
 
 @st.cache_resource
@@ -90,6 +86,14 @@ def _init_session() -> None:
 def _reset_to_input() -> None:
     st.session_state.ui_state = UiState.INPUT.value
     st.session_state.outcome = None
+
+
+def _render_top_nav() -> None:
+    try:
+        st.page_link("app.py", label="Find my 401(k)", icon="🔍")
+        st.page_link("pages/1_Guided_rollover.py", label="Guided rollover", icon="🐝")
+    except Exception:
+        pass
 
 
 def _render_input(flow: DiscoveryFlow) -> None:
@@ -151,6 +155,23 @@ def _render_input(flow: DiscoveryFlow) -> None:
             st.session_state.ui_state = classify_ui_state(outcome).value
         st.rerun()
 
+    st.markdown('<div style="height:0.75rem"></div>', unsafe_allow_html=True)
+    skip_url = customer_url(employer=employer.strip())
+    st.link_button(
+        "Skip lookup — go straight to guided rollover →",
+        skip_url,
+        use_container_width=True,
+    )
+    try:
+        st.page_link(
+            "pages/1_Guided_rollover.py",
+            label="Or open guided rollover inside Streamlit",
+            icon="🐝",
+            use_container_width=True,
+        )
+    except Exception:
+        pass
+
 
 def _render_result() -> None:
     outcome = st.session_state.outcome
@@ -175,19 +196,14 @@ def _render_result() -> None:
 
     st.markdown(
         '<p class="pb-subcopy" style="margin-top:0.5rem;margin-bottom:1rem;">'
-        "Next, our guided rollover companion walks you through login, provider menus, "
-        "and tracking — one step at a time.</p>",
+        "Next, roll over step-by-step in our guided companion — inside Streamlit or in a new tab.</p>",
         unsafe_allow_html=True,
     )
 
-    handoff = _rollover_companion_url(disc.employer_query, disc.resolved_provider)
-    st.link_button(
-        "Continue in rollover companion →",
-        handoff,
-        type="primary",
-        use_container_width=True,
+    render_companion_handoff(
+        employer=disc.employer_query,
+        provider=disc.resolved_provider,
     )
-    st.caption(f"Opens {ROLLOVER_COMPANION_URL} — run the API + Next.js app locally.")
 
     st.markdown('<div class="pb-text-action">', unsafe_allow_html=True)
     if st.button("Search another employer", key="result_restart"):
@@ -250,6 +266,8 @@ def _render_low_confidence() -> None:
             )
         st.markdown("</div>", unsafe_allow_html=True)
 
+    render_companion_handoff(employer=disc.employer_query, provider=disc.resolved_provider)
+
     if not disc.resolved_provider:
         warm_message(
             "No dead ends here",
@@ -280,10 +298,11 @@ def main() -> None:
         page_title="Find your old 401(k) | PensionBee",
         page_icon="🐝",
         layout="centered",
-        initial_sidebar_state="collapsed",
+        initial_sidebar_state="expanded",
     )
     inject_brand_css()
     _init_session()
+    _render_top_nav()
 
     try:
         flow = _build_flow()
