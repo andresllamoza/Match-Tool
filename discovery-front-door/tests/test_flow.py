@@ -8,7 +8,7 @@ def test_full_flow_outcome():
     adv, matcher = build_adapters()
     flow = DiscoveryFlow(adv, matcher, KnowledgeBridge.from_dir())
     outcome = flow.run("Target Corporation", BalanceRange.R_100_250K)
-    assert outcome.discovery.resolved_provider == "Vanguard"
+    assert outcome.discovery.resolved_provider == "Alight Solutions"
     assert outcome.value_reveal is not None
     assert outcome.value_reveal.match_low == 1000
     assert outcome.next_step is not None

@@ -65,12 +65,29 @@ streamlit run app.py        # the add-transfer wizard (internal demo)
 
 ## Quick start
 
+**Important:** `streamlit run app.py` is only the **discovery / value-reveal** beat (employer → provider → $ match). The full guided rollover UI lives in **`rollover-companion/web`** at `/customer`. After discovery, click **Continue in rollover companion** (or open `/customer` directly).
+
+```bash
+# Terminal 1 — rollover engine API
+cd rollover-companion && python3 -m uvicorn api.server:app --port 8000
+
+# Terminal 2 — full product UI (PensionBee design system + one-step flow)
+cd rollover-companion/web && npm install && npm run dev
+# → http://localhost:3000/customer
+
+# Optional — discovery front door (hands off to companion)
+export ROLLOVER_COMPANION_URL=http://localhost:3000/customer
+USE_SYNTHETIC=1 streamlit run discovery-front-door/app.py
+```
+
+Or from repo root: `bash scripts/run-product-demo.sh`
+
 ```bash
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-pytest -q                                                   # 25 tests
-streamlit run app.py                                        # add-transfer wizard
+pytest -q                                                   # discovery tests
+streamlit run app.py                                        # discovery only
 ```
 
 ## Lookup source (interim: the 5500 matcher)

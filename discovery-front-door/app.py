@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
+import urllib.parse
 from pathlib import Path
 
 import streamlit as st
@@ -45,6 +46,17 @@ US_STATES = [
 ]
 
 BALANCE_OPTIONS = [(br, format_balance_label(br.value)) for br in BalanceRange]
+
+ROLLOVER_COMPANION_URL = os.environ.get(
+    "ROLLOVER_COMPANION_URL", "http://localhost:3000/customer"
+).rstrip("/")
+
+
+def _rollover_companion_url(employer: str, provider: str | None = None) -> str:
+    params: dict[str, str] = {"employer": employer}
+    if provider:
+        params["provider"] = provider
+    return f"{ROLLOVER_COMPANION_URL}?{urllib.parse.urlencode(params)}"
 
 
 @st.cache_resource
@@ -161,12 +173,21 @@ def _render_result() -> None:
     if outcome.next_step:
         next_step_card(outcome.next_step.action)
 
-    st.markdown('<div style="height:0.85rem"></div>', unsafe_allow_html=True)
-    if st.button("Start your rollover", type="primary", use_container_width=True):
-        warm_message(
-            "You're on the right track",
-            "A BeeKeeper can walk you through rolling over to PensionBee — real humans, no jargon.",
-        )
+    st.markdown(
+        '<p class="pb-subcopy" style="margin-top:0.5rem;margin-bottom:1rem;">'
+        "Next, our guided rollover companion walks you through login, provider menus, "
+        "and tracking — one step at a time.</p>",
+        unsafe_allow_html=True,
+    )
+
+    handoff = _rollover_companion_url(disc.employer_query, disc.resolved_provider)
+    st.link_button(
+        "Continue in rollover companion →",
+        handoff,
+        type="primary",
+        use_container_width=True,
+    )
+    st.caption(f"Opens {ROLLOVER_COMPANION_URL} — run the API + Next.js app locally.")
 
     st.markdown('<div class="pb-text-action">', unsafe_allow_html=True)
     if st.button("Search another employer", key="result_restart"):

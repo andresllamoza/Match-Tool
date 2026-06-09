@@ -1,10 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BrandHeader } from "./BrandHeader";
 import { CustomerHelpPanel } from "./CustomerHelpPanel";
 import { JourneyFlow } from "./JourneyFlow";
 import type { JourneyPhase } from "@/lib/types";
+
+function CustomerJourney({ onPhaseChange }: { onPhaseChange: (phase: JourneyPhase) => void }) {
+  const searchParams = useSearchParams();
+  const initialEmployer = searchParams.get("employer") ?? "";
+
+  return (
+    <JourneyFlow mode="customer" initialEmployer={initialEmployer} onPhaseChange={onPhaseChange} />
+  );
+}
 
 export function CustomerPageClient() {
   const [phase, setPhase] = useState<JourneyPhase>("find");
@@ -18,7 +28,15 @@ export function CustomerPageClient() {
 
       <div className="lg:grid lg:grid-cols-12 lg:gap-10">
         <div className="lg:col-span-7 xl:col-span-8">
-          <JourneyFlow mode="customer" onPhaseChange={setPhase} />
+          <Suspense
+            fallback={
+              <div className="flex min-h-[40dvh] items-center justify-center">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-bee-yellow/30 border-t-bee-yellow" />
+              </div>
+            }
+          >
+            <CustomerJourney onPhaseChange={setPhase} />
+          </Suspense>
         </div>
         <div className="lg:col-span-5 xl:col-span-4">
           <CustomerHelpPanel phase={phase} />

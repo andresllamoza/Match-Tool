@@ -20,6 +20,7 @@ import { SourceStatusBadge } from "./ui/SourceStatusBadge";
 interface JourneyFlowProps {
   mode?: "customer" | "agent" | "embed";
   theme?: "default" | "minimal";
+  initialEmployer?: string;
   onPhaseChange?: (phase: import("@/lib/types").JourneyPhase) => void;
 }
 
@@ -68,7 +69,12 @@ function resolveDecisionMode(
   return "confirm";
 }
 
-export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChange }: JourneyFlowProps) {
+export function JourneyFlow({
+  mode = "customer",
+  theme = "default",
+  initialEmployer = "",
+  onPhaseChange,
+}: JourneyFlowProps) {
   const isAgent = mode === "agent";
   const [data, setData] = useState<JourneyResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,20 +103,38 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
   );
 
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
+      const employerSeed = initialEmployer.trim();
+      if (employerSeed) setEmployerInput(employerSeed);
+
       try {
-        const res = await startJourney(isAgent);
+        let res = await startJourney(isAgent);
+        if (cancelled) return;
+
+        if (employerSeed && res.screen.state === "provider_unknown") {
+          res = await journeyAction(res.context.journey_id, { type: "lookup", employer: employerSeed }, isAgent);
+          if (cancelled) return;
+        }
+
         setData(res);
         onPhaseChange?.(res.screen.phase);
         const prov = await fetch("/api/providers").then((r) => r.json());
-        setProviders(prov.providers || []);
+        if (!cancelled) setProviders(prov.providers || []);
       } catch {
-        setError("Could not connect to the rollover engine. A BeeKeeper can help.");
+        if (!cancelled) {
+          setError("Could not connect to the rollover engine. A BeeKeeper can help.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [isAgent, onPhaseChange]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAgent, initialEmployer, onPhaseChange]);
 
   if (loading && !data) {
     return (

@@ -57,7 +57,7 @@ Override with `JOURNEY_LOG_PATH` / `COMPARISON_LOG_PATH`.
 
 ## Design system
 
-- Cream background `#FBF6EC`, brand blue `#1B4F9C`, bee yellow accents
+- Canvas `#FAF8F5`, bee yellow `#FFC72C`, charcoal CTAs `#111111`, white cards
 - DM Sans, 16px rounded cards, one primary action per screen
 - Mobile-first single column; desktop uses wider grid layouts with side panels
 - Reconstructed steps show provenance warnings in both customer and agent surfaces

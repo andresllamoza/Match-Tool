@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from .customer_copy import customer_next_copy
 from .models import NextStepResult
 
 
@@ -43,7 +44,10 @@ class KnowledgeBridge:
             return None
         na = playbook.next_actions[FunnelStage.PROVIDER_IDENTIFIED]
         return NextStepResult(
-            action=na.customer_message,
+            action=customer_next_copy(
+                customer_message=getattr(na, "customer_message", None),
+                action=na.action,
+            ),
             owner=na.owner.value,
             source_status=na.source_status.value,
             provenance_warning=None,
