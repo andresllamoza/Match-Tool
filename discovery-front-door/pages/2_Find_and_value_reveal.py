@@ -22,10 +22,10 @@ from discovery.models import BalanceRange  # noqa: E402
 from discovery.synthetic import build_adapters  # noqa: E402
 from ui.brand import inject_brand_css  # noqa: E402
 from ui.components import (  # noqa: E402
+    brand_header,
     error_card,
     format_balance_label,
     headline,
-    logo_mark,
     next_step_card,
     provider_result_card,
     value_reveal_card,
@@ -78,10 +78,10 @@ flow = _build_flow()
 state = UiState(st.session_state.find_ui_state)
 
 if state == UiState.INPUT:
-    logo_mark()
+    brand_header("Find & value (optional)")
     headline(
         "Find your old 401(k)",
-        "Optional pre-signup lookup + illustrative match. The full rollover is on the Home page.",
+        "Pre-signup lookup + illustrative 1% match. For the full guided rollover, open Home in the sidebar.",
     )
     employer = st.text_input("Former employer", value=st.session_state.find_last_employer)
     balance_key = st.selectbox(

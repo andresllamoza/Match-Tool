@@ -1,260 +1,315 @@
-"""PensionBee discovery brand tokens + Streamlit chrome hiding."""
+"""PensionBee US design tokens for Streamlit — canvas, bee yellow, charcoal CTAs."""
 
 from __future__ import annotations
 
 import streamlit as st
 
-# Verified against pensionbee.com/us + existing Match-Tool brand tokens (app.py).
-PB_CREAM = "#FBF6EC"
-PB_CREAM_DEEP = "#F5EDD8"
-PB_CARD = "#FFFFFF"
-PB_NAVY = "#071426"
-PB_BLUE = "#1A56DB"
-PB_BLUE_HOVER = "#1548BD"
-PB_BLUE_SOFT = "#E8F0FF"
-PB_MUTED = "#5C6B7A"
-PB_BORDER = "#E8DFCF"
-PB_SUCCESS = "#0D7A4A"
-PB_AMBER = "#9A6200"
+# Authentic PensionBee US palette (matches rollover-companion/web)
+CANVAS = "#FAF8F5"
+CANVAS_DEEP = "#F3EDE4"
+CARD = "#FFFFFF"
+CHARCOAL = "#111111"
+INK = "#1E242B"
+MUTED = "#6B6560"
+BORDER = "#EAE5DC"
+YELLOW = "#FFC72C"
+YELLOW_SOFT = "#FFF4D6"
+GREEN = "#1B7F4B"
+GREEN_SOFT = "#E8F5EE"
+RADIUS = "16px"
 
 
 def inject_brand_css() -> None:
     st.markdown(
         f"""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 
     :root {{
-        --pb-cream: {PB_CREAM};
-        --pb-card: {PB_CARD};
-        --pb-navy: {PB_NAVY};
-        --pb-blue: {PB_BLUE};
-        --pb-muted: {PB_MUTED};
-        --pb-border: {PB_BORDER};
-        --pb-radius: 16px;
-        --pb-shadow: 0 18px 48px rgba(7, 20, 38, 0.08);
+        --canvas: {CANVAS};
+        --card: {CARD};
+        --charcoal: {CHARCOAL};
+        --ink: {INK};
+        --muted: {MUTED};
+        --border: {BORDER};
+        --yellow: {YELLOW};
+        --radius: {RADIUS};
     }}
 
-    /* Hide default Streamlit chrome */
     #MainMenu, footer, header[data-testid="stHeader"],
     [data-testid="stToolbar"], .stDeployButton,
     [data-testid="stStatusWidget"], .viewerBadge_container {{
         visibility: hidden !important;
         display: none !important;
         height: 0 !important;
-        max-height: 0 !important;
         overflow: hidden !important;
     }}
 
     html, body, #root, .stApp, [data-testid="stAppViewContainer"] {{
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: {PB_CREAM} !important;
-        color: {PB_NAVY};
+        font-family: "DM Sans", system-ui, sans-serif !important;
+        background: {CANVAS} !important;
+        color: {INK} !important;
     }}
 
     .stApp {{
         background:
-            radial-gradient(circle at 12% 0%, rgba(26, 86, 219, 0.06), transparent 42%),
-            linear-gradient(180deg, {PB_CREAM} 0%, #FDF9F2 100%) !important;
+            radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 199, 44, 0.09), transparent),
+            radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255, 199, 44, 0.05), transparent),
+            {CANVAS} !important;
+    }}
+
+    [data-testid="stSidebar"] {{
+        background: {CANVAS} !important;
+        border-right: 1px solid {BORDER} !important;
     }}
 
     .block-container {{
-        padding-top: 1.25rem;
+        padding-top: 1.5rem;
         padding-bottom: 2.5rem;
         max-width: 28rem;
         padding-left: 1rem;
         padding-right: 1rem;
     }}
 
-    /* Branded shell */
-    .pb-shell {{
-        max-width: 28rem;
-        margin: 0 auto;
-    }}
-
-    .pb-logo {{
-        font-size: 0.78rem;
-        font-weight: 800;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: {PB_BLUE};
+    /* ── Brand header ── */
+    .pb-brand-row {{
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
         margin-bottom: 1.5rem;
     }}
+    .pb-bee-icon {{
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 999px;
+        background: {YELLOW};
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }}
+    .pb-wordmark {{
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: {CHARCOAL};
+        letter-spacing: -0.02em;
+    }}
+    .pb-product-tag {{
+        font-size: 0.8rem;
+        color: {MUTED};
+        margin-top: 0.1rem;
+    }}
+
+    .pb-logo {{ display: none; }}
 
     .pb-headline {{
-        font-size: clamp(1.75rem, 5vw, 2.15rem);
-        font-weight: 800;
-        line-height: 1.15;
-        color: {PB_NAVY};
+        font-size: clamp(1.65rem, 5vw, 2rem);
+        font-weight: 700;
+        line-height: 1.2;
+        color: {CHARCOAL};
         margin: 0 0 0.5rem 0;
         letter-spacing: -0.02em;
     }}
 
     .pb-subcopy {{
-        font-size: 1.02rem;
+        font-size: 1rem;
         line-height: 1.55;
-        color: {PB_MUTED};
-        margin: 0 0 1.5rem 0;
+        color: {MUTED};
+        margin: 0 0 1.25rem 0;
     }}
 
     .pb-card {{
-        background: {PB_CARD};
-        border: 1px solid {PB_BORDER};
-        border-radius: var(--pb-radius);
-        box-shadow: var(--pb-shadow);
+        background: {CARD};
+        border: 1px solid {BORDER};
+        border-radius: var(--radius);
+        box-shadow: 0 2px 12px rgba(17, 17, 17, 0.06);
         padding: 1.25rem 1.2rem;
         margin-bottom: 1rem;
     }}
 
     .pb-card-hero {{
-        background: linear-gradient(145deg, #FFFFFF 0%, {PB_BLUE_SOFT} 100%);
-        border: 1px solid rgba(26, 86, 219, 0.18);
+        background: linear-gradient(145deg, #FFFFFF 0%, {YELLOW_SOFT} 100%);
+        border: 1px solid rgba(255, 199, 44, 0.35);
     }}
 
+    .pb-promo {{
+        background: {YELLOW_SOFT};
+        border: 1px solid rgba(255, 199, 44, 0.4);
+        border-radius: var(--radius);
+        padding: 1rem 1.1rem;
+        margin-bottom: 1rem;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        color: {INK};
+    }}
+    .pb-promo strong {{ color: {CHARCOAL}; }}
+
     .pb-provider-name {{
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: {PB_NAVY};
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: {CHARCOAL};
         margin: 0.35rem 0 0.15rem;
-        line-height: 1.25;
     }}
 
     .pb-confidence {{
         display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.78rem;
+        font-size: 0.72rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: {PB_SUCCESS};
-        background: rgba(13, 122, 74, 0.1);
+        color: {GREEN};
+        background: {GREEN_SOFT};
         border-radius: 999px;
         padding: 0.28rem 0.65rem;
+        margin-bottom: 0.5rem;
     }}
-
-    .pb-confidence.medium {{
-        color: {PB_AMBER};
-        background: rgba(154, 98, 0, 0.1);
-    }}
+    .pb-confidence.medium {{ color: #9A6200; background: #FFF4D6; }}
 
     .pb-match-label {{
-        font-size: 0.82rem;
+        font-size: 0.75rem;
         font-weight: 600;
-        color: {PB_MUTED};
+        color: {MUTED};
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-bottom: 0.25rem;
     }}
-
-    .pb-match-value {{
-        font-size: 1.75rem;
-        font-weight: 800;
-        color: {PB_BLUE};
-        line-height: 1.1;
-        margin: 0;
-    }}
-
-    .pb-disclaimer {{
-        font-size: 0.78rem;
-        line-height: 1.45;
-        color: {PB_MUTED};
-        margin-top: 0.5rem;
-    }}
-
-    .pb-next-step {{
-        font-size: 0.95rem;
-        line-height: 1.5;
-        color: {PB_NAVY};
-        margin: 0;
-    }}
+    .pb-match-value {{ font-size: 1.65rem; font-weight: 700; color: {CHARCOAL}; margin: 0; }}
+    .pb-disclaimer {{ font-size: 0.78rem; color: {MUTED}; margin-top: 0.5rem; line-height: 1.45; }}
+    .pb-next-step {{ font-size: 0.95rem; line-height: 1.5; color: {INK}; margin: 0; }}
 
     .pb-warm {{
-        background: #FFF8EE;
-        border: 1px solid #F0E2C8;
-        border-radius: var(--pb-radius);
-        padding: 1.1rem 1.15rem;
-        color: {PB_NAVY};
+        background: {YELLOW_SOFT};
+        border: 1px solid rgba(255, 199, 44, 0.35);
+        border-radius: var(--radius);
+        padding: 1rem;
         line-height: 1.55;
     }}
-
     .pb-error {{
         background: #FFF5F5;
         border: 1px solid #F5D0D0;
-        border-radius: var(--pb-radius);
-        padding: 1.1rem 1.15rem;
-        color: {PB_NAVY};
+        border-radius: var(--radius);
+        padding: 1rem;
     }}
 
-    /* Streamlit inputs */
-    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div {{
-        border-radius: 12px !important;
-        border-color: {PB_BORDER} !important;
-        min-height: 3rem;
+    /* ── Journey-specific ── */
+    .pb-phase-bar {{ display: flex; gap: 4px; margin-bottom: 1.25rem; }}
+    .pb-phase {{ flex: 1; text-align: center; font-size: 0.72rem; font-weight: 600; color: {MUTED}; }}
+    .pb-phase.active {{ color: {CHARCOAL}; font-weight: 700; }}
+    .pb-phase-dot {{ height: 4px; border-radius: 999px; background: {BORDER}; margin-bottom: 6px; }}
+    .pb-phase-dot.done, .pb-phase-dot.active {{ background: {YELLOW}; }}
+    .pb-card-j {{
+        background: {CARD};
+        border: 1px solid {BORDER};
+        border-radius: var(--radius);
+        padding: 1.35rem 1.25rem;
+        box-shadow: 0 2px 12px rgba(17, 17, 17, 0.06);
+    }}
+    .pb-h1 {{ font-size: 1.65rem; font-weight: 700; color: {CHARCOAL}; line-height: 1.2; margin: 0 0 0.5rem; }}
+    .pb-body {{ color: {INK}; line-height: 1.55; margin-bottom: 1rem; font-size: 1rem; }}
+    .pb-badge-ok {{
+        display: inline-block; background: {GREEN_SOFT}; color: {GREEN};
+        font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.7rem; border-radius: 999px;
+        margin-bottom: 0.75rem;
+    }}
+    .pb-badge-warn {{
+        border: 2px solid #F59E0B; background: #FFFBEB; border-radius: 12px;
+        padding: 0.75rem 1rem; font-size: 0.88rem; margin-bottom: 1rem;
+    }}
+    .pb-say {{
+        border: 2px solid rgba(255, 199, 44, 0.45); border-radius: 12px;
+        padding: 1rem; background: #fff; margin: 0.75rem 0;
+    }}
+    .pb-helper {{
+        font-size: 0.88rem; color: {MUTED}; line-height: 1.5; margin: 0.35rem 0 1rem;
+    }}
+
+    /* ── Inputs: white cards, never dark ── */
+    .stTextInput input,
+    .stSelectbox div[data-baseweb="select"] > div,
+    div[data-baseweb="input"] > div,
+    textarea {{
+        background-color: {CARD} !important;
+        color: {CHARCOAL} !important;
+        border: 2px solid {BORDER} !important;
+        border-radius: {RADIUS} !important;
+        min-height: 3.25rem !important;
         font-size: 1rem !important;
+        box-shadow: none !important;
+    }}
+    .stTextInput input:focus {{
+        border-color: {YELLOW} !important;
+        box-shadow: 0 0 0 3px rgba(255, 199, 44, 0.35) !important;
     }}
 
     label[data-testid="stWidgetLabel"] p {{
         font-weight: 600 !important;
-        color: {PB_NAVY} !important;
-        font-size: 0.92rem !important;
+        color: {CHARCOAL} !important;
+        font-size: 0.9rem !important;
     }}
 
-    /* Primary button */
-    .stButton > button {{
-        width: 100%;
-        min-height: 3.1rem;
-        border-radius: 999px !important;
-        background: {PB_BLUE} !important;
-        color: white !important;
-        font-weight: 700 !important;
+    /* Primary CTA — charcoal */
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="stBaseButton-primary"] {{
+        width: 100% !important;
+        min-height: 3.25rem !important;
+        border-radius: {RADIUS} !important;
+        background: {CHARCOAL} !important;
+        color: #fff !important;
+        font-weight: 600 !important;
         font-size: 1rem !important;
         border: none !important;
-        box-shadow: 0 10px 24px rgba(26, 86, 219, 0.28);
+        box-shadow: 0 2px 8px rgba(17, 17, 17, 0.15) !important;
+        transition: transform 0.12s ease !important;
+    }}
+    .stButton > button[kind="primary"]:active {{
+        transform: scale(0.98) !important;
+    }}
+    .stButton > button[kind="primary"]:focus {{
+        box-shadow: 0 0 0 3px {YELLOW} !important;
     }}
 
-    .stButton > button:hover {{
-        background: {PB_BLUE_HOVER} !important;
-        color: white !important;
-        border: none !important;
-    }}
-
-    .stButton > button:focus {{
-        box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.25);
-    }}
-
-    /* Secondary link-style */
-    div[data-testid="stHorizontalBlock"] .stButton > button {{
-        box-shadow: none;
-    }}
-
-    .pb-secondary .stButton > button {{
-        background: transparent !important;
-        color: {PB_BLUE} !important;
-        box-shadow: none !important;
-        border: 1.5px solid rgba(26, 86, 219, 0.35) !important;
-        min-height: 2.75rem !important;
-    }}
-
-    .pb-text-action .stButton > button {{
-        background: transparent !important;
-        color: {PB_BLUE} !important;
-        box-shadow: none !important;
-        border: none !important;
-        min-height: 2rem !important;
-        font-size: 0.92rem !important;
+    /* Selection blocks — secondary buttons */
+    .stButton > button[kind="secondary"],
+    .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]) {{
+        width: 100% !important;
+        min-height: 4rem !important;
+        border-radius: {RADIUS} !important;
+        background: {CARD} !important;
+        color: {CHARCOAL} !important;
         font-weight: 600 !important;
-        margin-top: 0.35rem;
+        font-size: 0.95rem !important;
+        border: 2px solid {BORDER} !important;
+        box-shadow: none !important;
+        text-align: left !important;
+        white-space: pre-wrap !important;
+        line-height: 1.35 !important;
+        transition: transform 0.12s ease, border-color 0.12s ease !important;
+    }}
+    .stButton > button[kind="secondary"]:hover,
+    .stButton > button:not([kind="primary"]):hover {{
+        border-color: rgba(17, 17, 17, 0.25) !important;
+        background: {CANVAS_DEEP} !important;
+        color: {CHARCOAL} !important;
+    }}
+    .stButton > button[kind="secondary"]:active {{
+        transform: scale(0.98) !important;
+        background: {YELLOW_SOFT} !important;
+        border-color: {CHARCOAL} !important;
+    }}
+
+    /* Link buttons */
+    .stLinkButton > a {{
+        border-radius: {RADIUS} !important;
+        font-weight: 600 !important;
+    }}
+
+    div[data-testid="stProgressBar"] > div > div {{
+        background-color: {YELLOW} !important;
     }}
 
     @media (max-width: 480px) {{
-        .block-container {{
-            padding-left: 0.85rem;
-            padding-right: 0.85rem;
-        }}
-        .pb-headline {{
-            font-size: 1.65rem;
-        }}
+        .block-container {{ padding-left: 0.85rem; padding-right: 0.85rem; }}
     }}
 </style>
         """,

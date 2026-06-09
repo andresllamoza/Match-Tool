@@ -1,4 +1,4 @@
-"""HTML component helpers for the discovery UI."""
+"""HTML component helpers — PensionBee branded."""
 
 from __future__ import annotations
 
@@ -6,17 +6,39 @@ import html
 
 import streamlit as st
 
-from discovery.models import ConfidenceTier, DiscoveryOutcome, ValueReveal
+from discovery.models import ConfidenceTier, ValueReveal
+
+
+def brand_header(subtitle: str = "Rollover Companion") -> None:
+    st.markdown(
+        f"""
+<div class="pb-brand-row">
+  <div class="pb-bee-icon" aria-hidden="true">🐝</div>
+  <div>
+    <div class="pb-wordmark">PensionBee</div>
+    <div class="pb-product-tag">{html.escape(subtitle)}</div>
+  </div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def logo_mark() -> None:
-    st.markdown('<div class="pb-logo">PensionBee</div>', unsafe_allow_html=True)
+    brand_header("Rollover Companion")
 
 
 def headline(text: str, subcopy: str | None = None) -> None:
     st.markdown(f'<h1 class="pb-headline">{html.escape(text)}</h1>', unsafe_allow_html=True)
     if subcopy:
         st.markdown(f'<p class="pb-subcopy">{html.escape(subcopy)}</p>', unsafe_allow_html=True)
+
+
+def promo_card(title: str, body: str) -> None:
+    st.markdown(
+        f'<div class="pb-promo"><strong>{html.escape(title)}</strong><br/>{html.escape(body)}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def provider_result_card(provider: str, employer: str, tier: ConfidenceTier) -> None:

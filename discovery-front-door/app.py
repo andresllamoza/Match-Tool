@@ -19,12 +19,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from journey import run_journey_app  # noqa: E402
+from ui.brand import inject_brand_css  # noqa: E402
 
 st.set_page_config(
     page_title="Rollover Companion | PensionBee",
     page_icon="🐝",
     layout="centered",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
+inject_brand_css()
 run_journey_app()

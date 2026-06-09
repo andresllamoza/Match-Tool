@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from ui.components import brand_header, promo_card  # noqa: E402
+
 from .engine_bridge import JourneyView, apply_action, current_view, get_engine, list_providers
 
 # Engine imports after companion path is on sys.path (via engine_bridge).
@@ -22,43 +24,6 @@ IN_CHANNEL = {
     JourneyState.PHONE_IN_PROGRESS,
     JourneyState.FORMS_IN_PROGRESS,
 }
-
-
-def inject_journey_css() -> None:
-    st.markdown(
-        """
-<style>
-  .pb-phase-bar { display:flex; gap:4px; margin-bottom:1.25rem; }
-  .pb-phase { flex:1; text-align:center; font-size:0.72rem; font-weight:700; color:#6B6560; }
-  .pb-phase.active { color:#111111; }
-  .pb-phase-dot {
-    height:4px; border-radius:999px; background:#EAE5DC; margin-bottom:6px;
-  }
-  .pb-phase-dot.done, .pb-phase-dot.active { background:#FFC72C; }
-  .pb-card-j {
-    background:#fff; border:1px solid #EAE5DC; border-radius:16px;
-    padding:1.25rem 1.2rem; box-shadow:0 2px 12px rgba(17,17,17,0.06);
-    margin-bottom:1rem;
-  }
-  .pb-h1 { font-size:1.65rem; font-weight:800; color:#111; line-height:1.2; margin:0 0 0.5rem; }
-  .pb-body { color:#1E242B; line-height:1.55; margin-bottom:1rem; }
-  .pb-badge-ok {
-    display:inline-block; background:#E8F5EE; color:#1B7F4B;
-    font-size:0.75rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:999px;
-    margin-bottom:0.75rem;
-  }
-  .pb-badge-warn {
-    border:2px solid #F59E0B; background:#FFFBEB; border-radius:12px;
-    padding:0.75rem 1rem; font-size:0.88rem; margin-bottom:1rem;
-  }
-  .pb-say {
-    border:2px solid rgba(255,199,44,0.45); border-radius:12px; padding:1rem;
-    background:#fff; margin:0.75rem 0;
-  }
-</style>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 def _render_progress(phase: str) -> None:
@@ -84,7 +49,7 @@ def _selection_button(label: str, key: str, description: str | None = None) -> b
     text = label
     if description:
         text = f"{label}\n\n{description}"
-    return st.button(text, key=key, use_container_width=True)
+    return st.button(text, key=key, type="secondary", use_container_width=True)
 
 
 def _render_channel_context(view: JourneyView) -> None:
@@ -150,11 +115,16 @@ def _render_decisions(view: JourneyView) -> None:
         return
 
     if state == JourneyState.PROVIDER_UNKNOWN:
+        st.markdown(
+            '<p class="pb-helper">We need your former employer\'s name to match the exact '
+            "distribution address required by your old custodian.</p>",
+            unsafe_allow_html=True,
+        )
         employer = st.text_input(
             "Former employer or plan provider",
             value=st.session_state.get("employer_draft", ""),
             placeholder="e.g. Target, FedEx, Walmart",
-            help="We need your former employer's name to match the distribution address your old custodian requires.",
+            label_visibility="visible",
         )
         st.session_state.employer_draft = employer
         if st.button(screen.primary_action, type="primary", use_container_width=True):
@@ -162,7 +132,7 @@ def _render_decisions(view: JourneyView) -> None:
                 _go({"type": "lookup", "employer": employer.strip()})
             else:
                 st.warning("Enter your former employer to continue.")
-        if st.button("I already know my 401(k) provider"):
+        if st.button("I already know my 401(k) provider", type="secondary"):
             st.session_state.show_provider_picker = True
             st.rerun()
         return
@@ -256,13 +226,15 @@ def _render_assistant(view: JourneyView) -> None:
                 st.success(ans["answer"])
             else:
                 st.warning(ans["answer"])
-        if st.button("Skip this step — talk to a human BeeKeeper", key="ask_escalate"):
+        if st.button(
+            "Skip this step — talk to a human BeeKeeper",
+            key="ask_escalate",
+            type="secondary",
+        ):
             _go({"type": "escalate", "reason": "assistant_handoff"})
 
 
 def run_journey_app() -> None:
-    inject_journey_css()
-
     if "show_provider_picker" not in st.session_state:
         st.session_state.show_provider_picker = False
     if "employer_draft" not in st.session_state:
@@ -277,12 +249,10 @@ def run_journey_app() -> None:
                 st.error(result)
             st.rerun()
 
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.markdown("### 🐝 PensionBee Rollover Companion")
-        st.caption("Full guided product — same engine as /customer in Next.js")
-    with col2:
-        if st.button("Restart"):
+    brand_header()
+    _, restart_col = st.columns([5, 1])
+    with restart_col:
+        if st.button("↺", help="Restart journey"):
             _go({"type": "restart"})
 
     view = current_view()
@@ -292,6 +262,12 @@ def run_journey_app() -> None:
         _render_progress(screen.phase.value)
 
     st.markdown('<div class="pb-card-j">', unsafe_allow_html=True)
+
+    if screen.state == JourneyState.PROVIDER_UNKNOWN and "1%" in screen.body:
+        promo_card(
+            "PensionBee perk",
+            "Roll your old 401(k) to PensionBee and get a 1% match on eligible transfers.",
+        )
 
     if screen.provider and screen.state not in (
         JourneyState.PROVIDER_IDENTIFIED,
@@ -313,9 +289,19 @@ def run_journey_app() -> None:
             unsafe_allow_html=True,
         )
 
-    st.markdown(f'<h1 class="pb-h1">{screen.headline}</h1>', unsafe_allow_html=True)
-    if screen.body and screen.state not in IN_CHANNEL:
+    st.markdown(f'<h1 class="pb-headline">{screen.headline}</h1>', unsafe_allow_html=True)
+    if (
+        screen.body
+        and screen.state not in IN_CHANNEL
+        and screen.state != JourneyState.PROVIDER_UNKNOWN
+    ):
         st.markdown(f'<p class="pb-body">{screen.body}</p>', unsafe_allow_html=True)
+    elif screen.state == JourneyState.PROVIDER_UNKNOWN:
+        st.markdown(
+            '<p class="pb-subcopy">Tell us where you worked — we\'ll find who holds your plan '
+            "and walk you through the rollover, one step at a time.</p>",
+            unsafe_allow_html=True,
+        )
 
     if screen.edge_cases:
         for ec in screen.edge_cases:
