@@ -7,6 +7,7 @@ import streamlit as st
 from ui.components import brand_header, promo_card  # noqa: E402
 
 from .engine_bridge import JourneyView, apply_action, current_view, get_engine, list_providers
+from .widgets import form_submit_primary, primary_button, secondary_button
 
 # Engine imports after companion path is on sys.path (via engine_bridge).
 from engine.assistant import ScopedAssistant  # noqa: E402
@@ -49,7 +50,7 @@ def _selection_button(label: str, key: str, description: str | None = None) -> b
     text = label
     if description:
         text = f"{label}\n\n{description}"
-    return st.button(text, key=key, type="secondary", use_container_width=True)
+    return secondary_button(text, key=key)
 
 
 def _render_channel_context(view: JourneyView) -> None:
@@ -102,7 +103,7 @@ def _render_decisions(view: JourneyView) -> None:
             if _selection_button(p, f"prov_{p}"):
                 st.session_state.show_provider_picker = False
                 _go({"type": "provider_direct", "provider": p})
-        if st.button("← Search by employer instead"):
+        if secondary_button("← Search by employer instead", key="hide_provider_picker"):
             st.session_state.show_provider_picker = False
             st.rerun()
         return
@@ -120,19 +121,24 @@ def _render_decisions(view: JourneyView) -> None:
             "distribution address required by your old custodian.</p>",
             unsafe_allow_html=True,
         )
-        employer = st.text_input(
-            "Former employer or plan provider",
-            value=st.session_state.get("employer_draft", ""),
-            placeholder="e.g. Target, FedEx, Walmart",
-            label_visibility="visible",
-        )
-        st.session_state.employer_draft = employer
-        if st.button(screen.primary_action, type="primary", use_container_width=True):
+        try:
+            form_ctx = st.form("employer_lookup_form", clear_on_submit=False, border=False)
+        except TypeError:
+            form_ctx = st.form("employer_lookup_form", clear_on_submit=False)
+        with form_ctx:
+            employer = st.text_input(
+                "Former employer or plan provider",
+                key="employer_draft",
+                placeholder="e.g. Target, FedEx, Walmart",
+                label_visibility="visible",
+            )
+            submitted = form_submit_primary(screen.primary_action)
+        if submitted:
             if employer.strip():
                 _go({"type": "lookup", "employer": employer.strip()})
             else:
-                st.warning("Enter your former employer to continue.")
-        if st.button("I already know my 401(k) provider", type="secondary"):
+                st.session_state.ui_error = "Enter your former employer to continue."
+        if secondary_button("I already know my 401(k) provider", key="show_provider_picker_btn"):
             st.session_state.show_provider_picker = True
             st.rerun()
         return
@@ -151,7 +157,9 @@ def _render_decisions(view: JourneyView) -> None:
             "We'll help you recover access or connect you with a BeeKeeper.",
         ):
             _go({"type": "access", "can_login": False})
-        if state == JourneyState.PROVIDER_NOT_COVERED and st.button("Talk to a BeeKeeper about this provider"):
+        if state == JourneyState.PROVIDER_NOT_COVERED and secondary_button(
+            "Talk to a BeeKeeper about this provider", key="handoff_provider"
+        ):
             _go({"type": "handoff", "reason": "provider_not_covered"})
         return
 
@@ -171,39 +179,39 @@ def _render_decisions(view: JourneyView) -> None:
         if view.total_steps > 0:
             st.progress((view.step_index + 1) / view.total_steps)
             st.caption(f"Step {view.step_index + 1} of {view.total_steps}")
-        if st.button(screen.primary_action, type="primary", use_container_width=True):
+        if primary_button(screen.primary_action, key="channel_done"):
             _go({"type": "step", "outcome": "done"})
-        if st.button("I'm stuck on this step"):
+        if secondary_button("I'm stuck on this step", key="channel_stuck"):
             _go({"type": "step", "outcome": "stuck"})
         return
 
     if state == JourneyState.STUCK:
-        if st.button(screen.primary_action, type="primary", use_container_width=True):
+        if primary_button(screen.primary_action, key="stuck_escalate"):
             _go({"type": "escalate", "reason": "stuck_on_step"})
-        if st.button("Try this step again"):
+        if secondary_button("Try this step again", key="stuck_resume"):
             _go({"type": "resume"})
         return
 
     if state in (JourneyState.INITIATED, JourneyState.IN_FLIGHT):
-        if st.button(screen.primary_action, type="primary", use_container_width=True):
+        if primary_button(screen.primary_action, key="track_primary"):
             kind = "confirm_in_flight" if state == JourneyState.INITIATED else "mark_complete"
             _go({"type": kind})
-        for action in screen.secondary_actions:
+        for i, action in enumerate(screen.secondary_actions):
             if "nothing arrived" in action.lower() or "help" in action.lower():
-                if st.button(action):
+                if secondary_button(action, key=f"track_sec_{i}"):
                     _go({"type": "escalate", "reason": "tracking_delay"})
         return
 
     if state == JourneyState.ACCESS_BLOCKED:
-        if st.button(screen.primary_action, type="primary", use_container_width=True):
+        if primary_button(screen.primary_action, key="access_blocked_primary"):
             _go({"type": "access_recovered"})
-        for action in screen.secondary_actions:
+        for i, action in enumerate(screen.secondary_actions):
             if "locked" in action.lower() or "beekeeper" in action.lower():
-                if st.button(action):
+                if secondary_button(action, key=f"access_blocked_sec_{i}"):
                     _go({"type": "escalate", "reason": "access_lockout"})
         return
 
-    if st.button(screen.primary_action, type="primary", use_container_width=True):
+    if primary_button(screen.primary_action, key="fallback_primary"):
         if state == JourneyState.ACCESS_RECOVERED:
             _go({"type": "channel", "channel": "online"})
 
@@ -211,14 +219,20 @@ def _render_decisions(view: JourneyView) -> None:
 def _go(action: dict) -> None:
     result = apply_action(action)
     if isinstance(result, str):
-        st.error(result)
+        st.session_state.ui_error = result
+        return
+    st.session_state.pop("ui_error", None)
+    if action.get("type") == "restart":
+        st.session_state.show_provider_picker = False
+        if "employer_draft" in st.session_state:
+            del st.session_state["employer_draft"]
     st.rerun()
 
 
 def _render_assistant(view: JourneyView) -> None:
     with st.expander("Ask a question about this step"):
         q = st.text_input("Your question", placeholder="e.g. Where does the check get mailed?")
-        if st.button("Ask", key="ask_btn") and q.strip():
+        if primary_button("Ask", key="ask_btn") and q.strip():
             assistant = ScopedAssistant(get_engine().knowledge)
             provider = view.ctx.provider or view.ctx.uncovered_provider
             ans = assistant.answer(q.strip(), view.ctx.state, provider)
@@ -226,10 +240,9 @@ def _render_assistant(view: JourneyView) -> None:
                 st.success(ans["answer"])
             else:
                 st.warning(ans["answer"])
-        if st.button(
+        if secondary_button(
             "Skip this step — talk to a human BeeKeeper",
             key="ask_escalate",
-            type="secondary",
         ):
             _go({"type": "escalate", "reason": "assistant_handoff"})
 
@@ -244,24 +257,28 @@ def run_journey_app() -> None:
         employer = str(st.session_state.pending_lookup).strip()
         del st.session_state.pending_lookup
         if employer:
+            st.session_state.employer_draft = employer
             result = apply_action({"type": "lookup", "employer": employer})
             if isinstance(result, str):
-                st.error(result)
-            st.rerun()
+                st.session_state.ui_error = result
+            else:
+                st.session_state.pop("ui_error", None)
+                st.rerun()
 
     brand_header()
     _, restart_col = st.columns([5, 1])
     with restart_col:
-        if st.button("↺", help="Restart journey"):
+        if secondary_button("↺", key="restart_journey"):
             _go({"type": "restart"})
+
+    if st.session_state.get("ui_error"):
+        st.error(st.session_state.ui_error)
 
     view = current_view()
     screen = view.screen
 
     if screen.state not in (JourneyState.COMPLETE, JourneyState.ESCALATED):
         _render_progress(screen.phase.value)
-
-    st.markdown('<div class="pb-card-j">', unsafe_allow_html=True)
 
     if screen.state == JourneyState.PROVIDER_UNKNOWN and "1%" in screen.body:
         promo_card(
@@ -332,5 +349,3 @@ def run_journey_app() -> None:
     else:
         _render_decisions(view)
         _render_assistant(view)
-
-    st.markdown("</div>", unsafe_allow_html=True)

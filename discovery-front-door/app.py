@@ -29,4 +29,9 @@ st.set_page_config(
 )
 
 inject_brand_css()
-run_journey_app()
+
+try:
+    run_journey_app()
+except Exception as exc:
+    st.error("Something went wrong starting the rollover companion. A BeeKeeper can help.")
+    st.exception(exc)

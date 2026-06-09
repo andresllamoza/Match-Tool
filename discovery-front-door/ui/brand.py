@@ -248,7 +248,19 @@ def inject_brand_css() -> None:
         font-size: 0.9rem !important;
     }}
 
-    /* Primary CTA — charcoal */
+    /* Ensure widgets stay clickable above decorative layers */
+    .stButton > button,
+    .stTextInput input,
+    [data-testid="stFormSubmitButton"] > button,
+    .stLinkButton > a {{
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        position: relative !important;
+        z-index: 2 !important;
+    }}
+
+    /* Primary CTA — charcoal (form submit + type=primary) */
+    [data-testid="stFormSubmitButton"] > button,
     .stButton > button[kind="primary"],
     .stButton > button[data-testid="stBaseButton-primary"] {{
         width: 100% !important;
@@ -260,18 +272,11 @@ def inject_brand_css() -> None:
         font-size: 1rem !important;
         border: none !important;
         box-shadow: 0 2px 8px rgba(17, 17, 17, 0.15) !important;
-        transition: transform 0.12s ease !important;
-    }}
-    .stButton > button[kind="primary"]:active {{
-        transform: scale(0.98) !important;
-    }}
-    .stButton > button[kind="primary"]:focus {{
-        box-shadow: 0 0 0 3px {YELLOW} !important;
     }}
 
-    /* Selection blocks — secondary buttons */
+    /* Selection blocks — secondary only (explicit kind) */
     .stButton > button[kind="secondary"],
-    .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]) {{
+    .stButton > button[data-testid="stBaseButton-secondary"] {{
         width: 100% !important;
         min-height: 4rem !important;
         border-radius: {RADIUS} !important;
@@ -284,18 +289,6 @@ def inject_brand_css() -> None:
         text-align: left !important;
         white-space: pre-wrap !important;
         line-height: 1.35 !important;
-        transition: transform 0.12s ease, border-color 0.12s ease !important;
-    }}
-    .stButton > button[kind="secondary"]:hover,
-    .stButton > button:not([kind="primary"]):hover {{
-        border-color: rgba(17, 17, 17, 0.25) !important;
-        background: {CANVAS_DEEP} !important;
-        color: {CHARCOAL} !important;
-    }}
-    .stButton > button[kind="secondary"]:active {{
-        transform: scale(0.98) !important;
-        background: {YELLOW_SOFT} !important;
-        border-color: {CHARCOAL} !important;
     }}
 
     /* Link buttons */

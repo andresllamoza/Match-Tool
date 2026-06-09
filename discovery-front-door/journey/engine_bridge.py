@@ -37,7 +37,10 @@ def _build_engine() -> JourneyEngine:
     if use_synthetic or not matcher_ready:
         matcher = Local5500Adapter.from_synthetic()
     else:
-        matcher = Local5500Adapter.from_matcher(_COMPANION.parent)
+        try:
+            matcher = Local5500Adapter.from_matcher(_COMPANION.parent)
+        except Exception:
+            matcher = Local5500Adapter.from_synthetic()
 
     knowledge = KnowledgeBase.from_dir(_COMPANION / "rollover-knowledge-layer")
     lookup = LookupService(knowledge, matcher, AdvizorProAdapter())
