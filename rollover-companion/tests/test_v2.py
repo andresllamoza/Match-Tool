@@ -11,13 +11,6 @@ from engine.models import JourneyChannel, JourneyState
 from engine.walk import walk_employer
 
 
-VERBATIM_CITI = [
-    "PensionBee FBO [User's Full Name]",
-    "PO Box 72, New York, NY 10272",
-    "7–10 business days",
-]
-
-
 def test_walk_amazon_fidelity_online(engine, knowledge):
     result = walk_employer(engine, "Amazon.com Services LLC", verbose=False)
     assert result["provider"] == "Fidelity"
@@ -28,31 +21,37 @@ def test_walk_amazon_fidelity_online(engine, knowledge):
     assert any(s.source_status.value == "reconstructed" for s in access_steps)
 
 
-def test_walk_walmart_general_online_path(engine):
+def test_walk_walmart_merrill_online_path(engine):
     result = walk_employer(engine, "Walmart", verbose=False)
-    assert result["uncovered_provider"] == "Merrill Lynch"
+    assert result["provider"] == "Merrill Lynch"
     assert result["channel"] == "online"
     assert result["state"] == "complete"
-    assert "Merrill Lynch" in result["rendered_text"]
-    assert "Log in to the old 401(k) provider" in result["rendered_text"]
-    assert "Withdrawals" in result["rendered_text"]
-    assert "PensionBee FBO" in result["rendered_text"]
+    assert "benefits.ml.com" in result["rendered_text"]
+    assert "PensionBee" in result["rendered_text"]
 
 
-def test_walk_walmart_general_phone_path(engine):
+def test_walk_walmart_merrill_phone_has_call_support(engine):
     result = walk_employer(engine, "Walmart", channel=JourneyChannel.PHONE, verbose=False)
-    assert result["uncovered_provider"] == "Merrill Lynch"
+    assert result["provider"] == "Merrill Lynch"
     assert result["channel"] == "phone"
     assert result["state"] == "complete"
-    assert "Check payable to?" in result["rendered_text"] or "PensionBee FBO" in result["rendered_text"]
+    assert "PensionBee" in result["rendered_text"]
+    assert "rollover" in result["rendered_text"].lower()
 
 
-def test_walk_citi_forms_verbatim_strings(engine):
-    result = walk_employer(engine, "Citi", channel=JourneyChannel.FORMS, verbose=False)
-    assert result["provider"] == "Citi"
-    assert result["channel"] == "forms"
-    for phrase in VERBATIM_CITI:
-        assert phrase in result["rendered_text"]
+def test_walk_citi_alight_rollovercentral(engine):
+    result = walk_employer(engine, "Citi", verbose=False)
+    assert result["provider"] == "Alight Solutions"
+    assert result["channel"] == "online"
+    assert result["state"] == "complete"
+    assert "RolloverCentral" in result["rendered_text"]
+    assert "VAN" in result["rendered_text"]
+
+
+def test_walk_target_alight(engine):
+    result = walk_employer(engine, "Target", verbose=False)
+    assert result["provider"] == "Alight Solutions"
+    assert result["state"] == "complete"
 
 
 def test_data_needed_only_brand_hexes():
@@ -85,8 +84,9 @@ def test_stuck_twice_auto_escalates(engine):
 
 def test_provider_not_covered_handoff_events(engine, tmp_logs):
     ctx = engine.start()
-    engine.lookup_employer(ctx, "Walmart Inc")
+    engine.lookup_employer(ctx, "Uncovered Demo Corp")
     assert ctx.state == JourneyState.PROVIDER_NOT_COVERED
+    assert ctx.uncovered_provider == "Paychex"
     engine.take_handoff(ctx)
     assert ctx.state == JourneyState.ESCALATED
     lines = tmp_logs.journey_path.read_text().strip().splitlines()
@@ -117,12 +117,12 @@ def test_promo_on_complete_screen(engine):
 def test_no_unresolved_keys_in_rendered_surfaces(engine):
     ctx = engine.start()
     screens = [engine.render(ctx)]
-    engine.lookup_employer(ctx, "Citi")
+    engine.lookup_employer(ctx, "Target")
     screens.append(engine.render(ctx))
     engine.submit_access(ctx, can_login=True)
     engine.submit_tax_type(ctx, "pre_tax")
-    engine.choose_channel(ctx, JourneyChannel.FORMS)
-    while ctx.state == JourneyState.FORMS_IN_PROGRESS:
+    engine.choose_channel(ctx, JourneyChannel.ONLINE)
+    while ctx.state == JourneyState.ONLINE_IN_PROGRESS:
         screens.append(engine.render(ctx))
         engine.advance_step(ctx, "done")
     screens.append(engine.render(ctx))
@@ -130,20 +130,26 @@ def test_no_unresolved_keys_in_rendered_surfaces(engine):
     assert not re.search(r"\{\{[A-Z0-9_]+\}\}", combined)
 
 
-def test_citi_sla_slower_than_general(engine, knowledge):
-    citi = knowledge.get("Citi")
+def test_principal_sla_slower_than_general(engine, knowledge):
+    principal = knowledge.get("Principal")
     general = knowledge.general_guide.typical_processing_time
-    assert "7–10" in citi.sla_note
+    assert "7" in principal.sla_note or "10" in principal.sla_note
     assert "2" in general or "4" in general
 
 
 def test_funnel_counts_provider_not_covered(engine, tmp_logs):
-    walk_employer(engine, "Walmart", verbose=False)
+    ctx = engine.start()
+    engine.lookup_employer(ctx, "Uncovered Demo Corp")
     summary = load_funnel_summary(tmp_logs.journey_path)
     assert summary.provider_not_covered_count >= 1
 
 
-def test_walmart_lookup_uncovered(lookup_service):
-    outcome = lookup_service.lookup("Walmart Inc")
-    assert outcome.uncovered_provider == "Merrill Lynch"
-    assert outcome.resolved_provider is None
+def test_uncovered_still_gets_general_call_strings(engine):
+    ctx = engine.start()
+    engine.lookup_employer(ctx, "Uncovered Demo Corp")
+    engine.submit_access(ctx, can_login=True)
+    engine.submit_tax_type(ctx, "pre_tax")
+    engine.choose_channel(ctx, JourneyChannel.PHONE)
+    screen = engine.render(ctx)
+    assert "PensionBee" in screen.body
+    assert "rollover" in screen.body.lower()

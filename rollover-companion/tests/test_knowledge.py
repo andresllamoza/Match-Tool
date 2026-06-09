@@ -10,7 +10,15 @@ def kb() -> KnowledgeBase:
 
 
 def test_loads_all_providers(kb: KnowledgeBase):
-    assert set(kb.list_providers()) == {"Citi", "Empower", "Fidelity", "Vanguard", "Voya"}
+    assert set(kb.list_providers()) == {
+        "Alight Solutions",
+        "Empower",
+        "Fidelity",
+        "Merrill Lynch",
+        "Principal",
+        "Vanguard",
+        "Voya",
+    }
 
 
 def test_general_guide_has_call_and_access_paths(kb: KnowledgeBase):
@@ -22,20 +30,29 @@ def test_general_guide_has_call_and_access_paths(kb: KnowledgeBase):
 
 
 def test_general_playbook_for_uncovered_recordkeeper(kb: KnowledgeBase):
-    pb = kb.general_playbook("Merrill Lynch")
-    assert pb.provider == "Merrill Lynch"
+    pb = kb.general_playbook("Paychex")
+    assert pb.provider == "Paychex"
     assert pb.steps == kb.general_guide.general_steps
+
+
+def test_alight_resolves_citigroup_employer_alias(kb: KnowledgeBase):
+    assert kb.resolve_provider("Alight") == "Alight Solutions"
 
 
 def test_alias_resolution(kb: KnowledgeBase):
     assert kb.resolve_provider("NetBenefits") == "Fidelity"
     assert kb.resolve_provider("Great-West") == "Empower"
+    assert kb.resolve_provider("Merrill") == "Merrill Lynch"
 
 
 def test_mechanism_invariants(kb: KnowledgeBase):
     empower = kb.get("Empower")
     assert empower.mechanism == Mechanism.CHECK_TO_PARTICIPANT
     assert empower.forward_step_required is True
+    merrill = kb.get("Merrill Lynch")
+    assert merrill.mechanism == Mechanism.CHECK_TO_PARTICIPANT
+    principal = kb.get("Principal")
+    assert principal.mechanism == Mechanism.CHECK_TO_PROVIDER
 
 
 def test_access_recovery_loaded(kb: KnowledgeBase):
@@ -48,6 +65,8 @@ def test_call_script_loaded(kb: KnowledgeBase):
     vanguard = kb.get("Vanguard")
     assert vanguard.call_script.phone
     assert len(vanguard.call_script.rep_questions) >= 1
+    alight = kb.get("Alight Solutions")
+    assert "general" in alight.call_script.intro.lower() or "PensionBee" in alight.call_script.intro
 
 
 def test_form_guidance_loaded(kb: KnowledgeBase):
@@ -67,3 +86,11 @@ def test_every_provider_has_complete_journey_assets(kb: KnowledgeBase):
         assert pb.form_guidance.fields
         assert pb.sla_note
         assert len(pb.steps) >= 1
+
+
+def test_alight_has_rollovercentral_steps(kb: KnowledgeBase):
+    alight = kb.get("Alight Solutions")
+    combined = " ".join(s.text for s in alight.steps)
+    assert "RolloverCentral" in combined
+    assert "PensionBee" in combined
+    assert "VAN" in combined

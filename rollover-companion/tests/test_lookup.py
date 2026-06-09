@@ -24,15 +24,33 @@ def test_low_confidence_no_match(lookup_service: LookupService):
 
 def test_target_maps_to_alight_solutions(lookup_service: LookupService):
     outcome = lookup_service.lookup("Target Corporation")
-    assert outcome.resolved_provider is None
-    assert outcome.uncovered_provider == "Alight Solutions"
+    assert outcome.resolved_provider == "Alight Solutions"
+    assert outcome.uncovered_provider is None
     assert outcome.confidence_tier == ConfidenceTier.HIGH
     assert outcome.agreement is True
 
 
 def test_target_alias_maps_to_alight(lookup_service: LookupService):
     outcome = lookup_service.lookup("Target")
-    assert outcome.uncovered_provider == "Alight Solutions"
+    assert outcome.resolved_provider == "Alight Solutions"
+
+
+def test_citi_maps_to_alight_not_citi_recordkeeper(lookup_service: LookupService):
+    outcome = lookup_service.lookup("Citi")
+    assert outcome.resolved_provider == "Alight Solutions"
+    assert outcome.uncovered_provider is None
+
+
+def test_walmart_maps_to_merrill_playbook(lookup_service: LookupService):
+    outcome = lookup_service.lookup("Walmart Inc")
+    assert outcome.resolved_provider == "Merrill Lynch"
+    assert outcome.uncovered_provider is None
+
+
+def test_uncovered_recordkeeper_uses_general_path(lookup_service: LookupService):
+    outcome = lookup_service.lookup("Uncovered Demo Corp")
+    assert outcome.resolved_provider is None
+    assert outcome.uncovered_provider == "Paychex"
 
 
 def test_comparison_event_every_lookup(lookup_service, tmp_logs):

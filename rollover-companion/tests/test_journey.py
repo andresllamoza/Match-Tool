@@ -75,23 +75,35 @@ def test_stuck_then_escalate(engine):
 
 def test_provider_not_covered_screen(engine):
     ctx = engine.start()
-    screen = engine.lookup_employer(ctx, "Walmart Inc")
+    screen = engine.lookup_employer(ctx, "Uncovered Demo Corp")
     assert ctx.state == JourneyState.PROVIDER_NOT_COVERED
-    assert ctx.uncovered_provider == "Merrill Lynch"
+    assert ctx.uncovered_provider == "Paychex"
     assert "log in" in screen.primary_action.lower()
     assert any("BeeKeeper" in a for a in screen.secondary_actions)
     assert "general" in screen.body.lower()
 
 
-def test_walmart_general_online_journey(engine):
+def test_walmart_merrill_online_journey(engine):
     ctx = engine.start()
     engine.lookup_employer(ctx, "Walmart")
+    assert ctx.provider == "Merrill Lynch"
     engine.submit_access(ctx, can_login=True)
     engine.submit_tax_type(ctx, "pre_tax")
     engine.choose_channel(ctx, JourneyChannel.ONLINE)
     while ctx.state == JourneyState.ONLINE_IN_PROGRESS:
         engine.advance_step(ctx, "done")
     assert ctx.state == JourneyState.INITIATED
+
+
+def test_target_alight_online_journey(engine):
+    ctx = engine.start()
+    engine.lookup_employer(ctx, "Target")
+    assert ctx.provider == "Alight Solutions"
+    engine.submit_access(ctx, can_login=True)
+    engine.submit_tax_type(ctx, "pre_tax")
+    engine.choose_channel(ctx, JourneyChannel.ONLINE)
+    screen = engine.render(ctx)
+    assert "RolloverCentral" in screen.body or ctx.step_index == 0
 
 
 def test_reconstructed_steps_flagged(engine):

@@ -61,12 +61,23 @@ def test_provider_not_covered_handoff():
     jid = start["context"]["journey_id"]
     r = client.post(
         f"/api/journey/{jid}/action",
-        json={"type": "lookup", "employer": "Walmart"},
+        json={"type": "lookup", "employer": "Uncovered Demo Corp"},
     ).json()
     assert r["screen"]["state"] == "provider_not_covered"
-    assert r["context"]["uncovered_provider"] == "Merrill Lynch"
+    assert r["context"]["uncovered_provider"] == "Paychex"
     r = client.post(
         f"/api/journey/{jid}/action",
         json={"type": "handoff", "reason": "provider_not_covered"},
     ).json()
     assert r["screen"]["state"] == "escalated"
+
+
+def test_walmart_lookup_merrill_playbook():
+    start = client.post("/api/journey/start").json()
+    jid = start["context"]["journey_id"]
+    r = client.post(
+        f"/api/journey/{jid}/action",
+        json={"type": "lookup", "employer": "Walmart"},
+    ).json()
+    assert r["screen"]["state"] == "provider_identified"
+    assert r["context"]["provider"] == "Merrill Lynch"

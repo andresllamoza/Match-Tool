@@ -21,7 +21,7 @@ def test_phone_channel_enrichment_has_rep_questions():
 def test_general_online_enrichment_has_payable_and_menu_hints():
     engine = JourneyEngine()
     ctx = engine.start()
-    engine.lookup_employer(ctx, "Walmart")
+    engine.lookup_employer(ctx, "Uncovered Demo Corp")
     engine.submit_access(ctx, can_login=True)
     engine.submit_tax_type(ctx, "pre_tax")
     engine.choose_channel(ctx, JourneyChannel.ONLINE)

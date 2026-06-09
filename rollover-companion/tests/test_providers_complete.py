@@ -6,7 +6,10 @@ from engine.journey import JourneyEngine
 from engine.models import JourneyChannel, JourneyState
 
 
-@pytest.mark.parametrize("provider", ["Fidelity", "Empower", "Vanguard", "Voya"])
+@pytest.mark.parametrize(
+    "provider",
+    ["Fidelity", "Empower", "Vanguard", "Voya", "Alight Solutions", "Merrill Lynch", "Principal"],
+)
 def test_complete_journey_all_channels(engine: JourneyEngine, provider: str):
     for channel in JourneyChannel:
         ctx = engine.start()
