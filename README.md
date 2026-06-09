@@ -59,6 +59,16 @@ Open `http://localhost:8501`, sign in, type an employer name (at least 3 letters
 
 Theme and Streamlit config: [`.streamlit/config.toml`](.streamlit/config.toml).
 
+### Related tools (separate Streamlit apps)
+
+| App | Run locally | Needs DOL cache? |
+|-----|-------------|------------------|
+| **5500 matcher** (this folder) | `streamlit run app.py` | Yes (first run) |
+| **Rollover playbook** | `cd rollover-playbook-engine && streamlit run app.py` | No |
+| **Add-a-transfer demo** | `cd discovery-front-door && USE_SYNTHETIC=1 streamlit run app.py` | Only without `USE_SYNTHETIC` |
+
+The playbook and matcher can be developed and deployed independently.
+
 ---
 
 ## Data pipeline
