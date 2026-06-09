@@ -45,6 +45,7 @@ class EventLogger:
         action: str,
         outcome: str,
         metadata: dict | None = None,
+        journey_id: str | None = None,
     ) -> JourneyEvent:
         event = JourneyEvent(
             timestamp=utc_now_iso(),
@@ -53,7 +54,7 @@ class EventLogger:
             channel=channel,
             action=action,
             outcome=outcome,
-            metadata=metadata or {},
+            metadata={**(metadata or {}), **({"journey_id": journey_id} if journey_id else {})},
         )
         self._append(self.journey_path, event.model_dump())
         return event

@@ -130,6 +130,7 @@ class JourneyEngine:
             action=action,
             outcome=outcome,
             metadata=metadata or {},
+            journey_id=ctx.journey_id,
         )
         return ctx
 
@@ -408,10 +409,13 @@ class JourneyEngine:
                 cs = playbook.call_script
                 steps = cs.steps
                 headline = f"Call script — step {ctx.step_index + 1} of {len(steps)}"
-                body = steps[ctx.step_index].text
-                guidance = [_step_to_guidance(steps[ctx.step_index])]
+                step_text = steps[ctx.step_index].text
                 if ctx.step_index == 0:
+                    body = f"Call {cs.phone}. {cs.intro}\n\n{step_text}"
                     agent_notes.append(f"Phone: {cs.phone} — {cs.intro}")
+                else:
+                    body = step_text
+                guidance = [_step_to_guidance(steps[ctx.step_index])]
             else:
                 fields = playbook.form_guidance.fields
                 headline = f"Form field: {fields[ctx.step_index].label}"
