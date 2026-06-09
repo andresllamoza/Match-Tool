@@ -99,6 +99,18 @@ def _parse_call_script(data: dict) -> CallScript:
     )
 
 
+def _parse_next_actions(data: dict) -> dict[FunnelStage, NextAction]:
+    return {
+        FunnelStage(stage): NextAction(
+            action=action["action"],
+            customer_message=action["customer_message"],
+            owner=_coerce_owner(action["owner"]),
+            source_status=_coerce_source(action["source_status"]),
+        )
+        for stage, action in data.items()
+    }
+
+
 def _parse_form_guidance(data: dict) -> FormGuidance:
     return FormGuidance(
         fields=[
@@ -113,15 +125,7 @@ def _parse_form_guidance(data: dict) -> FormGuidance:
 
 
 def _parse_provider(data: dict) -> ProviderPlaybook:
-    next_actions = {
-        FunnelStage(stage): NextAction(
-            action=action["action"],
-            customer_message=action["customer_message"],
-            owner=_coerce_owner(action["owner"]),
-            source_status=_coerce_source(action["source_status"]),
-        )
-        for stage, action in data["next_actions"].items()
-    }
+    next_actions = _parse_next_actions(data["next_actions"])
     escalations = [
         EscalationTrigger(
             id=e["id"],
@@ -206,6 +210,10 @@ def _parse_general_guide(data: dict) -> GeneralGuide:
         account_numbers_policy=data["account_numbers_policy"],
         employer_vs_provider_note=data["employer_vs_provider_note"].strip(),
         general_steps=_parse_steps(data.get("general_steps", [])),
+        general_access_recovery=_parse_access_recovery(data["general_access_recovery"]),
+        general_call_script=_parse_call_script(data["general_call_script"]),
+        general_form_guidance=_parse_form_guidance(data["general_form_guidance"]),
+        general_next_actions=_parse_next_actions(data["general_next_actions"]),
         portal_menu_aliases=data.get("portal_menu_aliases", []),
         destination_dropdown_aliases=data.get("destination_dropdown_aliases", []),
         promo=Promo(
@@ -306,6 +314,38 @@ class KnowledgeBase:
         canonical = self.resolve_provider(name)
         return self._providers[canonical]
 
+    def is_general_path(self, ctx) -> bool:
+        return bool(ctx.uncovered_provider)
+
+    def playbook_for(self, ctx) -> ProviderPlaybook:
+        if ctx.uncovered_provider:
+            return self.general_playbook(ctx.uncovered_provider)
+        if not ctx.provider:
+            raise KeyError("No provider or uncovered recordkeeper in context")
+        return self.get(ctx.provider)
+
+    def general_playbook(self, recordkeeper_name: str) -> ProviderPlaybook:
+        g = self.general_guide
+        tr = g.tax_routing_customer
+        return ProviderPlaybook(
+            provider=recordkeeper_name,
+            mechanism=Mechanism.CHECK_TO_PROVIDER,
+            check_destination=f"Directly to {g.destination_name}",
+            forward_step_required=False,
+            preferred_path="Direct rollover via portal, phone, or forms using general PensionBee instructions.",
+            portal=g.general_access_recovery.portal_name,
+            sla_note=g.typical_processing_time,
+            tax_routing_note=f"{tr.pre_tax} {tr.roth}",
+            next_actions=g.general_next_actions,
+            steps=g.general_steps,
+            edge_cases=[
+                "Provider-specific portal paths may vary — a BeeKeeper can help if you're stuck.",
+            ],
+            access_recovery=g.general_access_recovery,
+            call_script=g.general_call_script,
+            form_guidance=g.general_form_guidance,
+        )
+
     def list_providers(self) -> list[str]:
         return sorted(self._providers)
 
@@ -318,19 +358,28 @@ class KnowledgeBase:
         snippets.append(self.global_rules.tax_routing.pre_tax)
         snippets.append(self.global_rules.tax_routing.roth)
         snippets.append(self.global_rules.tax_routing.conversion_rule)
+
+        playbook: ProviderPlaybook | None = None
         if provider:
-            playbook = self.get(provider)
-            snippets.append(playbook.preferred_path)
-            snippets.append(playbook.tax_routing_note)
-            snippets.extend(playbook.edge_cases)
-            for step in playbook.steps:
-                snippets.append(step.text)
-            for step in playbook.access_recovery.reset_steps:
-                snippets.append(step.text)
-            for step in playbook.call_script.steps:
-                snippets.append(step.text)
-            for q in playbook.call_script.rep_questions:
-                snippets.append(f"{q.question} → {q.answer}")
-            for field in playbook.form_guidance.fields:
-                snippets.append(f"{field.label}: {field.instruction}")
+            try:
+                playbook = self.get(provider)
+            except KeyError:
+                playbook = self.general_playbook(provider)
+
+        if playbook is None:
+            return [s for s in snippets if s]
+
+        snippets.append(playbook.preferred_path)
+        snippets.append(playbook.tax_routing_note)
+        snippets.extend(playbook.edge_cases)
+        for step in playbook.steps:
+            snippets.append(step.text)
+        for step in playbook.access_recovery.reset_steps:
+            snippets.append(step.text)
+        for step in playbook.call_script.steps:
+            snippets.append(step.text)
+        for q in playbook.call_script.rep_questions:
+            snippets.append(f"{q.question} → {q.answer}")
+        for field in playbook.form_guidance.fields:
+            snippets.append(f"{field.label}: {field.instruction}")
         return [s for s in snippets if s]

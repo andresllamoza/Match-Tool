@@ -30,6 +30,8 @@ TRANSITIONS: dict[tuple[JourneyState, str], JourneyState] = {
     (JourneyState.PROVIDER_UNKNOWN, "lookup_high_confidence"): JourneyState.PROVIDER_IDENTIFIED,
     (JourneyState.PROVIDER_UNKNOWN, "lookup_not_covered"): JourneyState.PROVIDER_NOT_COVERED,
     (JourneyState.PROVIDER_UNKNOWN, "lookup_low_confidence"): JourneyState.PROVIDER_UNKNOWN,
+    (JourneyState.PROVIDER_NOT_COVERED, "can_access_yes"): JourneyState.ACCESS_RECOVERED,
+    (JourneyState.PROVIDER_NOT_COVERED, "can_access_no"): JourneyState.ACCESS_BLOCKED,
     (JourneyState.PROVIDER_NOT_COVERED, "handoff"): JourneyState.ESCALATED,
     (JourneyState.PROVIDER_NOT_COVERED, "escalate"): JourneyState.ESCALATED,
     (JourneyState.PROVIDER_UNKNOWN, "provider_direct"): JourneyState.PROVIDER_IDENTIFIED,
@@ -66,9 +68,14 @@ TRANSITIONS: dict[tuple[JourneyState, str], JourneyState] = {
 
 
 def _phase_for_state(state: JourneyState) -> JourneyPhase:
-    if state in {JourneyState.PROVIDER_UNKNOWN, JourneyState.PROVIDER_NOT_COVERED}:
+    if state == JourneyState.PROVIDER_UNKNOWN:
         return JourneyPhase.FIND
-    if state in {JourneyState.PROVIDER_IDENTIFIED, JourneyState.ACCESS_BLOCKED, JourneyState.ACCESS_RECOVERED}:
+    if state in {
+        JourneyState.PROVIDER_IDENTIFIED,
+        JourneyState.PROVIDER_NOT_COVERED,
+        JourneyState.ACCESS_BLOCKED,
+        JourneyState.ACCESS_RECOVERED,
+    }:
         return JourneyPhase.ACCESS
     if state in {
         JourneyState.ONLINE_IN_PROGRESS,
@@ -148,7 +155,14 @@ class JourneyEngine:
             ctx.uncovered_provider = outcome.uncovered_provider
             ctx.provider = None
             self._transition(ctx, "lookup_not_covered", outcome.uncovered_provider)
-            self.log_handoff_offered(ctx, "provider_not_covered")
+            self.event_logger.log_journey(
+                state=ctx.state,
+                provider=ctx.uncovered_provider,
+                channel=ctx.channel,
+                action="documentation_priority",
+                outcome=outcome.uncovered_provider or "unknown",
+                journey_id=ctx.journey_id,
+            )
         elif outcome.disambiguation_question and not outcome.resolved_provider:
             self._transition(ctx, "lookup_low_confidence", "disambiguation_required")
         elif outcome.confidence_tier == ConfidenceTier.LOW:
@@ -268,7 +282,7 @@ class JourneyEngine:
         }:
             raise InvalidTransitionError(f"advance_step invalid in {ctx.state.value}")
 
-        playbook = self.knowledge.get(ctx.provider)  # type: ignore[arg-type]
+        playbook = self.knowledge.playbook_for(ctx)
         total = self._total_steps(ctx, playbook)
         ctx.step_index += 1
         if ctx.step_index >= total:
@@ -294,6 +308,7 @@ class JourneyEngine:
     def take_handoff(self, ctx: JourneyContext, reason: str = "provider_not_covered") -> JourneyScreen:
         if ctx.state != JourneyState.PROVIDER_NOT_COVERED:
             raise InvalidTransitionError("handoff only valid from provider_not_covered")
+        self.log_handoff_offered(ctx, reason)
         self.log_handoff_taken(ctx, reason)
         self._transition(ctx, "handoff", reason)
         return self.render(ctx)
@@ -359,7 +374,11 @@ class JourneyEngine:
                 disambiguation_options=ctx.disambiguation_options,
             )
 
-        playbook = self.knowledge.get(ctx.provider) if ctx.provider else None
+        playbook = (
+            self.knowledge.playbook_for(ctx)
+            if (ctx.provider or ctx.uncovered_provider)
+            else None
+        )
         if playbook:
             edge_cases = list(playbook.edge_cases)
             sla_note = playbook.sla_note or self.knowledge.general_guide.typical_processing_time
@@ -591,26 +610,33 @@ class JourneyEngine:
                 sla_note=sla_note,
             )
 
-        if ctx.state == JourneyState.PROVIDER_NOT_COVERED:
+        if ctx.state == JourneyState.PROVIDER_NOT_COVERED and playbook:
             name = ctx.uncovered_provider or "your recordkeeper"
-            headline = "We found your plan — here's what's next"
+            na = playbook.next_actions[FunnelStage.PROVIDER_IDENTIFIED]
+            headline = f"Can you log in to {name}'s retirement portal?"
             body = (
-                f"Your 401(k) appears to be with {name}. We don't have a guided rollover path "
-                f"for that provider yet — but a BeeKeeper can walk you through it live."
+                f"Your 401(k) appears to be with {name}. {na.customer_message}"
             )
+            primary = "Yes, I can log in"
+            secondary = ["No — I need help getting access", "Talk to a BeeKeeper"]
             agent_notes.append(f"Documentation priority: add playbook for {name}")
+            agent_notes.append(f"Ops: {na.action}")
+            provenance_warning = "Using general rollover steps — provider-specific path not yet in library."
             return JourneyScreen(
                 journey_id=ctx.journey_id,
                 state=ctx.state,
-                phase=JourneyPhase.FIND,
+                phase=JourneyPhase.ACCESS,
                 provider=None,
                 channel=ctx.channel,
                 headline=headline,
                 body=body,
-                primary_action="Talk to a BeeKeeper",
-                secondary_actions=[],
+                primary_action=primary,
+                secondary_actions=secondary,
+                edge_cases=edge_cases,
                 agent_notes=agent_notes,
-                next_beekeeper_script=f"Warm handoff — uncovered provider {name}. Log as documentation priority.",
+                provenance_warning=provenance_warning,
+                sla_note=playbook.sla_note,
+                confidence_tier=ctx.lookup_confidence_tier,
             )
 
         if ctx.state == JourneyState.COMPLETE:

@@ -37,7 +37,10 @@ class ScopedAssistant:
 
         snippets = self.knowledge.scoped_content(provider, state.value)
         if provider:
-            playbook = self.knowledge.get(provider)
+            try:
+                playbook = self.knowledge.get(provider)
+            except KeyError:
+                playbook = self.knowledge.general_playbook(provider)
             snippets.extend(playbook.edge_cases)
 
         match = self._find_best_snippet(q, snippets)

@@ -231,6 +231,10 @@ class GeneralGuide(BaseModel):
     account_numbers_policy: str
     employer_vs_provider_note: str
     general_steps: list[Step]
+    general_access_recovery: AccessRecovery
+    general_call_script: CallScript
+    general_form_guidance: FormGuidance
+    general_next_actions: dict[FunnelStage, NextAction]
     portal_menu_aliases: list[str] = Field(default_factory=list)
     destination_dropdown_aliases: list[str] = Field(default_factory=list)
     promo: Promo

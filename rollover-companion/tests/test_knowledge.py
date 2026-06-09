@@ -13,6 +13,20 @@ def test_loads_all_providers(kb: KnowledgeBase):
     assert set(kb.list_providers()) == {"Citi", "Empower", "Fidelity", "Vanguard", "Voya"}
 
 
+def test_general_guide_has_call_and_access_paths(kb: KnowledgeBase):
+    g = kb.general_guide
+    assert len(g.general_steps) >= 4
+    assert g.general_call_script.steps
+    assert g.general_form_guidance.fields
+    assert g.general_access_recovery.reset_steps
+
+
+def test_general_playbook_for_uncovered_recordkeeper(kb: KnowledgeBase):
+    pb = kb.general_playbook("Merrill Lynch")
+    assert pb.provider == "Merrill Lynch"
+    assert pb.steps == kb.general_guide.general_steps
+
+
 def test_alias_resolution(kb: KnowledgeBase):
     assert kb.resolve_provider("NetBenefits") == "Fidelity"
     assert kb.resolve_provider("Great-West") == "Empower"

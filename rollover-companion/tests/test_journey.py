@@ -78,7 +78,20 @@ def test_provider_not_covered_screen(engine):
     screen = engine.lookup_employer(ctx, "Walmart Inc")
     assert ctx.state == JourneyState.PROVIDER_NOT_COVERED
     assert ctx.uncovered_provider == "Merrill Lynch"
-    assert "BeeKeeper" in screen.primary_action
+    assert "log in" in screen.primary_action.lower()
+    assert any("BeeKeeper" in a for a in screen.secondary_actions)
+    assert "general" in screen.body.lower()
+
+
+def test_walmart_general_online_journey(engine):
+    ctx = engine.start()
+    engine.lookup_employer(ctx, "Walmart")
+    engine.submit_access(ctx, can_login=True)
+    engine.submit_tax_type(ctx, "pre_tax")
+    engine.choose_channel(ctx, JourneyChannel.ONLINE)
+    while ctx.state == JourneyState.ONLINE_IN_PROGRESS:
+        engine.advance_step(ctx, "done")
+    assert ctx.state == JourneyState.INITIATED
 
 
 def test_reconstructed_steps_flagged(engine):

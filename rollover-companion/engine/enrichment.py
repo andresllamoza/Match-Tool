@@ -27,14 +27,18 @@ def build_enrichment(
         tax_options=_tax_options(knowledge) if _needs_tax_selection(ctx) else [],
     )
 
-    if ctx.employer_query and ctx.provider and ctx.state == JourneyState.PROVIDER_IDENTIFIED:
+    recordkeeper = ctx.provider or ctx.uncovered_provider
+    if ctx.employer_query and recordkeeper and ctx.state in {
+        JourneyState.PROVIDER_IDENTIFIED,
+        JourneyState.PROVIDER_NOT_COVERED,
+    }:
         enrichment.lookup = LookupContext(
             employer_query=ctx.employer_query,
-            matched_provider=ctx.provider,
+            matched_provider=recordkeeper,
         )
 
-    if ctx.provider:
-        pb = knowledge.get(ctx.provider)
+    if recordkeeper:
+        pb = knowledge.playbook_for(ctx)
         enrichment.mechanism = pb.mechanism.value
         enrichment.check_destination = pb.check_destination
         enrichment.forward_step_required = pb.forward_step_required

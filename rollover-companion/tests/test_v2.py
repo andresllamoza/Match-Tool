@@ -28,11 +28,13 @@ def test_walk_amazon_fidelity_online(engine, knowledge):
     assert any(s.source_status.value == "reconstructed" for s in access_steps)
 
 
-def test_walk_walmart_provider_not_covered(engine):
+def test_walk_walmart_general_online_path(engine):
     result = walk_employer(engine, "Walmart", verbose=False)
-    assert result["state"] == "provider_not_covered"
     assert result["uncovered_provider"] == "Merrill Lynch"
-    assert "BeeKeeper" in result["rendered_text"]
+    assert result["channel"] == "online"
+    assert result["state"] == "complete"
+    assert "Merrill Lynch" in result["rendered_text"]
+    assert "Log in to the old 401(k) provider" in result["rendered_text"]
 
 
 def test_walk_citi_forms_verbatim_strings(engine):
@@ -79,7 +81,7 @@ def test_provider_not_covered_handoff_events(engine, tmp_logs):
     assert ctx.state == JourneyState.ESCALATED
     lines = tmp_logs.journey_path.read_text().strip().splitlines()
     actions = [__import__("json").loads(line)["action"] for line in lines]
-    assert actions.count("handoff_offered") >= 1
+    assert "documentation_priority" in actions
     assert "handoff_taken" in actions
 
 
@@ -125,11 +127,10 @@ def test_citi_sla_slower_than_general(engine, knowledge):
     assert "2" in general or "4" in general
 
 
-def test_funnel_counts_handoff_and_not_covered(engine, tmp_logs):
+def test_funnel_counts_provider_not_covered(engine, tmp_logs):
     walk_employer(engine, "Walmart", verbose=False)
     summary = load_funnel_summary(tmp_logs.journey_path)
     assert summary.provider_not_covered_count >= 1
-    assert summary.handoff_offered_count >= 1
 
 
 def test_walmart_lookup_uncovered(lookup_service):

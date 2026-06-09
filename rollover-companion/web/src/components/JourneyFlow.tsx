@@ -106,7 +106,7 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "tax_type", tax_type: "pre_tax" });
       return;
     }
-    if (s === "provider_identified" && primary.includes("yes")) {
+    if ((s === "provider_identified" || s === "provider_not_covered") && primary.includes("yes")) {
       await act({ type: "access", can_login: true });
       return;
     }
@@ -134,10 +134,6 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       await act({ type: "escalate", reason: "stuck_on_step" });
       return;
     }
-    if (s === "provider_not_covered" && primary.includes("beekeeper")) {
-      await act({ type: "handoff", reason: "provider_not_covered" });
-      return;
-    }
   }
 
   async function handleSecondary(label: string) {
@@ -155,8 +151,12 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       setShowProviderPicker(true);
       return;
     }
-    if (lower.includes("no") && s === "provider_identified") {
+    if (lower.includes("no") && (s === "provider_identified" || s === "provider_not_covered")) {
       await act({ type: "access", can_login: false });
+      return;
+    }
+    if (lower.includes("beekeeper") && s === "provider_not_covered") {
+      await act({ type: "handoff", reason: "provider_not_covered" });
       return;
     }
     if (lower.includes("locked out") || (lower.includes("beekeeper") && s === "access_blocked")) {
@@ -204,10 +204,12 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
 
       <LookupBanner data={data} />
 
-      {screen.provider && screen.state !== "provider_identified" && (
+      {(screen.provider || context.uncovered_provider) &&
+        !["provider_identified", "provider_not_covered"].includes(screen.state) && (
         <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-bee-muted lg:text-base">
-          {screen.provider}
+          {screen.provider || context.uncovered_provider}
           {screen.channel && ` · ${screen.channel}`}
+          {!screen.provider && context.uncovered_provider && " · general guide"}
         </p>
       )}
 
@@ -222,14 +224,14 @@ export function JourneyFlow({ mode = "customer", theme = "default", onPhaseChang
       )}
 
       {screen.state === "provider_not_covered" && (
-        <div className="mb-5 rounded-card border border-bee-yellow/60 bg-bee-yellow/15 p-4 lg:p-5">
+        <div className="mb-5 rounded-card border border-bee-blue/20 bg-bee-blue-light/40 p-4 lg:p-5">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-bee-muted">
-            BeeKeeper handoff
+            General rollover guide
           </p>
           <p className="text-sm leading-relaxed text-bee-ink lg:text-base">
             {context.uncovered_provider
-              ? `Your plan appears to be with ${context.uncovered_provider}. We don't have a guided path for that provider yet — a BeeKeeper can still walk you through it.`
-              : "This provider isn't in our guided library yet. A rollover specialist can still help you move your account."}
+              ? `Your plan is with ${context.uncovered_provider}. We'll use our general online or phone steps — a BeeKeeper is available if you get stuck.`
+              : "We'll use our general online or phone rollover steps for your provider."}
           </p>
         </div>
       )}

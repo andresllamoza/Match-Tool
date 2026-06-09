@@ -75,16 +75,17 @@ class JourneyResponse(BaseModel):
 
 
 def _enrich_intel(ctx: JourneyContext, screen: JourneyScreen) -> dict[str, Any]:
-    if not ctx.provider:
+    if not ctx.provider and not ctx.uncovered_provider:
         return {}
     engine = get_engine()
-    pb = engine.knowledge.get(ctx.provider)
+    pb = engine.knowledge.playbook_for(ctx)
     intel: dict[str, Any] = {
         "mechanism": pb.mechanism.value,
         "check_destination": pb.check_destination,
         "forward_step_required": pb.forward_step_required,
         "portal": pb.portal,
-        "flags_available": engine.knowledge.available_flags(ctx.provider),
+        "flags_available": [],
+        "general_path": engine.knowledge.is_general_path(ctx),
         "rep_questions": [q.model_dump() for q in pb.call_script.rep_questions],
         "call_phone": pb.call_script.phone,
         "call_intro": pb.call_script.intro,
@@ -93,9 +94,9 @@ def _enrich_intel(ctx: JourneyContext, screen: JourneyScreen) -> dict[str, Any]:
 
 
 def _step_totals(ctx: JourneyContext) -> tuple[int, int]:
-    if not ctx.provider:
+    if not ctx.provider and not ctx.uncovered_provider:
         return ctx.step_index, 0
-    pb = get_engine().knowledge.get(ctx.provider)
+    pb = get_engine().knowledge.playbook_for(ctx)
     if ctx.state == JourneyState.ONLINE_IN_PROGRESS:
         return ctx.step_index, len(pb.steps)
     if ctx.state == JourneyState.PHONE_IN_PROGRESS:
@@ -202,7 +203,11 @@ def journey_action(journey_id: str, body: ActionRequest, agent: bool = False):
         elif body.type == "ask":
             if not body.question:
                 raise HTTPException(400, "question required")
-            result = _assistant.answer(body.question, ctx.state, ctx.provider)
+            result = _assistant.answer(
+                body.question,
+                ctx.state,
+                ctx.provider or ctx.uncovered_provider,
+            )
             save_session(ctx)
             return {"assistant": result, **_wrap(ctx, engine.render(ctx), include_intel=agent).model_dump()}
         else:

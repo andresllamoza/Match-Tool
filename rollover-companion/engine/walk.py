@@ -32,9 +32,6 @@ def walk_employer(
     screen = engine.lookup_employer(ctx, employer)
     record("lookup", screen)
 
-    if ctx.state == JourneyState.PROVIDER_NOT_COVERED:
-        return _summary(ctx, employer, trail)
-
     if ctx.state == JourneyState.PROVIDER_UNKNOWN:
         return _summary(ctx, employer, trail)
 
