@@ -1,6 +1,8 @@
+import type { PathHistoryEntry } from "./pathHistory";
 import type { JourneyResponse } from "./types";
 
 const STORAGE_KEY = "pb_rollover_journey_v1";
+const MAX_PATH_ENTRIES = 24;
 
 export interface PersistedJourneySession {
   version: 1;
@@ -9,7 +11,10 @@ export interface PersistedJourneySession {
   snapshot: JourneyResponse;
   employerInput: string;
   showProviderPicker: boolean;
+  pathHistory?: PathHistoryEntry[];
 }
+
+export { MAX_PATH_ENTRIES };
 
 const TERMINAL_STATES = new Set(["complete", "escalated"]);
 

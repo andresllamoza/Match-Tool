@@ -68,7 +68,27 @@ body {
   }
 
   .pb-surface-card {
-    @apply rounded-2xl border border-[#EAE5DC] bg-white p-8 shadow-sm sm:p-10;
+    @apply rounded-2xl border border-[#EAE5DC] bg-[#FFFFFF] p-8 shadow-sm sm:p-10;
+  }
+
+  .pb-surface-white {
+    @apply rounded-2xl border border-[#EAE5DC] bg-[#FFFFFF] shadow-sm;
+  }
+
+  .embed-theme-light {
+    --embed-canvas: #faf8f5;
+    --embed-card: #ffffff;
+    --embed-ink: #1e242b;
+    --embed-muted: #6b6560;
+    --embed-border: #eae5dc;
+    background: var(--embed-canvas);
+    color: var(--embed-ink);
+  }
+
+  .embed-theme-light .pb-card,
+  .embed-theme-light .pb-surface-white {
+    background: var(--embed-card);
+    border-color: var(--embed-border);
   }
 
   @keyframes pb-step-enter {

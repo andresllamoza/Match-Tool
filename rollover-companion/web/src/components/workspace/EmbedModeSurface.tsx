@@ -68,7 +68,11 @@ export function EmbedModeSurface() {
           <p className="mb-4 text-xs font-bold uppercase tracking-wider text-white/50">
             Simulated device frame
           </p>
-          <div className="overflow-hidden rounded-xl border border-white/10">
+          <div
+            className={`overflow-hidden rounded-xl border ${
+              embedTheme === "dark" ? "border-white/10" : "border-[#EAE5DC]"
+            }`}
+          >
             <JourneyFlow
               key={embedTheme}
               mode="embed"

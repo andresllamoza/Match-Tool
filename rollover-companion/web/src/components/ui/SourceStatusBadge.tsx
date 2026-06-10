@@ -7,18 +7,23 @@ export function SourceStatusBadge({
 
   if (status === "verified") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-pill bg-bee-green-soft px-3 py-1 text-xs font-semibold text-bee-green lg:text-sm">
-        ✓ Verified Transfer Path
+      <span className="inline-flex items-center gap-1 rounded-lg border border-[#EAE5DC] bg-white px-3 py-1.5 text-xs font-semibold text-[#1B7F4B] shadow-sm lg:text-sm">
+        <span aria-hidden>✓</span> Verified path
       </span>
     );
   }
 
   return (
-    <div className="rounded-card border-2 border-amber-400/80 bg-amber-50/80 px-4 py-3 text-sm leading-relaxed text-amber-950 lg:text-base">
-      <p className="font-semibold">Double-check this layout</p>
-      <p className="mt-1 text-amber-900/90">
-        If your old provider&apos;s automated phone menu options look different, let your BeeKeeper
-        know.
+    <div className="rounded-xl border border-amber-300/70 bg-amber-50/90 px-5 py-4 text-sm leading-relaxed text-amber-950 shadow-sm lg:text-base">
+      <p className="flex items-center gap-2 font-semibold">
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-xs" aria-hidden>
+          !
+        </span>
+        Human verification recommended
+      </p>
+      <p className="mt-2 text-amber-900/90">
+        Some steps are reconstructed from our general guide. If your provider&apos;s menus differ, your
+        BeeKeeper can confirm the exact path.
       </p>
     </div>
   );

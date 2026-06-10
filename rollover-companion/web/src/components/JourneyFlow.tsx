@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { deriveSourceStatus } from "@/lib/sourceStatus";
 import type { JourneyController } from "@/hooks/useJourneyController";
 import { useJourneyController } from "@/hooks/useJourneyController";
@@ -21,6 +22,11 @@ import { StepTransition } from "./ui/StepTransition";
 import { EscalationConnecting } from "./EscalationConnecting";
 import { WelcomeBackToast } from "./WelcomeBackToast";
 import { employerSearchError } from "@/lib/validationCopy";
+import type { DecisionMode } from "@/lib/decisionMode";
+import { decisionTitle } from "@/lib/decisionMode";
+import { stepHelperCopy } from "@/lib/stepHelpers";
+import { StepDecisionFrame } from "./ui/StepDecisionFrame";
+import { TrustHelperBanner } from "./ui/TrustHelperBanner";
 
 interface JourneyFlowProps {
   mode?: "customer" | "agent" | "embed";
@@ -33,19 +39,6 @@ interface JourneyFlowProps {
   hideAssistant?: boolean;
   channelSurface?: ChannelSurface;
 }
-
-type DecisionMode =
-  | "tax"
-  | "employer"
-  | "provider_pick"
-  | "disambiguation"
-  | "access"
-  | "channel"
-  | "channel_step"
-  | "track"
-  | "stuck"
-  | "confirm"
-  | "done";
 
 function resolveDecisionMode(
   data: JourneyResponse,
@@ -148,8 +141,11 @@ export function JourneyFlow({
 
   if (!data) {
     return (
-      <div className="pb-card p-6 text-center text-red-800">
-        {error || "Unable to start journey."}
+      <div className="pb-card p-8 sm:p-10">
+        <TrustHelperBanner>
+          {employerSearchError(error, false) ||
+            "We couldn't load your rollover session. Refresh the page or start again — a BeeKeeper can help if this persists."}
+        </TrustHelperBanner>
       </div>
     );
   }
@@ -244,6 +240,15 @@ export function JourneyFlow({
   function renderDecision() {
     if (decision === "done") return null;
 
+    const frame = (title: string, body: ReactNode) => (
+      <StepDecisionFrame
+        title={title}
+        helper={stepHelperCopy(decision)}
+      >
+        {body}
+      </StepDecisionFrame>
+    );
+
     if (decision === "tax") {
       const options =
         enrichment.tax_options.length > 0
@@ -253,30 +258,24 @@ export function JourneyFlow({
               { id: "roth", label: "Roth (Roth IRA)", hint: "After-tax contributions and earnings" },
               { id: "both", label: "Both pre-tax and Roth", hint: "Split across two IRA types" },
             ];
-      return (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-bee-charcoal lg:text-base">
-            How is your old 401(k) taxed?
-          </p>
-          {options.map((opt) => (
-            <SelectionBlock
-              key={opt.id}
-              label={opt.label}
-              description={opt.hint}
-              onClick={() => handleTaxPick(opt.id)}
-              disabled={disabled}
-            />
-          ))}
-        </div>
+      return frame(
+        decisionTitle(decision),
+        options.map((opt) => (
+          <SelectionBlock
+            key={opt.id}
+            label={opt.label}
+            description={opt.hint}
+            onClick={() => handleTaxPick(opt.id)}
+            disabled={disabled}
+          />
+        ))
       );
     }
 
     if (decision === "provider_pick") {
-      return (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-bee-charcoal lg:text-base">
-            Select your 401(k) provider
-          </p>
+      return frame(
+        decisionTitle(decision),
+        <>
           {providers.map((p) => (
             <SelectionBlock
               key={p}
@@ -288,38 +287,32 @@ export function JourneyFlow({
           <button
             type="button"
             onClick={() => setShowProviderPicker(false)}
-            className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+            className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
           >
             ← Search by employer instead
           </button>
-        </div>
+        </>
       );
     }
 
     if (decision === "disambiguation") {
-      return (
-        <div className="space-y-3">
-          <p className="text-base font-semibold text-bee-charcoal lg:text-lg">
-            {screen.disambiguation_question}
-          </p>
-          {screen.disambiguation_options.map((opt) => (
-            <SelectionBlock
-              key={opt}
-              label={opt}
-              onClick={() => handleDisambiguation(opt)}
-              disabled={disabled}
-            />
-          ))}
-        </div>
+      return frame(
+        decisionTitle(decision, screen.disambiguation_question),
+        screen.disambiguation_options.map((opt) => (
+          <SelectionBlock
+            key={opt}
+            label={opt}
+            onClick={() => handleDisambiguation(opt)}
+            disabled={disabled}
+          />
+        ))
       );
     }
 
     if (decision === "access") {
-      return (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-bee-charcoal lg:text-base">
-            Can you log in to your old 401(k) account right now?
-          </p>
+      return frame(
+        decisionTitle(decision),
+        <>
           <SelectionBlock
             label="Yes, I can log in"
             description="We'll walk you through the rollover in your provider portal or by phone."
@@ -337,21 +330,19 @@ export function JourneyFlow({
               type="button"
               onClick={handleHandoff}
               disabled={disabled}
-              className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+              className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
             >
               Talk to a BeeKeeper about this provider →
             </button>
           )}
-        </div>
+        </>
       );
     }
 
     if (decision === "channel") {
-      return (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-bee-charcoal lg:text-base">
-            How would you like to start your rollover?
-          </p>
+      return frame(
+        decisionTitle(decision),
+        <>
           <SelectionBlock
             label="Online"
             description="Fastest when you can log in to your provider's website."
@@ -370,13 +361,14 @@ export function JourneyFlow({
             onClick={() => handleChannel("forms")}
             disabled={disabled}
           />
-        </div>
+        </>
       );
     }
 
     if (decision === "channel_step") {
-      return (
-        <div className="space-y-3">
+      return frame(
+        decisionTitle(decision),
+        <>
           <Button onClick={handlePrimary} disabled={disabled}>
             {screen.primary_action}
           </Button>
@@ -384,17 +376,18 @@ export function JourneyFlow({
             type="button"
             onClick={() => act({ type: "step", outcome: "stuck" })}
             disabled={disabled}
-            className="w-full py-2 text-center text-sm font-semibold text-red-700 hover:underline"
+            className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
           >
             I&apos;m stuck on this step
           </button>
-        </div>
+        </>
       );
     }
 
     if (decision === "stuck") {
-      return (
-        <div className="space-y-3">
+      return frame(
+        decisionTitle(decision),
+        <>
           <Button onClick={handlePrimary} disabled={disabled}>
             {screen.primary_action}
           </Button>
@@ -402,17 +395,18 @@ export function JourneyFlow({
             type="button"
             onClick={() => act({ type: "resume" })}
             disabled={disabled}
-            className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+            className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
           >
             Try this step again →
           </button>
-        </div>
+        </>
       );
     }
 
     if (decision === "track") {
-      return (
-        <div className="space-y-3">
+      return frame(
+        decisionTitle(decision),
+        <>
           <Button onClick={handlePrimary} disabled={disabled}>
             {screen.primary_action}
           </Button>
@@ -425,7 +419,7 @@ export function JourneyFlow({
                   type="button"
                   onClick={() => handleEscalate("tracking_delay")}
                   disabled={disabled}
-                  className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+                  className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
                 >
                   {action} →
                 </button>
@@ -433,12 +427,13 @@ export function JourneyFlow({
             }
             return null;
           })}
-        </div>
+        </>
       );
     }
 
-    return (
-      <div className="space-y-3">
+    return frame(
+      decisionTitle(decision),
+      <>
         <Button onClick={handlePrimary} disabled={disabled}>
           {screen.primary_action}
         </Button>
@@ -452,7 +447,7 @@ export function JourneyFlow({
                   type="button"
                   onClick={() => handleEscalate("access_lockout")}
                   disabled={disabled}
-                  className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+                  className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
                 >
                   {action} →
                 </button>
@@ -460,7 +455,7 @@ export function JourneyFlow({
             }
             return null;
           })}
-      </div>
+      </>
     );
   }
 
@@ -470,12 +465,8 @@ export function JourneyFlow({
   const findStepView = isFindStep ? (
     <div className={`w-full text-left ${validationShake ? "animate-shake" : ""}`}>
       {friendlyError && (
-        <div
-          className={`mb-4 rounded-xl border border-[#EAE5DC] bg-[#FFF9E6] px-5 py-4 text-sm leading-relaxed text-[#1E242B] ${
-            isSandbox ? "" : "mx-auto max-w-lg"
-          }`}
-        >
-          {friendlyError}
+        <div className={`mb-6 ${isSandbox ? "" : "mx-auto max-w-lg"}`}>
+          <TrustHelperBanner>{friendlyError}</TrustHelperBanner>
         </div>
       )}
       <FindEmployerStep
@@ -610,8 +601,8 @@ export function JourneyFlow({
       )}
 
       {!isFindStep && friendlyError && (
-        <div className="mb-4 rounded-card border border-[#EAE5DC] bg-[#FFF9E6] px-5 py-4 text-sm leading-relaxed text-[#1E242B] lg:text-base">
-          {friendlyError}
+        <div className="mb-6">
+          <TrustHelperBanner>{friendlyError}</TrustHelperBanner>
         </div>
       )}
 
@@ -654,9 +645,9 @@ export function JourneyFlow({
 
   const themeClass =
     theme === "dark"
-      ? "embed-theme-dark rounded-2xl bg-[#1E242B] p-4 text-white"
+      ? "embed-theme-dark rounded-2xl bg-[#1E242B] p-6 text-white sm:p-8"
       : theme === "minimal"
-        ? ""
+        ? "embed-theme-light rounded-2xl p-4 sm:p-6"
         : "";
 
   return (

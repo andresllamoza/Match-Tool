@@ -7,6 +7,7 @@ import {
   clearJourneySession,
   isResumableSession,
   loadJourneySession,
+  MAX_PATH_ENTRIES,
   resumeProviderLabel,
   saveJourneySession,
 } from "@/lib/sessionPersistence";
@@ -93,7 +94,9 @@ export function useJourneyController({
     (res: JourneyResponse, action = "snapshot") => {
       setData(res);
       onPhaseChange?.(res.screen.phase);
-      setPathHistory((prev) => [...prev, buildPathEntry(res, action)]);
+      setPathHistory((prev) =>
+        [...prev, buildPathEntry(res, action)].slice(-MAX_PATH_ENTRIES)
+      );
       if (res.screen.state === "escalated") {
         setEscalationActive(true);
       }
@@ -111,8 +114,9 @@ export function useJourneyController({
       snapshot: data,
       employerInput,
       showProviderPicker,
+      pathHistory,
     });
-  }, [data, employerInput, showProviderPicker]);
+  }, [data, employerInput, showProviderPicker, pathHistory]);
 
   const act = useCallback(
     async (body: Record<string, unknown>) => {
@@ -200,6 +204,9 @@ export function useJourneyController({
       }
       setEmployerInput(saved.employerInput);
       setShowProviderPicker(saved.showProviderPicker);
+      if (saved.pathHistory?.length) {
+        setPathHistory(saved.pathHistory.slice(-MAX_PATH_ENTRIES));
+      }
       applyResponse(res, "resume");
       setResumeOffer(null);
     } catch {

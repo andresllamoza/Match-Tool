@@ -60,13 +60,18 @@ export function FindEmployerStep({
           }}
           placeholder="e.g. Google, Target, FedEx"
           disabled={loading}
-          className="mb-4 h-14 w-full rounded-xl border border-bee-border bg-white px-4 text-lg text-bee-charcoal shadow-none outline-none transition-all placeholder:text-bee-muted/70 hover:border-bee-charcoal focus:border-2 focus:border-bee-charcoal focus:ring-0 disabled:opacity-50"
+          aria-describedby="employer-find-helper"
+          className="mb-2 h-14 min-h-[56px] w-full rounded-xl border border-[#EAE5DC] bg-[#FFFFFF] px-5 text-lg text-[#1E242B] shadow-sm outline-none transition-all duration-200 placeholder:text-[#6B6560]/70 hover:border-[#111111]/30 focus:border-2 focus:border-[#FFC72C] focus:ring-2 focus:ring-[#FFC72C]/25 disabled:opacity-50"
         />
+        <p id="employer-find-helper" className="mb-6 text-sm leading-relaxed text-[#6B6560]">
+          We only use your employer name to match you to the correct 401(k) recordkeeper — never to
+          sell your data.
+        </p>
 
         <Button
           onClick={onSearch}
           disabled={loading}
-          className="mb-4 h-14 min-h-[56px] rounded-xl bg-bee-charcoal text-base font-semibold text-white active:scale-[0.99] transition-transform duration-100"
+          className="mb-6 h-14 min-h-[56px] rounded-xl"
         >
           {searchLabel}
         </Button>
@@ -77,7 +82,7 @@ export function FindEmployerStep({
               type="button"
               onClick={onKnowProvider}
               disabled={loading}
-              className="block w-full text-left text-sm font-semibold text-bee-muted transition-colors hover:text-bee-charcoal disabled:opacity-50"
+              className="pb-interactive block w-full py-2 text-left text-sm font-semibold text-[#6B6560] hover:text-[#1E242B] disabled:opacity-50"
             >
               I already know my 401(k) provider →
             </button>
@@ -86,7 +91,7 @@ export function FindEmployerStep({
             type="button"
             onClick={onAskQuestion}
             disabled={loading}
-            className="block w-full text-left text-sm font-semibold text-bee-muted transition-colors hover:text-bee-charcoal disabled:opacity-50"
+            className="pb-interactive block w-full py-2 text-left text-sm font-semibold text-[#6B6560] hover:text-[#1E242B] disabled:opacity-50"
           >
             Ask a question about this step →
           </button>
