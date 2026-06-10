@@ -6,7 +6,12 @@ import html
 
 import streamlit as st
 
-from ui.components import brand_header_bar  # noqa: E402
+from ui.shell import (  # noqa: E402
+    render_footer,
+    render_top_bar,
+    resolve_footer,
+    show_back_button,
+)
 
 from .engine_bridge import (
     JourneyView,
@@ -126,14 +131,16 @@ def _screen_owns_headline(view: JourneyView) -> bool:
 
 
 def _render_provider_picker() -> None:
+    st.markdown('<div class="pb-shell-body">', unsafe_allow_html=True)
     _decision_hero("Select your 401(k) provider", "Pick the company that holds your old plan.")
     for p in list_providers():
         if secondary_button(p, key=f"prov_{p}"):
             st.session_state.show_provider_picker = False
             _go({"type": "provider_direct", "provider": p})
-    if secondary_button("← Search by employer instead", key="hide_provider_picker"):
+    if text_link_button("← Search by employer instead", key="hide_provider_picker"):
         st.session_state.show_provider_picker = False
         st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _find_surface(view: JourneyView) -> str:
@@ -155,63 +162,60 @@ def _find_card():
 
 def _render_find_disambiguation(view: JourneyView) -> None:
     screen = view.screen
-    with _find_card():
-        _render_progress(screen.phase.value, variant="minimal")
-        st.markdown(
-            '<h1 class="pb-find-h1">Narrow it down</h1>'
-            "<p class=\"pb-find-sub\">We need one more detail to locate the right 401(k) plan.</p>",
-            unsafe_allow_html=True,
-        )
-        _decision_hero(screen.disambiguation_question or "Narrow it down")
-        for opt in screen.disambiguation_options:
-            if option_card(opt, key=f"find_dis_{opt}"):
-                _go({"type": "disambiguate", "answer": opt})
-        if text_link_button("← Search a different employer", key="find_disambig_reset"):
-            save_context(get_engine().start())
-            st.session_state.show_provider_picker = False
-            st.session_state.show_find_assistant = False
-            st.session_state.pop("ui_error", None)
-            st.session_state.employer_draft = ""
-            st.rerun()
+    st.markdown('<div class="pb-shell-body">', unsafe_allow_html=True)
+    st.markdown(
+        '<h1 class="pb-find-h1">Narrow it down</h1>'
+        "<p class=\"pb-find-sub\">We need one more detail to locate the right 401(k) plan.</p>",
+        unsafe_allow_html=True,
+    )
+    _decision_hero(screen.disambiguation_question or "Narrow it down")
+    for opt in screen.disambiguation_options:
+        if option_card(opt, key=f"find_dis_{opt}"):
+            _go({"type": "disambiguate", "answer": opt})
+    if text_link_button("← Search a different employer", key="find_disambig_reset"):
+        _go({"type": "restart"})
+    st.markdown("</div>", unsafe_allow_html=True)
     _render_find_perk(screen.body)
 
 
 def _render_find_step(view: JourneyView) -> None:
     screen = view.screen
-    with _find_card():
-        _render_progress(screen.phase.value, variant="minimal")
-        st.markdown(
-            '<h1 class="pb-find-h1">Find your old 401(k)</h1>'
-            "<p class=\"pb-find-sub\">Tell us your former employer. We'll match you to the 401(k) "
-            "provider and guide you through login, rollover, or a phone call.</p>",
-            unsafe_allow_html=True,
+    st.markdown('<div class="pb-shell-body">', unsafe_allow_html=True)
+    st.markdown(
+        '<h1 class="pb-find-h1">Find your old 401(k)</h1>'
+        "<p class=\"pb-find-sub\">Tell us your former employer. We'll match you to the 401(k) "
+        "provider and guide you through login, rollover, or a phone call.</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="pb-find-form">', unsafe_allow_html=True)
+    try:
+        form_ctx = st.form("employer_lookup_form", clear_on_submit=False, border=False)
+    except TypeError:
+        form_ctx = st.form("employer_lookup_form", clear_on_submit=False)
+    with form_ctx:
+        st.text_input(
+            "Former employer",
+            key="employer_draft",
+            placeholder="e.g. Google, Target, FedEx",
+            label_visibility="visible",
         )
-        try:
-            form_ctx = st.form("employer_lookup_form", clear_on_submit=False, border=False)
-        except TypeError:
-            form_ctx = st.form("employer_lookup_form", clear_on_submit=False)
-        with form_ctx:
-            employer = st.text_input(
-                "Former employer",
-                key="employer_draft",
-                placeholder="e.g. Google, Target, FedEx",
-                label_visibility="visible",
-            )
-            submitted = form_submit_primary(screen.primary_action)
-        if submitted:
-            name = (employer or st.session_state.get("employer_draft", "")).strip()
-            if name:
-                st.session_state.pending_lookup = name
-                st.rerun()
-            else:
-                st.session_state.ui_error = "Enter your former employer to continue."
-                st.rerun()
-        if text_link_button("I already know my 401(k) provider →", key="show_provider_picker_btn"):
-            st.session_state.show_provider_picker = True
+        submitted = form_submit_primary(screen.primary_action or "Find my 401(k)")
+    st.markdown("</div>", unsafe_allow_html=True)
+    if submitted:
+        name = st.session_state.get("employer_draft", "").strip()
+        if name:
+            st.session_state.pending_lookup = name
             st.rerun()
-        if text_link_button("Ask a question about this step →", key="find_ask_assistant"):
-            st.session_state.show_find_assistant = True
+        else:
+            _set_ui_message("Enter your former employer to continue.")
             st.rerun()
+    if text_link_button("I already know my 401(k) provider →", key="show_provider_picker_btn"):
+        st.session_state.show_provider_picker = True
+        st.rerun()
+    if text_link_button("Ask a question about this step →", key="find_ask_assistant"):
+        st.session_state.show_find_assistant = True
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
     _render_find_perk(screen.body)
     if st.session_state.get("show_find_assistant"):
         _render_assistant(view)
@@ -368,10 +372,6 @@ def _render_decisions(view: JourneyView) -> None:
             caption="We'll recover access or bring in a BeeKeeper.",
         ):
             _go({"type": "access", "can_login": False})
-        if state == JourneyState.PROVIDER_NOT_COVERED and secondary_button(
-            "Talk to a BeeKeeper about this provider", key="handoff_provider"
-        ):
-            _go({"type": "handoff", "reason": "provider_not_covered"})
         return
 
     if state == JourneyState.ACCESS_RECOVERED and any(
@@ -404,44 +404,8 @@ def _render_decisions(view: JourneyView) -> None:
             _go({"type": "channel", "channel": "forms"})
         return
 
-    if state in IN_CHANNEL:
-        if view.total_steps > 0:
-            st.progress((view.step_index + 1) / view.total_steps)
-        if primary_button(screen.primary_action, key="channel_done"):
-            _go({"type": "step", "outcome": "done"})
-        if secondary_button("I'm stuck on this step", key="channel_stuck"):
-            _go({"type": "step", "outcome": "stuck"})
-        return
-
-    if state == JourneyState.STUCK:
-        if primary_button(screen.primary_action, key="stuck_escalate"):
-            _go({"type": "escalate", "reason": "stuck_on_step"})
-        if secondary_button("Try this step again", key="stuck_resume"):
-            _go({"type": "resume"})
-        return
-
-    if state in (JourneyState.INITIATED, JourneyState.IN_FLIGHT):
-        if primary_button(screen.primary_action, key="track_primary"):
-            kind = "confirm_in_flight" if state == JourneyState.INITIATED else "mark_complete"
-            _go({"type": kind})
-        for i, action in enumerate(screen.secondary_actions):
-            if "nothing arrived" in action.lower() or "help" in action.lower():
-                if secondary_button(action, key=f"track_sec_{i}"):
-                    _go({"type": "escalate", "reason": "tracking_delay"})
-        return
-
-    if state == JourneyState.ACCESS_BLOCKED:
-        if primary_button(screen.primary_action, key="access_blocked_primary"):
-            _go({"type": "access_recovered"})
-        for i, action in enumerate(screen.secondary_actions):
-            if "locked" in action.lower() or "beekeeper" in action.lower():
-                if secondary_button(action, key=f"access_blocked_sec_{i}"):
-                    _go({"type": "escalate", "reason": "access_lockout"})
-        return
-
-    if primary_button(screen.primary_action, key="fallback_primary"):
-        if state == JourneyState.ACCESS_RECOVERED:
-            _go({"type": "channel", "channel": "online"})
+    if state in IN_CHANNEL and view.total_steps > 0:
+        st.progress((view.step_index + 1) / view.total_steps)
 
 
 _FATAL_PREFIX = "__FATAL__:"
@@ -457,8 +421,20 @@ def _clear_ui_message() -> None:
     st.session_state.pop("ui_error_fatal", None)
 
 
+def _shell_beekeeper(view: JourneyView) -> None:
+    get_engine().log_handoff_taken(view.ctx, f"voluntary:{view.screen.state.value}")
+    save_context(view.ctx)
+    st.toast("Your BeeKeeper has the full context of this journey.")
+
+
+def _shell_action(action: dict) -> None:
+    _go(action)
+
+
 def _go(action: dict) -> None:
     st.session_state.journey_restored = False
+    if action.get("type") == "go_back":
+        st.session_state.show_provider_picker = False
     result = apply_action(action)
     if isinstance(result, str):
         if result.startswith(_FATAL_PREFIX):
@@ -566,6 +542,8 @@ def run_journey_app() -> None:
         st.session_state.employer_draft = ""
     if "journey_restored" not in st.session_state:
         st.session_state.journey_restored = False
+    if "demo_surface" not in st.session_state:
+        st.session_state.demo_surface = "Customer"
 
     # Process employer search before any widgets render (Streamlit forbids mutating
     # session keys that are bound to widgets after those widgets are drawn).
@@ -578,22 +556,25 @@ def run_journey_app() -> None:
             st.session_state.ui_error = "Enter your former employer to continue."
             st.rerun()
 
-    header_left, header_mid, header_right = st.columns([4, 3, 1])
-    with header_left:
-        brand_header_bar()
-    with header_mid:
-        try:
-            surface = st.segmented_control("Surface", SURFACES, default="Customer", label_visibility="collapsed")
-        except (AttributeError, TypeError):
-            surface = st.radio("Surface", SURFACES, horizontal=True, label_visibility="collapsed")
-    with header_right:
-        if icon_button("↺", key="restart_journey", help="Restart journey"):
-            _go({"type": "restart"})
-    surface = surface or "Customer"
+    surface = st.session_state.get("demo_surface", "Customer")
 
     if surface == "Funnel":
         _render_funnel_surface()
         st.stop()
+
+    view = current_view()
+    screen = view.screen
+    is_find_step = screen.state == JourneyState.PROVIDER_UNKNOWN
+    find_surface = _find_surface(view) if is_find_step else None
+
+    render_top_bar(
+        show_back=show_back_button(view),
+        on_back=lambda: _go({"type": "go_back"}),
+        on_save_exit=lambda: (
+            save_context(view.ctx),
+            st.toast("Saved — open the same link anytime to continue."),
+        ),
+    )
 
     if st.session_state.get("ui_error"):
         msg = html.escape(st.session_state.ui_error)
@@ -602,10 +583,8 @@ def run_journey_app() -> None:
         else:
             st.markdown(f'<div class="pb-notice">{msg}</div>', unsafe_allow_html=True)
 
-    view = current_view()
-    screen = view.screen
-
-    is_find_step = screen.state == JourneyState.PROVIDER_UNKNOWN
+    if screen.state not in (JourneyState.COMPLETE, JourneyState.ESCALATED):
+        _render_progress(screen.phase.value)
 
     if st.session_state.get("journey_restored"):
         provider = view.ctx.provider or view.ctx.uncovered_provider or "your provider"
@@ -618,9 +597,6 @@ def run_journey_app() -> None:
             unsafe_allow_html=True,
         )
         st.session_state.journey_restored = False
-
-    if screen.state not in (JourneyState.COMPLETE, JourneyState.ESCALATED) and not is_find_step:
-        _render_progress(screen.phase.value)
 
     if screen.provider and screen.state not in (
         JourneyState.PROVIDER_IDENTIFIED,
@@ -691,38 +667,62 @@ def run_journey_app() -> None:
         _render_initiated_fbo(view)
 
     if screen.state == JourneyState.COMPLETE:
+        st.markdown('<div class="pb-shell-body">', unsafe_allow_html=True)
         st.success("🎉 You're all set! Your rollover is complete.")
+        st.markdown("</div>", unsafe_allow_html=True)
     elif screen.state == JourneyState.ESCALATED:
-        st.info("A BeeKeeper will take it from here.")
+        st.markdown('<div class="pb-shell-body">', unsafe_allow_html=True)
+        st.markdown(
+            '<p class="pb-body">A BeeKeeper will take it from here. '
+            "Use Back to return to your last step, or save and come back later.</p>",
+            unsafe_allow_html=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
     elif is_find_step:
-        surface = _find_surface(view)
-        if surface == "provider_picker":
+        if find_surface == "provider_picker":
             _render_provider_picker()
-        elif surface == "disambiguation":
+        elif find_surface == "disambiguation":
             _render_find_disambiguation(view)
         else:
             _render_find_step(view)
     else:
+        st.markdown('<div class="pb-shell-body">', unsafe_allow_html=True)
         _render_decisions(view)
-        if screen.state not in (
-            JourneyState.COMPLETE,
-            JourneyState.ESCALATED,
-            JourneyState.PROVIDER_NOT_COVERED,
-        ):
-            st.markdown(
-                '<div class="pb-bk-handoff">'
-                "<p>Prefer a person? Your BeeKeeper can take it from here.</p>"
-                "</div>",
-                unsafe_allow_html=True,
-            )
-            if st.button("Talk to your BeeKeeper", type="tertiary", key="voluntary_bk"):
-                get_engine().log_handoff_taken(view.ctx, f"voluntary:{screen.state.value}")
-                save_context(view.ctx)
-                st.toast("Your BeeKeeper has the full context of this journey.")
-        _render_assistant(view)
+        if screen.state not in (JourneyState.COMPLETE, JourneyState.ESCALATED):
+            _render_assistant(view)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    if find_surface == "employer_form":
+        st.markdown(
+            '<div class="pb-shell-footer pb-shell-footer--find">'
+            '<p class="pb-shell-bk-copy">🐝 Talk to your BeeKeeper</p></div>',
+            unsafe_allow_html=True,
+        )
+        if text_link_button("Get a person to help", key="find_shell_bk"):
+            _shell_beekeeper(view)
+    else:
+        footer = resolve_footer(view, find_surface=find_surface)
+        render_footer(
+            footer,
+            on_action=_shell_action,
+            on_beekeeper=lambda: _shell_beekeeper(view),
+        )
 
     if surface == "BeeKeeper":
         _render_beekeeper_surface(view)
+
+    with st.expander("Demo: ops surface & tools", expanded=False):
+        try:
+            demo_surface = st.segmented_control(
+                "Surface", SURFACES, default=surface, label_visibility="collapsed"
+            )
+        except (AttributeError, TypeError):
+            demo_surface = st.radio("Surface", SURFACES, horizontal=True, index=SURFACES.index(surface))
+        if demo_surface and demo_surface != surface:
+            st.session_state.demo_surface = demo_surface
+            st.rerun()
+        if icon_button("↺ Restart journey", key="restart_journey", help="Restart journey"):
+            _go({"type": "restart"})
 
     with st.expander("Demo: customer name", expanded=False):
         from engine.customer_copy import DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME

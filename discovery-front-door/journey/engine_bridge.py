@@ -187,6 +187,10 @@ def apply_action(action: dict[str, Any]) -> JourneyView | str:
             ctx.customer_first_name = action["first_name"].strip()
             ctx.customer_last_name = action["last_name"].strip()
             screen = engine.render(ctx)
+        elif kind == "go_back":
+            screen = engine.go_back(ctx)
+            if ctx.state == JourneyState.PROVIDER_UNKNOWN:
+                st.session_state.show_provider_picker = False
         elif kind == "restart":
             ctx = engine.start()
             st.session_state.journey_restored = False

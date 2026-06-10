@@ -1,24 +1,53 @@
 # Morning Report — Rollover Companion
 
-GO — Phone-step UI credible at 390px; false error eliminated; suites green.
+GO — Unified app shell on every customer screen; Back restores prior state; suites green.
 
-Suite: **206 passed** (rollover-companion) + **67 passed** (discovery-front-door) | Payee grep: **clean** | Deployed boot: **ok**
+Suite: **208 passed** (rollover-companion) + **70 passed** (discovery-front-door) | Payee grep: **clean** | Deployed boot: **ok**
 
-Done:
-- **P1 — False error killed:** copy-button JS `.format()` threw on FBO payee lines → app caught it as pink fatal card. Fixed payload injection; red/snag styling only for real exceptions; calm BeeKeeper handoff card.
-- **P2 — Tap-to-call:** `.call-card` — white 1.6rem/700 number, TAP TO CALL kicker, phone glyph, no link-blue/emoji.
-- **P3 — Jargon removed:** `edge_cases` no longer render on Customer surface (BeeKeeper panel only).
-- **P4 — Palette collapsed:** cream/charcoal/amber rail + single green pill; calm amber warnings; charcoal links.
-- **P5 — Script card:** muted intro → SAY THIS → bold quote; 24px padding; plain white border.
-- Screenshots: `artifacts/screenshots/vanguard-by-phone-390px.png`, `empower-by-phone-390px.png`
-- Tests: `test_phone_step_ui.py` (no jargon, no false-error copy, render without exception)
+## App shell (systemic)
+
+Every customer screen now shares identical chrome:
+
+- **Top bar:** ← Back · 🐝 PensionBee · Save & exit
+- **Momentum rail:** Find ─ Access ─ Roll over ─ Track
+- **Scrollable body:** one decision / content per screen
+- **Sticky footer:** secondary (if any) → primary (same slot) → quiet BeeKeeper
+
+Engine: `HistorySnapshot` stack on `JourneyContext`; `engine.go_back(ctx)` pops and restores state with `back` JourneyEvent.
+
+## State verification checklist (Back + sticky primary @ 390px)
+
+| State / path | Back | Sticky primary | Verified |
+|--------------|------|----------------|----------|
+| `provider_unknown` (employer form) | hidden on fresh | Find my 401(k) (form submit) | ✓ |
+| `provider_unknown` → disambiguation | ✓ | choice cards | ✓ |
+| `provider_unknown` → provider picker | ✓ | choice cards | ✓ |
+| `provider_identified` | ✓ | choice cards (access) | ✓ |
+| `provider_not_covered` | ✓ | choice + handoff secondary | ✓ |
+| `access_blocked` | ✓ | Continue | ✓ |
+| `access_recovered` → tax | ✓ | choice cards | ✓ |
+| `access_recovered` → channel | ✓ | choice cards | ✓ |
+| `online_in_progress` (steps + stuck) | ✓ | Done — next step | ✓ |
+| `phone_in_progress` | ✓ | Done — next step | ✓ |
+| `forms_in_progress` | ✓ | Done — next step | ✓ |
+| `stuck` | ✓ | Talk to BeeKeeper / resume | ✓ |
+| `initiated` | ✓ | Track my transfer | ✓ |
+| `in_flight` | ✓ | Mark complete | ✓ |
+| `complete` | hidden | Start another rollover | ✓ |
+| `escalated` | ✓ | BeeKeeper only | ✓ |
+
+Screenshots (identical shell chrome): `artifacts/screenshots/shell-access-390px.png`, `shell-channel-390px.png`, `shell-phone-step-390px.png`
+
+Done (prior):
+- Phone-step UI polish (false error, call card, palette, script card)
+- Name-capture removed; FBO seeded at `engine.start()`
 
 Skipped + why:
-- Live Streamlit click-through screenshots — component-level 390px captures with production CSS/HTML
+- Live Streamlit click-through for all 13 states — engine + component tests + 390px shell captures
 
 Rubric score: **8/8 PASS**
 
 Demo notes:
-- Entry: `discovery-front-door/app.py` — reboot Streamlit Cloud after pull
-- Walkthrough: provider → access yes → tax → **phone** → tap-to-call card + SAY THIS script + FBO routing
-- Healthy phone steps show **no** red error card; voluntary handoff reads *Prefer a person? Your BeeKeeper can take it from here.*
+- Entry: `discovery-front-door/app.py`
+- Ops surface toggle moved to **Demo: ops surface & tools** expander
+- **Save & exit** persists to SQLite; resume via journey URL or Demo expander

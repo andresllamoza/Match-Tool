@@ -67,11 +67,65 @@ def inject_brand_css() -> None:
     }}
 
     .block-container {{
-        padding-top: 1.5rem;
-        padding-bottom: 2rem;
+        padding-top: 0.75rem;
+        padding-bottom: 11rem;
         max-width: 28rem;
         padding-left: 1rem;
         padding-right: 1rem;
+    }}
+
+    /* ── App shell ── */
+    .pb-shell-top {{
+        margin: 0 0 12px 0;
+    }}
+    .pb-shell-brand {{
+        text-align: center;
+        font-size: 1rem;
+        font-weight: 700;
+        color: {CHARCOAL};
+        margin: 0;
+        letter-spacing: -0.02em;
+    }}
+    .pb-shell-body {{
+        margin: 0 0 16px 0;
+    }}
+    .pb-shell-footer {{
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 0;
+        width: 100%;
+        max-width: 28rem;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+        background: linear-gradient(180deg, rgba(250, 248, 245, 0) 0%, {CANVAS} 18%, {CANVAS} 100%);
+        border-top: 1px solid {BORDER};
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }}
+    .pb-shell-bk-copy {{
+        font-size: 0.78rem;
+        color: {MUTED};
+        margin: 4px 0 0;
+        text-align: center;
+    }}
+    .pb-shell-footer .stButton > button[kind="primary"],
+    .pb-shell-footer [data-testid="stFormSubmitButton"] > button {{
+        min-height: 3.25rem !important;
+    }}
+    .pb-find-form [data-testid="stFormSubmitButton"] {{
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 0;
+        width: 100%;
+        max-width: 28rem;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+        background: linear-gradient(180deg, rgba(250, 248, 245, 0) 0%, {CANVAS} 18%, {CANVAS} 100%);
+        border-top: 1px solid {BORDER};
+        z-index: 50;
+        margin: 0 !important;
     }}
     /* Spacing system: 8 / 12 / 16 / 24 / 32px only */
     [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
