@@ -4,10 +4,12 @@ data/*
 !data/employer_rk_index.csv
 discovery-front-door/data/*
 !discovery-front-door/data/.gitkeep
-rollover-playbook-engine/data/*
-!rollover-playbook-engine/data/.gitkeep
+!discovery-front-door/data/employer_rk_index.csv
 rollover-companion/data/*
 !rollover-companion/data/.gitkeep
+!rollover-companion/data/employer_rk_index.csv
+rollover-playbook-engine/data/*
+!rollover-playbook-engine/data/.gitkeep
 
 # Secrets — real values go in Streamlit Cloud's Secrets UI, not in the repo
 .streamlit/secrets.toml

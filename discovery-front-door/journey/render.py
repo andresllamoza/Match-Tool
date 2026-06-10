@@ -149,8 +149,8 @@ def _render_find_step(view: JourneyView) -> None:
         if submitted:
             name = (employer or st.session_state.get("employer_draft", "")).strip()
             if name:
-                st.session_state.pending_lookup = name
-                st.rerun()
+                st.session_state.employer_draft = name
+                _go({"type": "lookup", "employer": name})
             else:
                 st.session_state.ui_error = "Enter your former employer to continue."
                 st.rerun()
@@ -308,7 +308,21 @@ def _go(action: dict) -> None:
     if isinstance(result, str):
         st.session_state.ui_error = result
     else:
-        st.session_state.pop("ui_error", None)
+        if (
+            action.get("type") == "lookup"
+            and hasattr(result, "ctx")
+            and result.ctx.state == JourneyState.PROVIDER_UNKNOWN
+            and hasattr(result, "screen")
+            and not (
+                result.screen.disambiguation_question and result.screen.disambiguation_options
+            )
+        ):
+            st.session_state.ui_error = (
+                "We couldn't find a 401(k) plan for that employer. "
+                "Try the full company name (e.g. Google LLC), or pick your provider below."
+            )
+        else:
+            st.session_state.pop("ui_error", None)
         if action.get("type") == "restart":
             st.session_state.show_provider_picker = False
             st.session_state.show_find_assistant = False
@@ -342,26 +356,6 @@ def run_journey_app() -> None:
         st.session_state.show_find_assistant = False
     if "employer_draft" not in st.session_state:
         st.session_state.employer_draft = ""
-
-    if st.session_state.get("pending_lookup"):
-        employer = str(st.session_state.pending_lookup).strip()
-        del st.session_state.pending_lookup
-        if employer:
-            st.session_state.employer_draft = employer
-            with st.spinner("Looking up your former employer…"):
-                result = apply_action({"type": "lookup", "employer": employer})
-            if isinstance(result, str):
-                st.session_state.ui_error = result
-            elif result.ctx.state == JourneyState.PROVIDER_UNKNOWN and not (
-                result.screen.disambiguation_question and result.screen.disambiguation_options
-            ):
-                st.session_state.ui_error = (
-                    "We couldn't find a 401(k) plan for that employer. "
-                    "Try the full company name (e.g. Google LLC), or pick your provider below."
-                )
-            else:
-                st.session_state.pop("ui_error", None)
-        st.rerun()
 
     header_left, header_right = st.columns([6, 1])
     with header_left:

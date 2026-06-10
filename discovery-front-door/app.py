@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from journey import run_journey_app  # noqa: E402
+from journey.engine_bridge import warm_lookup_cache  # noqa: E402
 from ui.brand import inject_brand_css  # noqa: E402
 
 st.set_page_config(
@@ -33,6 +34,7 @@ st.set_page_config(
 )
 
 inject_brand_css()
+warm_lookup_cache()
 
 try:
     run_journey_app()

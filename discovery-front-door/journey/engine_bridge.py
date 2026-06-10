@@ -9,6 +9,7 @@ from typing import Any
 import streamlit as st
 
 _COMPANION = Path(__file__).resolve().parents[2] / "rollover-companion"
+_DISCOVERY = Path(__file__).resolve().parents[1]
 if not _COMPANION.exists():
     raise FileNotFoundError(f"rollover-companion not found at {_COMPANION}")
 if str(_COMPANION) not in sys.path:
@@ -25,26 +26,32 @@ from engine.models import (
 )
 
 
+def _employer_index_paths() -> list[Path]:
+    """Bundled fast index — try app dir first (Streamlit Cloud entrypoint)."""
+    repo = _DISCOVERY.parent
+    return [
+        _DISCOVERY / "data" / "employer_rk_index.csv",
+        repo / "data" / "employer_rk_index.csv",
+        _COMPANION / "data" / "employer_rk_index.csv",
+    ]
+
+
 def _build_engine() -> JourneyEngine:
     from adapters.advizorpro import AdvizorProAdapter
     from adapters.employer_index import EmployerIndexAdapter
     from adapters.hybrid5500 import Hybrid5500Adapter
-    from adapters.matcher5500 import Local5500Adapter, master_cache_available
+    from adapters.matcher5500 import Local5500Adapter
     from engine.knowledge import KnowledgeBase
     from engine.lookup import LookupService
 
-    # Fast path for Streamlit Cloud: synthetic → bundled index (~6 MB, no DOL download).
-    # Full 115 MB matcher only when recordkeeper_master.csv exists locally.
-    repo = _COMPANION.parent
+    # Streamlit Cloud: NEVER load the 115MB DOL matcher (can download for minutes).
+    # Synthetic hot list → bundled ~6MB employer index only.
     adapters: list = [Local5500Adapter.from_synthetic()]
-    index = EmployerIndexAdapter.from_csv(repo / "data" / "employer_rk_index.csv")
-    if index is not None:
-        adapters.append(index)
-    if master_cache_available(repo):
-        try:
-            adapters.append(Local5500Adapter.from_matcher(repo))
-        except Exception:
-            pass
+    for path in _employer_index_paths():
+        index = EmployerIndexAdapter.from_csv(path)
+        if index is not None:
+            adapters.append(index)
+            break
     matcher = Hybrid5500Adapter(adapters) if len(adapters) > 1 else adapters[0]
 
     knowledge = KnowledgeBase.from_dir(_COMPANION / "rollover-knowledge-layer")
@@ -55,6 +62,14 @@ def _build_engine() -> JourneyEngine:
 @st.cache_resource
 def get_engine() -> JourneyEngine:
     return _build_engine()
+
+
+@st.cache_resource
+def warm_lookup_cache() -> bool:
+    """Prime matcher + index on first page load so Search is instant."""
+    engine = get_engine()
+    engine.lookup_service.matcher.lookup("google")
+    return True
 
 
 def load_context() -> JourneyContext:
