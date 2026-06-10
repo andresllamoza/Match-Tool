@@ -1,0 +1,17 @@
+{
+  "name": "match-tool",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "web"
+  ],
+  "dependencies": {
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "scripts": {
+    "build": "npm run build --workspace=web",
+    "vercel-build": "npm run build --workspace=web"
+  }
+}
