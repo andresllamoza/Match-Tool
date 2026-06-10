@@ -75,21 +75,64 @@ class JourneyResponse(BaseModel):
 
 
 def _enrich_intel(ctx: JourneyContext, screen: JourneyScreen) -> dict[str, Any]:
-    if not ctx.provider and not ctx.uncovered_provider:
-        return {}
     engine = get_engine()
-    pb = engine.knowledge.playbook_for(ctx)
     intel: dict[str, Any] = {
-        "mechanism": pb.mechanism.value,
-        "check_destination": pb.check_destination,
-        "forward_step_required": pb.forward_step_required,
-        "portal": pb.portal,
-        "flags_available": [],
-        "general_path": engine.knowledge.is_general_path(ctx),
-        "rep_questions": [q.model_dump() for q in pb.call_script.rep_questions],
-        "call_phone": pb.call_script.phone,
-        "call_intro": pb.call_script.intro,
+        "provider_status": (
+            "RECONSTRUCTED"
+            if screen.has_reconstructed_content
+            else ("PENDING" if ctx.state == JourneyState.PROVIDER_UNKNOWN else "VERIFIED")
+        ),
+        "agent_action_script": screen.next_beekeeper_script,
+        "escalation_triggers": [],
+        "failure_modes": [],
+        "knowledge_rules": [],
     }
+    if not ctx.provider and not ctx.uncovered_provider:
+        return intel
+
+    pb = engine.knowledge.playbook_for(ctx)
+    intel.update(
+        {
+            "mechanism": pb.mechanism.value,
+            "check_destination": pb.check_destination,
+            "forward_step_required": pb.forward_step_required,
+            "portal": pb.portal,
+            "flags_available": [],
+            "general_path": engine.knowledge.is_general_path(ctx),
+            "rep_questions": [q.model_dump() for q in pb.call_script.rep_questions],
+            "call_phone": pb.call_script.phone,
+            "call_intro": pb.call_script.intro,
+            "escalation_triggers": [t.flag for t in pb.escalation_triggers],
+            "failure_modes": [f.flag for f in pb.failure_modes],
+        }
+    )
+    rules: list[dict[str, str]] = []
+    if pb.call_script.phone:
+        rules.append(
+            {
+                "title": f"{pb.provider} Phone Script Fallback",
+                "body": pb.call_script.intro or f"Call {pb.call_script.phone}",
+            }
+        )
+    for trigger in pb.escalation_triggers:
+        rules.append({"title": trigger.flag, "body": trigger.action})
+    for failure in pb.failure_modes:
+        rules.append({"title": failure.flag, "body": failure.routing_action})
+    if pb.access_recovery.lockout_fallback.phone:
+        rules.append(
+            {
+                "title": f"{pb.provider} Access Recovery",
+                "body": pb.access_recovery.lockout_fallback.what_to_say,
+            }
+        )
+    if "notary" in " ".join(pb.edge_cases).lower():
+        rules.append(
+            {
+                "title": f"{pb.provider} Notary Details",
+                "body": " ; ".join(pb.edge_cases),
+            }
+        )
+    intel["knowledge_rules"] = rules
     return intel
 
 

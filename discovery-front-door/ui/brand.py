@@ -15,7 +15,7 @@ BORDER = "#EAE5DC"
 YELLOW = "#FFC72C"
 YELLOW_SOFT = "#FFF4D6"
 PERK_BG = "#FFF9E6"
-INPUT_BORDER = "#D1C9BC"
+INPUT_BORDER = "#EAE5DC"
 SUBCOPY = "#555555"
 GREEN = "#1B7F4B"
 GREEN_SOFT = "#E8F5EE"
@@ -75,11 +75,19 @@ def inject_brand_css() -> None:
     }}
 
     /* ── Brand header ── */
+    .pb-header-bar {{
+        display: flex;
+        align-items: center;
+        width: 100%;
+    }}
     .pb-brand-row {{
         display: flex;
         align-items: center;
         gap: 0.65rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0;
+    }}
+    .pb-brand-row--inline {{
+        margin-bottom: 0;
     }}
     .pb-bee-icon {{
         width: 2.5rem;
@@ -203,9 +211,9 @@ def inject_brand_css() -> None:
         text-align: left;
     }}
     .pb-step-item {{
-        display: flex;
+        display: inline-flex;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
     }}
     .pb-step-label {{
         font-size: 0.75rem;
@@ -218,32 +226,26 @@ def inject_brand_css() -> None:
         color: {CHARCOAL};
     }}
     .pb-step-pill {{
-        width: 1.5rem;
+        width: 100%;
         height: 0.25rem;
         border-radius: 999px;
         background: {YELLOW};
         margin-top: 0.25rem;
     }}
 
-    /* ── Premium find card ── */
-    .pb-find-shell {{
-        background: {CARD};
-        border: 1px solid {BORDER};
-        border-radius: 1rem;
-        box-shadow: 0 1px 3px rgba(17, 17, 17, 0.06);
-        padding: 2rem;
-        margin: 2rem auto 0;
-        max-width: 32rem;
-        text-align: left;
+    /* ── Premium find card (Streamlit bordered container) ── */
+    .block-container [data-testid="stVerticalBlockBorderWrapper"] {{
+        background: {CARD} !important;
+        border-color: {BORDER} !important;
+        border-radius: 1rem !important;
+        box-shadow: 0 1px 3px rgba(17, 17, 17, 0.06) !important;
+        padding: 1.75rem 1.5rem !important;
     }}
-    .pb-find-shell [data-testid="stForm"] {{
+    [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stForm"] {{
         margin: 0;
         padding: 0;
         border: none;
         background: transparent;
-    }}
-    .pb-find-card {{
-        text-align: left;
     }}
     .pb-find-h1 {{
         font-size: clamp(1.875rem, 5vw, 2.25rem);
@@ -283,10 +285,24 @@ def inject_brand_css() -> None:
         color: {CHARCOAL};
         margin: 0.35rem 0 0;
     }}
-    .pb-find-links {{
-        border-top: 1px solid {BORDER};
-        margin-top: 1rem;
-        padding-top: 1rem;
+    /* Compact restart icon in header */
+    .stButton button[title="Restart journey"] {{
+        width: 2.75rem !important;
+        min-height: 2.75rem !important;
+        margin-top: 0.15rem !important;
+        padding: 0 !important;
+        border: 1px solid {BORDER} !important;
+        border-radius: 0.75rem !important;
+        background: {CARD} !important;
+        color: {CHARCOAL} !important;
+        font-size: 1.2rem !important;
+        line-height: 1 !important;
+        box-shadow: none !important;
+    }}
+    .stButton button[title="Restart journey"]:hover {{
+        border-color: {CHARCOAL} !important;
+        background: {CARD} !important;
+        color: {CHARCOAL} !important;
     }}
 
     /* ── Journey-specific ── */

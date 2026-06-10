@@ -36,3 +36,14 @@ def text_link_button(label: str, *, key: str) -> bool:
         return st.button(label, type="tertiary", key=key, use_container_width=True)
     except TypeError:
         return st.button(label, key=key, use_container_width=True)
+
+
+def icon_button(label: str, *, key: str, help: str | None = None) -> bool:
+    """Compact header icon button (e.g. journey restart)."""
+    kwargs: dict = {"key": key}
+    if help:
+        kwargs["help"] = help
+    try:
+        return st.button(label, type="tertiary", **kwargs)
+    except TypeError:
+        return st.button(label, **kwargs)

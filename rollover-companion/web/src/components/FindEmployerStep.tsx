@@ -54,7 +54,7 @@ export function FindEmployerStep({
           }}
           placeholder="e.g. Target, FedEx, Walmart"
           disabled={loading}
-          className="mb-4 h-14 w-full rounded-xl border border-[#D1C9BC] bg-white px-4 text-lg text-[#111111] outline-none transition-all placeholder:text-[#6B6560]/70 focus:border-2 focus:border-[#111111] focus:ring-0 disabled:opacity-50"
+          className="mb-4 h-14 w-full rounded-xl border border-[#EAE5DC] bg-white px-4 text-lg text-[#111111] shadow-none outline-none transition-all placeholder:text-[#6B6560]/70 hover:border-[#111111] focus:border-2 focus:border-[#111111] focus:ring-0 disabled:opacity-50"
         />
 
         <Button

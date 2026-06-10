@@ -35,6 +35,9 @@ export function BrandHeader({ mode = "customer", compact = false }: BrandHeaderP
           <Link href="/embed" className="transition-colors hover:text-bee-charcoal">
             Embed
           </Link>
+          <Link href="/sandbox" className="transition-colors hover:text-bee-charcoal">
+            Sandbox
+          </Link>
         </nav>
       )}
       {mode === "agent" && (

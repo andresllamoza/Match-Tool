@@ -21,7 +21,7 @@ export function ProgressSteps({ current, variant = "default" }: ProgressStepsPro
         {STEPS.map((step, i) => {
           const active = i === currentIdx;
           return (
-            <div key={step.id} className="flex flex-col items-start">
+            <div key={step.id} className="inline-flex flex-col items-stretch">
               <span
                 className={`text-xs font-bold uppercase tracking-wider ${
                   active ? "text-[#111111]" : "text-gray-400"
@@ -31,7 +31,7 @@ export function ProgressSteps({ current, variant = "default" }: ProgressStepsPro
               </span>
               {active && (
                 <span
-                  className="mt-1 h-1 w-6 rounded-full bg-[#FFC72C]"
+                  className="mt-1 h-1 w-full rounded-full bg-[#FFC72C]"
                   aria-hidden
                 />
               )}

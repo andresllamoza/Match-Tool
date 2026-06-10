@@ -24,6 +24,24 @@ def brand_header(subtitle: str = "Rollover Companion") -> None:
     )
 
 
+def brand_header_bar(subtitle: str = "Rollover Companion") -> None:
+    """Unified top bar: logo left (restart button rendered in sibling column)."""
+    st.markdown(
+        f"""
+<div class="pb-header-bar">
+  <div class="pb-brand-row pb-brand-row--inline">
+    <div class="pb-bee-icon" aria-hidden="true">🐝</div>
+    <div>
+      <div class="pb-wordmark">PensionBee</div>
+      <div class="pb-product-tag">{html.escape(subtitle)}</div>
+    </div>
+  </div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def logo_mark() -> None:
     brand_header("Rollover Companion")
 

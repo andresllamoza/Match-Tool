@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { journeyAction, startJourney } from "@/lib/api";
 import { deriveSourceStatus } from "@/lib/sourceStatus";
+import type { JourneyController } from "@/hooks/useJourneyController";
+import { useJourneyController } from "@/hooks/useJourneyController";
 import type { JourneyResponse } from "@/lib/types";
 import { AgentPanel } from "./AgentPanel";
 import { AssistantDrawer } from "./AssistantDrawer";
@@ -19,9 +19,12 @@ import { SourceStatusBadge } from "./ui/SourceStatusBadge";
 
 interface JourneyFlowProps {
   mode?: "customer" | "agent" | "embed";
-  theme?: "default" | "minimal";
+  theme?: "default" | "minimal" | "dark";
   initialEmployer?: string;
   onPhaseChange?: (phase: import("@/lib/types").JourneyPhase) => void;
+  controller?: JourneyController;
+  readOnly?: boolean;
+  hideAssistant?: boolean;
 }
 
 type DecisionMode =
@@ -74,67 +77,32 @@ export function JourneyFlow({
   theme = "default",
   initialEmployer = "",
   onPhaseChange,
+  controller: externalController,
+  readOnly = false,
+  hideAssistant = false,
 }: JourneyFlowProps) {
   const isAgent = mode === "agent";
-  const [data, setData] = useState<JourneyResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [employerInput, setEmployerInput] = useState("");
-  const [showProviderPicker, setShowProviderPicker] = useState(false);
-  const [providers, setProviders] = useState<string[]>([]);
-  const [assistantOpen, setAssistantOpen] = useState(false);
+  const internalController = useJourneyController({
+    withAgentIntel: isAgent,
+    initialEmployer,
+    onPhaseChange,
+    autoStart: !externalController,
+  });
+  const {
+    data,
+    loading,
+    error,
+    employerInput,
+    setEmployerInput,
+    showProviderPicker,
+    setShowProviderPicker,
+    providers,
+    assistantOpen,
+    setAssistantOpen,
+    act,
+  } = externalController ?? internalController;
 
-  const act = useCallback(
-    async (body: Record<string, unknown>) => {
-      if (!data) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await journeyAction(data.context.journey_id, body, isAgent);
-        setData(res);
-        onPhaseChange?.(res.screen.phase);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong. A BeeKeeper can help.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [data, isAgent, onPhaseChange]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const employerSeed = initialEmployer.trim();
-      if (employerSeed) setEmployerInput(employerSeed);
-
-      try {
-        let res = await startJourney(isAgent);
-        if (cancelled) return;
-
-        if (employerSeed && res.screen.state === "provider_unknown") {
-          res = await journeyAction(res.context.journey_id, { type: "lookup", employer: employerSeed }, isAgent);
-          if (cancelled) return;
-        }
-
-        setData(res);
-        onPhaseChange?.(res.screen.phase);
-        const prov = await fetch("/api/providers").then((r) => r.json());
-        if (!cancelled) setProviders(prov.providers || []);
-      } catch {
-        if (!cancelled) {
-          setError("Could not connect to the rollover engine. A BeeKeeper can help.");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAgent, initialEmployer, onPhaseChange]);
+  const disabled = loading || readOnly;
 
   if (loading && !data) {
     return (
@@ -246,7 +214,7 @@ export function JourneyFlow({
               label={opt.label}
               description={opt.hint}
               onClick={() => handleTaxPick(opt.id)}
-              disabled={loading}
+              disabled={disabled}
             />
           ))}
         </div>
@@ -264,7 +232,7 @@ export function JourneyFlow({
               key={p}
               label={p}
               onClick={() => handleProviderPick(p)}
-              disabled={loading}
+              disabled={disabled}
             />
           ))}
           <button
@@ -289,7 +257,7 @@ export function JourneyFlow({
               key={opt}
               label={opt}
               onClick={() => handleDisambiguation(opt)}
-              disabled={loading}
+              disabled={disabled}
             />
           ))}
         </div>
@@ -306,19 +274,19 @@ export function JourneyFlow({
             label="Yes, I can log in"
             description="We'll walk you through the rollover in your provider portal or by phone."
             onClick={() => handleAccess(true)}
-            disabled={loading}
+            disabled={disabled}
           />
           <SelectionBlock
             label="No, I'm locked out or never had access"
             description="We'll help you recover access or connect you with a BeeKeeper."
             onClick={() => handleAccess(false)}
-            disabled={loading}
+            disabled={disabled}
           />
           {screen.state === "provider_not_covered" && (
             <button
               type="button"
               onClick={handleHandoff}
-              disabled={loading}
+              disabled={disabled}
               className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
             >
               Talk to a BeeKeeper about this provider →
@@ -338,19 +306,19 @@ export function JourneyFlow({
             label="Online"
             description="Fastest when you can log in to your provider's website."
             onClick={() => handleChannel("online")}
-            disabled={loading}
+            disabled={disabled}
           />
           <SelectionBlock
             label="By phone"
             description="We'll give you the number and exactly what to say."
             onClick={() => handleChannel("phone")}
-            disabled={loading}
+            disabled={disabled}
           />
           <SelectionBlock
             label="Paper forms"
             description="Download, fill out, and mail a distribution form."
             onClick={() => handleChannel("forms")}
-            disabled={loading}
+            disabled={disabled}
           />
         </div>
       );
@@ -359,13 +327,13 @@ export function JourneyFlow({
     if (decision === "channel_step") {
       return (
         <div className="space-y-3">
-          <Button onClick={handlePrimary} disabled={loading}>
+          <Button onClick={handlePrimary} disabled={disabled}>
             {screen.primary_action}
           </Button>
           <button
             type="button"
             onClick={() => act({ type: "step", outcome: "stuck" })}
-            disabled={loading}
+            disabled={disabled}
             className="w-full py-2 text-center text-sm font-semibold text-red-700 hover:underline"
           >
             I&apos;m stuck on this step
@@ -377,13 +345,13 @@ export function JourneyFlow({
     if (decision === "stuck") {
       return (
         <div className="space-y-3">
-          <Button onClick={handlePrimary} disabled={loading}>
+          <Button onClick={handlePrimary} disabled={disabled}>
             {screen.primary_action}
           </Button>
           <button
             type="button"
             onClick={() => act({ type: "resume" })}
-            disabled={loading}
+            disabled={disabled}
             className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
           >
             Try this step again →
@@ -395,7 +363,7 @@ export function JourneyFlow({
     if (decision === "track") {
       return (
         <div className="space-y-3">
-          <Button onClick={handlePrimary} disabled={loading}>
+          <Button onClick={handlePrimary} disabled={disabled}>
             {screen.primary_action}
           </Button>
           {screen.secondary_actions.map((action) => {
@@ -406,7 +374,7 @@ export function JourneyFlow({
                   key={action}
                   type="button"
                   onClick={() => handleEscalate("tracking_delay")}
-                  disabled={loading}
+                  disabled={disabled}
                   className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
                 >
                   {action} →
@@ -421,7 +389,7 @@ export function JourneyFlow({
 
     return (
       <div className="space-y-3">
-        <Button onClick={handlePrimary} disabled={loading}>
+        <Button onClick={handlePrimary} disabled={disabled}>
           {screen.primary_action}
         </Button>
         {screen.state === "access_blocked" &&
@@ -433,7 +401,7 @@ export function JourneyFlow({
                   key={action}
                   type="button"
                   onClick={() => handleEscalate("access_lockout")}
-                  disabled={loading}
+                  disabled={disabled}
                   className="w-full py-2 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
                 >
                   {action} →
@@ -462,7 +430,7 @@ export function JourneyFlow({
         onKnowProvider={() => setShowProviderPicker(true)}
         onAskQuestion={() => setAssistantOpen(true)}
         searchLabel={screen.primary_action}
-        loading={loading}
+        loading={disabled}
         showKnowProvider={screen.secondary_actions.some((a) =>
           a.toLowerCase().includes("provider")
         )}
@@ -580,16 +548,18 @@ export function JourneyFlow({
         </div>
       )}
 
-      {decision !== "done" && !isFindStep && (
+      {decision !== "done" && !isFindStep && !readOnly && (
         <div className="space-y-3">
           {renderDecision()}
-          <button
-            type="button"
-            onClick={() => setAssistantOpen(true)}
-            className="w-full py-3 text-center text-sm font-semibold text-bee-muted transition-colors hover:text-bee-charcoal lg:text-base"
-          >
-            Ask a question about this step
-          </button>
+          {!hideAssistant && (
+            <button
+              type="button"
+              onClick={() => setAssistantOpen(true)}
+              className="w-full py-3 text-center text-sm font-semibold text-bee-muted transition-colors hover:text-bee-charcoal lg:text-base"
+            >
+              Ask a question about this step
+            </button>
+          )}
         </div>
       )}
 
@@ -614,18 +584,27 @@ export function JourneyFlow({
     </div>
   );
 
+  const themeClass =
+    theme === "dark"
+      ? "embed-theme-dark rounded-2xl bg-[#1E242B] p-4 text-white"
+      : theme === "minimal"
+        ? ""
+        : "";
+
   return (
-    <>
-      <AssistantDrawer
-        journeyId={context.journey_id}
-        screen={screen}
-        open={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
-        onEscalate={() => {
-          setAssistantOpen(false);
-          act({ type: "escalate", reason: "assistant_handoff" });
-        }}
-      />
+    <div className={themeClass}>
+      {!hideAssistant && !readOnly && (
+        <AssistantDrawer
+          journeyId={context.journey_id}
+          screen={screen}
+          open={assistantOpen}
+          onClose={() => setAssistantOpen(false)}
+          onEscalate={() => {
+            setAssistantOpen(false);
+            act({ type: "escalate", reason: "assistant_handoff" });
+          }}
+        />
+      )}
 
       {isAgent ? (
         <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
@@ -639,6 +618,6 @@ export function JourneyFlow({
       ) : (
         journeyCard
       )}
-    </>
+    </div>
   );
 }

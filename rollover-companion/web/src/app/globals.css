@@ -40,4 +40,26 @@ body {
   .pb-sheet {
     @apply bg-canvas;
   }
+
+  .embed-theme-dark .pb-card,
+  .embed-theme-dark .rounded-2xl {
+    @apply border-white/15 bg-[#2A3139] text-white;
+  }
+
+  .embed-theme-dark h1,
+  .embed-theme-dark h2,
+  .embed-theme-dark .text-bee-charcoal,
+  .embed-theme-dark .text-\[\#111111\] {
+    @apply text-white;
+  }
+
+  .embed-theme-dark .text-bee-muted,
+  .embed-theme-dark .text-\[\#555555\],
+  .embed-theme-dark .text-\[\#6B6560\] {
+    @apply text-white/60;
+  }
+
+  .embed-theme-dark input {
+    @apply border-white/20 bg-[#1E242B] text-white;
+  }
 }

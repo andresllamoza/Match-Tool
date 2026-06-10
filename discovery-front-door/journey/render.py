@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui.components import brand_header  # noqa: E402
+from ui.components import brand_header_bar  # noqa: E402
 
 from .engine_bridge import JourneyView, apply_action, current_view, get_engine, list_providers
-from .widgets import form_submit_primary, primary_button, secondary_button, text_link_button
+from .widgets import form_submit_primary, icon_button, primary_button, secondary_button, text_link_button
 
 # Engine imports after companion path is on sys.path (via engine_bridge).
 from engine.assistant import ScopedAssistant  # noqa: E402
@@ -75,39 +75,41 @@ def _render_find_perk(body: str) -> None:
 
 def _render_find_step(view: JourneyView) -> None:
     screen = view.screen
-    st.markdown('<div class="pb-find-shell"><div class="pb-find-card">', unsafe_allow_html=True)
-    _render_progress(screen.phase.value, variant="minimal")
-    st.markdown(
-        '<h1 class="pb-find-h1">Find your old 401(k)</h1>'
-        "<p class=\"pb-find-sub\">Tell us your former employer or plan provider. We'll handle "
-        "the lookup to locate the exact distribution details required by your old custodian.</p>",
-        unsafe_allow_html=True,
-    )
     try:
-        form_ctx = st.form("employer_lookup_form", clear_on_submit=False, border=False)
+        card = st.container(border=True)
     except TypeError:
-        form_ctx = st.form("employer_lookup_form", clear_on_submit=False)
-    with form_ctx:
-        employer = st.text_input(
-            "Former employer or plan provider",
-            key="employer_draft",
-            placeholder="e.g. Target, FedEx, Walmart",
-            label_visibility="visible",
+        card = st.container()
+    with card:
+        _render_progress(screen.phase.value, variant="minimal")
+        st.markdown(
+            '<h1 class="pb-find-h1">Find your old 401(k)</h1>'
+            "<p class=\"pb-find-sub\">Tell us your former employer or plan provider. We'll handle "
+            "the lookup to locate the exact distribution details required by your old custodian.</p>",
+            unsafe_allow_html=True,
         )
-        submitted = form_submit_primary(screen.primary_action)
-    if submitted:
-        if employer.strip():
-            _go({"type": "lookup", "employer": employer.strip()})
-        else:
-            st.session_state.ui_error = "Enter your former employer to continue."
-    st.markdown('<div class="pb-find-links">', unsafe_allow_html=True)
-    if text_link_button("I already know my 401(k) provider →", key="show_provider_picker_btn"):
-        st.session_state.show_provider_picker = True
-        st.rerun()
-    if text_link_button("Ask a question about this step →", key="find_ask_assistant"):
-        st.session_state.show_find_assistant = True
-        st.rerun()
-    st.markdown("</div></div>", unsafe_allow_html=True)
+        try:
+            form_ctx = st.form("employer_lookup_form", clear_on_submit=False, border=False)
+        except TypeError:
+            form_ctx = st.form("employer_lookup_form", clear_on_submit=False)
+        with form_ctx:
+            employer = st.text_input(
+                "Former employer or plan provider",
+                key="employer_draft",
+                placeholder="e.g. Target, FedEx, Walmart",
+                label_visibility="visible",
+            )
+            submitted = form_submit_primary(screen.primary_action)
+        if submitted:
+            if employer.strip():
+                _go({"type": "lookup", "employer": employer.strip()})
+            else:
+                st.session_state.ui_error = "Enter your former employer to continue."
+        if text_link_button("I already know my 401(k) provider →", key="show_provider_picker_btn"):
+            st.session_state.show_provider_picker = True
+            st.rerun()
+        if text_link_button("Ask a question about this step →", key="find_ask_assistant"):
+            st.session_state.show_find_assistant = True
+            st.rerun()
     _render_find_perk(screen.body)
     if st.session_state.get("show_find_assistant"):
         _render_assistant(view)
@@ -266,6 +268,7 @@ def _go(action: dict) -> None:
     st.session_state.pop("ui_error", None)
     if action.get("type") == "restart":
         st.session_state.show_provider_picker = False
+        st.session_state.show_find_assistant = False
         if "employer_draft" in st.session_state:
             del st.session_state["employer_draft"]
     st.rerun()
@@ -309,10 +312,11 @@ def run_journey_app() -> None:
                 st.session_state.pop("ui_error", None)
                 st.rerun()
 
-    brand_header()
-    _, restart_col = st.columns([5, 1])
-    with restart_col:
-        if secondary_button("↺", key="restart_journey"):
+    header_left, header_right = st.columns([6, 1])
+    with header_left:
+        brand_header_bar()
+    with header_right:
+        if icon_button("↺", key="restart_journey", help="Restart journey"):
             _go({"type": "restart"})
 
     if st.session_state.get("ui_error"):
