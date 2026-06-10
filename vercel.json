@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
-  "installCommand": "npm ci --prefix rollover-companion/web",
-  "buildCommand": "npm run build --prefix rollover-companion/web"
+  "builds": [
+    {
+      "src": "rollover-companion/web/package.json",
+      "use": "@vercel/next"
+    }
+  ]
 }
