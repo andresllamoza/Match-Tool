@@ -7,8 +7,41 @@ const STEPS: { id: JourneyPhase; label: string }[] = [
   { id: "track", label: "Track" },
 ];
 
-export function ProgressSteps({ current }: { current: JourneyPhase }) {
+interface ProgressStepsProps {
+  current: JourneyPhase;
+  variant?: "default" | "minimal";
+}
+
+export function ProgressSteps({ current, variant = "default" }: ProgressStepsProps) {
   const currentIdx = STEPS.findIndex((s) => s.id === current);
+
+  if (variant === "minimal") {
+    return (
+      <nav aria-label="Rollover progress" className="mb-8 flex gap-6 sm:gap-8">
+        {STEPS.map((step, i) => {
+          const active = i === currentIdx;
+          const done = i < currentIdx;
+          return (
+            <div key={step.id} className="flex flex-col items-start">
+              <span
+                className={`text-xs font-bold uppercase tracking-wider ${
+                  active || done ? "text-[#111111]" : "text-gray-400"
+                }`}
+              >
+                {step.label}
+              </span>
+              {active && (
+                <span
+                  className="mt-1 h-1 w-6 rounded-full bg-[#FFC72C]"
+                  aria-hidden
+                />
+              )}
+            </div>
+          );
+        })}
+      </nav>
+    );
+  }
 
   return (
     <div className="mb-6 lg:mb-8">

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui.components import brand_header, promo_card  # noqa: E402
+from ui.components import brand_header  # noqa: E402
 
 from .engine_bridge import JourneyView, apply_action, current_view, get_engine, list_providers
-from .widgets import form_submit_primary, primary_button, secondary_button
+from .widgets import form_submit_primary, primary_button, secondary_button, text_link_button
 
 # Engine imports after companion path is on sys.path (via engine_bridge).
 from engine.assistant import ScopedAssistant  # noqa: E402
@@ -27,12 +27,28 @@ IN_CHANNEL = {
 }
 
 
-def _render_progress(phase: str) -> None:
+def _render_progress(phase: str, *, variant: str = "default") -> None:
     ids = [p[0] for p in PHASES]
     try:
         idx = ids.index(phase)
     except ValueError:
         idx = 0
+
+    if variant == "minimal":
+        parts = ['<nav class="pb-step-nav" aria-label="Rollover progress">']
+        for i, (_, label) in enumerate(PHASES):
+            done = i < idx
+            active = i == idx
+            cls = "active" if active else ("done" if done else "")
+            parts.append(f'<div class="pb-step-item">')
+            parts.append(f'<span class="pb-step-label {cls}">{label}</span>')
+            if active:
+                parts.append('<span class="pb-step-pill" aria-hidden="true"></span>')
+            parts.append("</div>")
+        parts.append("</nav>")
+        st.markdown("".join(parts), unsafe_allow_html=True)
+        return
+
     parts = ['<div class="pb-phase-bar">']
     for i, (_, label) in enumerate(PHASES):
         done = i < idx
@@ -44,6 +60,58 @@ def _render_progress(phase: str) -> None:
         )
     parts.append("</div>")
     st.markdown("".join(parts), unsafe_allow_html=True)
+
+
+def _render_find_perk(body: str) -> None:
+    if "1%" not in body:
+        return
+    st.markdown(
+        '<div class="pb-perk-below">'
+        '<p class="pb-perk-kicker">PensionBee perk</p>'
+        '<p class="pb-perk-body">Roll your old 401(k) to PensionBee and get a 1% match on '
+        "eligible transfers.</p></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_find_step(view: JourneyView) -> None:
+    screen = view.screen
+    _render_progress(screen.phase.value, variant="minimal")
+    st.markdown('<div class="pb-find-shell"><div class="pb-find-card">', unsafe_allow_html=True)
+    st.markdown(
+        '<h1 class="pb-find-h1">Find your old 401(k)</h1>'
+        "<p class=\"pb-find-sub\">Tell us your former employer or plan provider. We'll handle "
+        "the lookup to locate the exact distribution details required by your old custodian.</p>",
+        unsafe_allow_html=True,
+    )
+    try:
+        form_ctx = st.form("employer_lookup_form", clear_on_submit=False, border=False)
+    except TypeError:
+        form_ctx = st.form("employer_lookup_form", clear_on_submit=False)
+    with form_ctx:
+        employer = st.text_input(
+            "Former employer or plan provider",
+            key="employer_draft",
+            placeholder="e.g. Target, FedEx, Walmart",
+            label_visibility="visible",
+        )
+        submitted = form_submit_primary(screen.primary_action)
+    if submitted:
+        if employer.strip():
+            _go({"type": "lookup", "employer": employer.strip()})
+        else:
+            st.session_state.ui_error = "Enter your former employer to continue."
+    st.markdown('<div class="pb-find-links">', unsafe_allow_html=True)
+    if text_link_button("I already know my 401(k) provider →", key="show_provider_picker_btn"):
+        st.session_state.show_provider_picker = True
+        st.rerun()
+    if text_link_button("Ask a question about this step →", key="find_ask_assistant"):
+        st.session_state.show_find_assistant = True
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
+    _render_find_perk(screen.body)
+    if st.session_state.get("show_find_assistant"):
+        _render_assistant(view)
 
 
 def _selection_button(label: str, key: str, description: str | None = None) -> bool:
@@ -116,31 +184,6 @@ def _render_decisions(view: JourneyView) -> None:
         return
 
     if state == JourneyState.PROVIDER_UNKNOWN:
-        st.markdown(
-            '<p class="pb-helper">We need your former employer\'s name to match the exact '
-            "distribution address required by your old custodian.</p>",
-            unsafe_allow_html=True,
-        )
-        try:
-            form_ctx = st.form("employer_lookup_form", clear_on_submit=False, border=False)
-        except TypeError:
-            form_ctx = st.form("employer_lookup_form", clear_on_submit=False)
-        with form_ctx:
-            employer = st.text_input(
-                "Former employer or plan provider",
-                key="employer_draft",
-                placeholder="e.g. Target, FedEx, Walmart",
-                label_visibility="visible",
-            )
-            submitted = form_submit_primary(screen.primary_action)
-        if submitted:
-            if employer.strip():
-                _go({"type": "lookup", "employer": employer.strip()})
-            else:
-                st.session_state.ui_error = "Enter your former employer to continue."
-        if secondary_button("I already know my 401(k) provider", key="show_provider_picker_btn"):
-            st.session_state.show_provider_picker = True
-            st.rerun()
         return
 
     if state in (JourneyState.PROVIDER_IDENTIFIED, JourneyState.PROVIDER_NOT_COVERED):
@@ -250,6 +293,8 @@ def _render_assistant(view: JourneyView) -> None:
 def run_journey_app() -> None:
     if "show_provider_picker" not in st.session_state:
         st.session_state.show_provider_picker = False
+    if "show_find_assistant" not in st.session_state:
+        st.session_state.show_find_assistant = False
     if "employer_draft" not in st.session_state:
         st.session_state.employer_draft = ""
 
@@ -277,14 +322,10 @@ def run_journey_app() -> None:
     view = current_view()
     screen = view.screen
 
-    if screen.state not in (JourneyState.COMPLETE, JourneyState.ESCALATED):
-        _render_progress(screen.phase.value)
+    is_find_step = screen.state == JourneyState.PROVIDER_UNKNOWN
 
-    if screen.state == JourneyState.PROVIDER_UNKNOWN and "1%" in screen.body:
-        promo_card(
-            "PensionBee perk",
-            "Roll your old 401(k) to PensionBee and get a 1% match on eligible transfers.",
-        )
+    if screen.state not in (JourneyState.COMPLETE, JourneyState.ESCALATED) and not is_find_step:
+        _render_progress(screen.phase.value)
 
     if screen.provider and screen.state not in (
         JourneyState.PROVIDER_IDENTIFIED,
@@ -306,19 +347,10 @@ def run_journey_app() -> None:
             unsafe_allow_html=True,
         )
 
-    st.markdown(f'<h1 class="pb-headline">{screen.headline}</h1>', unsafe_allow_html=True)
-    if (
-        screen.body
-        and screen.state not in IN_CHANNEL
-        and screen.state != JourneyState.PROVIDER_UNKNOWN
-    ):
-        st.markdown(f'<p class="pb-body">{screen.body}</p>', unsafe_allow_html=True)
-    elif screen.state == JourneyState.PROVIDER_UNKNOWN:
-        st.markdown(
-            '<p class="pb-subcopy">Tell us where you worked — we\'ll find who holds your plan '
-            "and walk you through the rollover, one step at a time.</p>",
-            unsafe_allow_html=True,
-        )
+    if not is_find_step:
+        st.markdown(f'<h1 class="pb-headline">{screen.headline}</h1>', unsafe_allow_html=True)
+        if screen.body and screen.state not in IN_CHANNEL:
+            st.markdown(f'<p class="pb-body">{screen.body}</p>', unsafe_allow_html=True)
 
     if screen.edge_cases:
         for ec in screen.edge_cases:
@@ -346,6 +378,8 @@ def run_journey_app() -> None:
         st.success("🎉 You're all set! Your rollover is complete.")
     elif screen.state == JourneyState.ESCALATED:
         st.info("A BeeKeeper will take it from here.")
+    elif is_find_step:
+        _render_find_step(view)
     else:
         _render_decisions(view)
         _render_assistant(view)

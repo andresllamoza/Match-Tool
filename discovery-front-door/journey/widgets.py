@@ -28,3 +28,11 @@ def form_submit_primary(label: str) -> bool:
         return st.form_submit_button(label, type="primary", use_container_width=True)
     except TypeError:
         return st.form_submit_button(label, use_container_width=True)
+
+
+def text_link_button(label: str, *, key: str) -> bool:
+    """Chevron text-link escape hatch (find screen secondary actions)."""
+    try:
+        return st.button(label, type="tertiary", key=key, use_container_width=True)
+    except TypeError:
+        return st.button(label, key=key, use_container_width=True)
