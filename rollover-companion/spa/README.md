@@ -18,7 +18,8 @@ npm run dev
 | Type | Employer |
 |------|----------|
 | Fidelity online (7 steps) | Amazon |
-| Empower (check → user → forward) | Citi |
+| Alight / RolloverCentral | Citi or Citigroup |
+| Empower (check → user → forward) | Dollar Tree or Apple |
 | Low-confidence disambiguation | Cardinal Micro |
 | Not covered → BeeKeeper | Walmart |
 

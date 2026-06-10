@@ -249,7 +249,7 @@ function FindScreen({ onLookup, onEscalate }: { onLookup: (e: string) => void; o
           id="employer"
           name="employer"
           className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3.5 text-[17px] outline-none ring-ink focus:ring-2"
-          placeholder="e.g. Amazon, Citi, Cardinal Micro"
+          placeholder="e.g. Amazon, Citi, Dollar Tree"
           autoComplete="organization"
         />
         <button type="submit" className="btn-primary mt-6">

@@ -14,8 +14,14 @@ describe("journeyEngine", () => {
     expect(ctx.providerName).toBe("Merrill Lynch");
   });
 
+  it("citi maps to alight not empower", () => {
+    const ctx = reduceJourney(initialContext(), { type: "lookup", employer: "Citi" });
+    expect(ctx.providerName).toBe("Alight Solutions");
+    expect(ctx.matchedEmployer).toBe("Citigroup Inc.");
+  });
+
   it("fbo always pensionbee", () => {
-    let ctx = reduceJourney(initialContext(), { type: "lookup", employer: "Citi" });
+    let ctx = reduceJourney(initialContext(), { type: "lookup", employer: "Dollar Tree" });
     ctx = reduceJourney(ctx, { type: "continue" });
     ctx = reduceJourney(ctx, { type: "access", canLogin: true });
     ctx = reduceJourney(ctx, { type: "set_name", firstName: "Avery", lastName: "Quinn" });

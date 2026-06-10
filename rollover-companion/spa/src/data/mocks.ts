@@ -63,6 +63,35 @@ export const PROVIDERS: Record<string, ProviderMock> = {
     mailToUser: true,
     notaryEdgeCase: "Some Empower plans require notarization — your BeeKeeper can arrange virtual notary support.",
   },
+  alight: {
+    id: "alight",
+    name: "Alight Solutions",
+    onlineSteps: [
+      "Go to alight.com/find-your-hr-website and open your employer's benefits site.",
+      "Log in and open Savings & Retirement.",
+      "Choose Rollover or Move money out.",
+      "Select RolloverCentral and start a direct rollover.",
+      "Search for PensionBee and link your account with your 14-digit VAN from BeeHive.",
+      "Confirm pre-tax funds go to your Traditional IRA.",
+      "Submit and save your confirmation.",
+    ],
+    phoneScript: {
+      opening: "I'd like a direct rollover from my Alight 401(k) to PensionBee.",
+      qa: [
+        { theyAsk: "Pre-tax or Roth?", youSay: "Pre-tax to Traditional IRA." },
+        { theyAsk: "Check payable?", youSay: "PensionBee FBO [your name]." },
+        { theyAsk: "Mailing address?", youSay: "PO Box 72, New York, NY 10272." },
+      ],
+    },
+    formSteps: [
+      "Direct rollover to external IRA.",
+      "Payee: PensionBee FBO [your name].",
+      "Mail: PO Box 72, New York, NY 10272.",
+    ],
+    onlineDays: "2–3 business days",
+    checkDays: "up to 2 weeks by check",
+    mailToUser: false,
+  },
   vanguard: {
     id: "vanguard",
     name: "Vanguard",
@@ -137,8 +166,17 @@ export function mockLookup(employer: string): LookupResult {
   if (q.includes("amazon")) {
     return { providerId: "fidelity", providerName: "Fidelity", matchedEmployer: "Amazon.com Services LLC", confidence: "high" };
   }
-  if (q.includes("citi")) {
-    return { providerId: "empower", providerName: "Empower", matchedEmployer: "Citigroup Inc.", confidence: "high" };
+  if (q.includes("citi") || q.includes("citigroup")) {
+    return {
+      providerId: "alight",
+      providerName: "Alight Solutions",
+      matchedEmployer: "Citigroup Inc.",
+      confidence: "high",
+    };
+  }
+  if (q.includes("dollar tree") || (q === "apple" || q.includes("apple inc"))) {
+    const name = q.includes("dollar") ? "Dollar Tree, Inc." : "Apple Inc.";
+    return { providerId: "empower", providerName: "Empower", matchedEmployer: name, confidence: "high" };
   }
   if (q.includes("cardinal")) {
     return {
@@ -159,6 +197,14 @@ export function mockLookup(employer: string): LookupResult {
   if (q.includes("vanguard")) {
     return { providerId: "vanguard", providerName: "Vanguard", matchedEmployer: employer.trim(), confidence: "high" };
   }
+  if (q.includes("home depot") || q.includes("marriott") || q.includes("rtx")) {
+    return {
+      providerId: "alight",
+      providerName: "Alight Solutions",
+      matchedEmployer: employer.trim(),
+      confidence: "high",
+    };
+  }
   if (q.includes("fidelity") || q.includes("fedex") || q.includes("target")) {
     return { providerId: "fidelity", providerName: "Fidelity", matchedEmployer: employer.trim(), confidence: "high" };
   }
@@ -167,7 +213,7 @@ export function mockLookup(employer: string): LookupResult {
     confidence: "low",
     disambiguation: {
       question: "We found more than one match — which employer is yours?",
-      options: [`${employer.trim()} — Fidelity plan`, `${employer.trim()} — Empower plan`],
+      options: [`${employer.trim()} — Fidelity plan`, `${employer.trim()} — Alight plan`],
     },
   };
 }
@@ -179,6 +225,9 @@ export function resolveDisambiguation(answer: string): LookupResult {
   }
   if (lower.includes("vanguard")) {
     return { providerId: "vanguard", providerName: "Vanguard", matchedEmployer: answer.split("—")[0]?.trim() || answer, confidence: "high" };
+  }
+  if (lower.includes("alight")) {
+    return { providerId: "alight", providerName: "Alight Solutions", matchedEmployer: answer.split("—")[0]?.trim() || answer, confidence: "high" };
   }
   return { providerId: "fidelity", providerName: "Fidelity", matchedEmployer: answer.split("—")[0]?.trim() || answer, confidence: "high" };
 }
