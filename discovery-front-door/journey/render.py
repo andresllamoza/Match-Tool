@@ -661,22 +661,16 @@ def run_journey_app() -> None:
             ),
             unsafe_allow_html=True,
         )
-        if screen.edge_cases and view.step_index == 0:
-            st.markdown(
-                f'<div class="pb-edge-tip">{screen.edge_cases[0]}</div>',
-                unsafe_allow_html=True,
-            )
     elif not is_find_step and not _screen_owns_headline(view):
         st.markdown(f'<h1 class="pb-headline">{screen.headline}</h1>', unsafe_allow_html=True)
         if screen.body:
             st.markdown(f'<p class="pb-body">{screen.body}</p>', unsafe_allow_html=True)
 
-    if screen.edge_cases and screen.state not in IN_CHANNEL:
-        for ec in screen.edge_cases:
-            st.markdown(f'<p class="pb-muted-note">{ec}</p>', unsafe_allow_html=True)
-
     if screen.provenance_warning:
-        st.warning(screen.provenance_warning)
+        st.markdown(
+            f'<div class="pb-badge-warn">{html.escape(screen.provenance_warning)}</div>',
+            unsafe_allow_html=True,
+        )
 
     if screen.state in IN_CHANNEL:
         _render_channel_context(view)
