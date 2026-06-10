@@ -28,9 +28,9 @@ export function FindEmployerStep({
 }: FindEmployerStepProps) {
   return (
     <div className="mx-auto mt-8 w-full max-w-lg text-left">
-      <ProgressSteps current="find" variant="minimal" />
-
       <div className="rounded-2xl border border-[#EAE5DC] bg-white p-8 shadow-sm">
+        <ProgressSteps current="find" variant="minimal" />
+
         <h1 className="mb-2 text-3xl font-bold tracking-tight text-[#111111] sm:text-4xl">
           Find your old 401(k)
         </h1>
@@ -54,13 +54,13 @@ export function FindEmployerStep({
           }}
           placeholder="e.g. Target, FedEx, Walmart"
           disabled={loading}
-          className="mb-4 h-14 w-full rounded-xl border border-[#D1C9BC] bg-white px-4 text-lg text-[#111111] outline-none transition-all placeholder:text-[#6B6560]/70 focus:border-[#111111] focus:ring-0 disabled:opacity-50"
+          className="mb-4 h-14 w-full rounded-xl border border-[#D1C9BC] bg-white px-4 text-lg text-[#111111] outline-none transition-all placeholder:text-[#6B6560]/70 focus:border-2 focus:border-[#111111] focus:ring-0 disabled:opacity-50"
         />
 
         <Button
           onClick={onSearch}
           disabled={loading || !employer.trim()}
-          className="mb-4 h-14 min-h-[56px] rounded-xl text-base active:scale-[0.99] transition-transform duration-100"
+          className="mb-4 h-14 min-h-[56px] rounded-xl bg-[#111111] text-base font-semibold text-white active:scale-[0.99] transition-transform duration-100"
         >
           {searchLabel}
         </Button>

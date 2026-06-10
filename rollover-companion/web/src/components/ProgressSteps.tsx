@@ -20,12 +20,11 @@ export function ProgressSteps({ current, variant = "default" }: ProgressStepsPro
       <nav aria-label="Rollover progress" className="mb-8 flex gap-6 sm:gap-8">
         {STEPS.map((step, i) => {
           const active = i === currentIdx;
-          const done = i < currentIdx;
           return (
             <div key={step.id} className="flex flex-col items-start">
               <span
                 className={`text-xs font-bold uppercase tracking-wider ${
-                  active || done ? "text-[#111111]" : "text-gray-400"
+                  active ? "text-[#111111]" : "text-gray-400"
                 }`}
               >
                 {step.label}
