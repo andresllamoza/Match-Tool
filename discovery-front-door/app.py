@@ -38,6 +38,9 @@ warm_lookup_cache()
 
 try:
     run_journey_app()
-except Exception as exc:
-    st.error("Something went wrong starting the rollover companion. A BeeKeeper can help.")
-    st.exception(exc)
+except Exception:
+    st.markdown(
+        '<div class="pb-error"><strong>Something went wrong on our side.</strong><br/>'
+        "A BeeKeeper can help you finish your rollover — real humans, not a dead end.</div>",
+        unsafe_allow_html=True,
+    )
