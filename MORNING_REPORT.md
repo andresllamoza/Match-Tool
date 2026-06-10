@@ -2,10 +2,10 @@
 
 GO — Demo branch merged to `origin/main`; payee compliance clean; suites green; deployed Streamlit entry boots.
 
-Suite: **204 passed** (rollover-companion) + **59 passed** (discovery-front-door) | Payee grep: **clean** (0 hits) | Deployed boot: **ok** (`discovery-front-door/app.py` HTTP 200, `USE_SYNTHETIC=1`)
+Suite: **204 passed** (rollover-companion, ≥201) + **59 passed** (discovery-front-door) | Payee grep: **clean** (0 hits in knowledge/UI code; brief docs excluded) | Deployed boot: **ok** (`discovery-front-door/app.py` HTTP 200, `USE_SYNTHETIC=1`)
 
 Done:
-- `d78f2ae` — Merge `cursor/discovery-front-door-demo-9f5f` into main (web conflicts → demo branch; engine keeps `resolve_check_payable()` + customer name fields)
+- `d78f2ae` — Merge `cursor/discovery-front-door-demo-9f5f` into main (web conflicts → `--theirs`; engine keeps `resolve_check_payable()` + customer name fields)
 - `870a39d` — Default FBO payee uses synthetic customer name when none entered (`Jordan Rivera`)
 - `c639217` — Phone provenance: fixed Fidelity `800-835-5095`, Merrill `800-228-4015`; cited official URLs for Empower/Voya/Principal/Vanguard
 - `9877b07` — Prior morning report (superseded by this file)
