@@ -20,9 +20,22 @@ body {
   min-height: 100dvh;
 }
 
+@keyframes fluidWandering {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 @layer utilities {
   .desktop-shell {
-    @apply relative min-h-dvh bg-canvas;
+    @apply relative min-h-dvh;
+    background: linear-gradient(135deg, #faf8f5 0%, #fffdf9 50%, #f5f0e6 100%);
+    background-size: 200% 200%;
+    animation: fluidWandering 15s ease infinite;
   }
 
   .desktop-shell::before {
@@ -107,6 +120,11 @@ body {
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .desktop-shell {
+      animation: none;
+      background-position: 0% 50%;
+    }
+
     .pb-step-enter {
       animation: none;
     }

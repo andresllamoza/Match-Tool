@@ -86,39 +86,23 @@ export function LandingPage() {
           <LandingTimeline />
         </motion.div>
 
-        <motion.h1
-          custom={1}
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="mb-2 text-4xl font-bold tracking-tight text-[#111111]"
-        >
-          Rollover Companion
-        </motion.h1>
+        <motion.div custom={1} variants={fadeUp} initial="hidden" animate="show">
+          <span className="mb-3 block text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">
+            Rollover Companion
+          </span>
 
-        <motion.p
-          custom={2}
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="mb-4 text-xl font-medium leading-relaxed text-[#555555]"
-        >
-          Move your old 401(k) to PensionBee — calmly, step by step.
-        </motion.p>
+          <h1 className="mb-6 text-4xl font-extrabold leading-[1.1] tracking-[-0.03em] text-[#111111] sm:text-5xl">
+            Move your old 401(k) to PensionBee — calmly, step by step.
+          </h1>
 
-        <motion.p
-          custom={3}
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="mb-8 max-w-xl text-base leading-relaxed text-gray-600"
-        >
-          Find your plan, recover missing access, and move your savings using verified routing
-          rules and exact phone scripts. A dedicated BeeKeeper is always one tap away.
-        </motion.p>
+          <p className="mb-8 max-w-xl text-lg leading-relaxed text-gray-600">
+            Find your plan, recover missing access, and move your savings using verified routing
+            rules and exact phone scripts. A dedicated BeeKeeper is always one tap away.
+          </p>
+        </motion.div>
 
         <motion.div
-          custom={4}
+          custom={3}
           variants={fadeUp}
           initial="hidden"
           animate="show"
@@ -136,7 +120,7 @@ export function LandingPage() {
         </motion.div>
 
         <motion.div
-          custom={5}
+          custom={4}
           variants={fadeUp}
           initial="hidden"
           animate="show"

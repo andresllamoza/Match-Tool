@@ -48,9 +48,13 @@ def inject_brand_css() -> None:
         overflow: hidden !important;
     }}
 
+    @keyframes fluidWandering {{
+        0%, 100% {{ background-position: 0% 50%; }}
+        50% {{ background-position: 100% 50%; }}
+    }}
+
     html, body, #root, .stApp, [data-testid="stAppViewContainer"] {{
         font-family: "DM Sans", system-ui, sans-serif !important;
-        background: {CANVAS} !important;
         color: {INK} !important;
     }}
 
@@ -58,7 +62,16 @@ def inject_brand_css() -> None:
         background:
             radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 199, 44, 0.09), transparent),
             radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255, 199, 44, 0.05), transparent),
-            {CANVAS} !important;
+            linear-gradient(135deg, #FAF8F5 0%, #FFFDF9 50%, #F5F0E6 100%) !important;
+        background-size: auto, auto, 200% 200% !important;
+        animation: fluidWandering 15s ease infinite !important;
+    }}
+
+    @media (prefers-reduced-motion: reduce) {{
+        .stApp {{
+            animation: none !important;
+            background-position: 0% 50%, 0% 0%, 0% 50% !important;
+        }}
     }}
 
     [data-testid="stSidebar"] {{
