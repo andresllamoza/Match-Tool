@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}PensionBee Rollover Companion{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            canvas: '#FAF8F5',
+            'bee-yellow': '#FFC72C',
+            charcoal: '#111111',
+          },
+          fontFamily: {
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+          },
+          keyframes: {
+            'step-enter': {
+              '0%': { opacity: '0', transform: 'translateY(12px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            'welcome-slide': {
+              '0%': { opacity: '0', transform: 'translateY(16px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            shake: {
+              '0%, 100%': { transform: 'translateX(0)' },
+              '20%, 60%': { transform: 'translateX(-6px)' },
+              '40%, 80%': { transform: 'translateX(6px)' },
+            },
+          },
+          animation: {
+            'step-enter': 'step-enter 0.35s ease-out',
+            'welcome-slide': 'welcome-slide 0.45s ease-out',
+            shake: 'shake 0.4s ease-in-out',
+          },
+        },
+      },
+    };
+  </script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    .pb-interactive { transition: transform 0.15s ease; }
+    .pb-interactive:active { transform: scale(0.98); }
+    .copy-done { color: #059669 !important; border-color: #A7F3D0 !important; background: #ECFDF5 !important; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="min-h-dvh bg-canvas font-sans text-[#1E242B] antialiased">
+  {% block body %}{% endblock %}
+  <script>
+    document.body.addEventListener('click', async function (e) {
+      const btn = e.target.closest('[data-copy]');
+      if (!btn) return;
+      const value = btn.getAttribute('data-copy');
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        const label = btn.querySelector('[data-copy-label]');
+        const icon = btn.querySelector('[data-copy-icon]');
+        if (label) label.textContent = 'Copied';
+        if (icon) icon.textContent = '✓';
+        btn.classList.add('copy-done');
+        setTimeout(function () {
+          if (label) label.textContent = 'Copy';
+          if (icon) icon.textContent = '';
+          btn.classList.remove('copy-done');
+        }, 2000);
+      } catch (_) {}
+    });
+  </script>
+</body>
+</html>

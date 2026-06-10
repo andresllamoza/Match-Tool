@@ -11,17 +11,30 @@ PensionBee's guided **401(k) → IRA rollover engine** — one headless journey 
 
 ---
 
-## Quick start (full stack)
+## Quick start (no Node.js — recommended)
+
+Pure Python UI: **FastAPI + Jinja2 + HTMX + Tailwind CDN**. One process, cookie + SQLite session persistence.
 
 ```bash
 cd rollover-companion
-python3 -m pip install -r requirements.txt
-pip install -r requirements.txt   # engine + API
+pip install -r requirements.txt
+bash scripts/dev-htmx.sh
+```
+
+Open **http://localhost:8000/customer**, **/agent**, **/embed**, **/sandbox**.
+
+Sessions survive refresh via the HTTP-only `pb_session` cookie and `data/pb_sessions.db`.
+
+## Quick start (Next.js — optional)
+
+```bash
+cd rollover-companion
+pip install -r requirements.txt
 
 # Terminal 1 — API
 python3 -m uvicorn api.server:app --host 0.0.0.0 --port 8000 --reload
 
-# Terminal 2 — Web
+# Terminal 2 — Web (requires Node.js)
 cd web && npm install && npm run dev
 ```
 
@@ -43,8 +56,9 @@ cd web && npm run build    # production frontend build
 rollover-knowledge-layer/     Markdown → pydantic (runtime, never hardcoded)
 engine/                       State machine, guardrails, assistant, funnel analytics
 adapters/                     AdvizorPro stub + 5500 matcher
-api/server.py                 Thin FastAPI over the engine
-web/                          Next.js 14 — customer, agent, embed, funnel
+api/server.py                 FastAPI — JSON API + HTMX HTML surfaces
+api/templates/                Jinja2 partials (Tailwind CDN, no build step)
+web/                          Next.js 14 — optional; customer, agent, embed, funnel
 ```
 
 **Event streams** (JSONL, no PII):

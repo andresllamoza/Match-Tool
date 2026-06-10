@@ -1,0 +1,17 @@
+<div id="journey-workspace-{{ mode }}" class="{% if embed_theme == 'minimal' %}bg-white{% endif %}">
+  {% include "partials/welcome_back_banner.html" %}
+  {% include "partials/progress_steps.html" %}
+  <div class="rounded-2xl border border-[#EAE5DC] bg-white p-6 shadow-sm sm:p-8 sm:p-10">
+    {% include "partials/journey_step.html" %}
+  </div>
+  {% if mode == 'customer' and not read_only %}
+  <div class="mt-6 text-center">
+    <button hx-post="/htmx/journey/restart"
+      hx-vals='{"journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="text-sm font-semibold text-[#9A928A] hover:text-[#6B6560]">
+      Start over
+    </button>
+  </div>
+  {% endif %}
+</div>

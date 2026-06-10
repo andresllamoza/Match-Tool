@@ -1,0 +1,35 @@
+{% if data.provider_intel %}
+<div class="space-y-4 text-sm">
+  <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+    <p class="text-xs font-bold uppercase tracking-wider text-amber-800">Provider status</p>
+    <p class="mt-1 font-semibold text-amber-900">{{ data.provider_intel.provider_status }}</p>
+  </div>
+  {% if data.provider_intel.call_phone %}
+  <div>
+    <p class="text-xs font-bold uppercase tracking-wider text-[#6B6560]">Call</p>
+    <p class="font-semibold">{{ data.provider_intel.call_phone }}</p>
+  </div>
+  {% endif %}
+  {% if data.provider_intel.agent_action_script %}
+  <div class="rounded-xl border border-[#EAE5DC] bg-[#FDFDFD] px-4 py-3">
+    <p class="text-xs font-bold uppercase tracking-wider text-[#6B6560]">BeeKeeper script</p>
+    <p class="mt-2 leading-relaxed">{{ data.provider_intel.agent_action_script }}</p>
+  </div>
+  {% endif %}
+  {% if data.provider_intel.knowledge_rules %}
+  <div>
+    <p class="mb-2 text-xs font-bold uppercase tracking-wider text-[#6B6560]">Knowledge rules</p>
+    <ul class="space-y-2">
+      {% for rule in data.provider_intel.knowledge_rules[:4] %}
+      <li class="rounded-lg border border-[#EAE5DC] px-3 py-2">
+        <p class="font-semibold">{{ rule.title }}</p>
+        <p class="mt-1 text-xs text-[#6B6560]">{{ rule.body[:120] }}{% if rule.body|length > 120 %}…{% endif %}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<p class="text-sm text-[#9A928A]">Agent intel appears once a provider is identified.</p>
+{% endif %}

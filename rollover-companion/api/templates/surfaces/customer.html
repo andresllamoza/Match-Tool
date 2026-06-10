@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Rollover Companion{% endblock %}
+{% block body %}
+<header class="border-b border-[#EAE5DC] bg-white">
+  <div class="mx-auto flex max-w-2xl items-center justify-between px-4 py-4 sm:px-6">
+    <span class="text-lg font-bold text-charcoal">PensionBee</span>
+    <nav class="flex gap-4 text-sm font-semibold text-[#6B6560]">
+      <a href="/customer" class="text-charcoal">Customer</a>
+      <a href="/agent" class="hover:text-charcoal">Agent</a>
+      <a href="/embed" class="hover:text-charcoal">Embed</a>
+      <a href="/sandbox" class="hover:text-charcoal">Sandbox</a>
+    </nav>
+  </div>
+</header>
+<main class="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+  {% include "partials/journey_workspace.html" %}
+</main>
+{% endblock %}

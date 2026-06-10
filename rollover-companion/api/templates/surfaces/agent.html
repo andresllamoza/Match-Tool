@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Agent View — Rollover Companion{% endblock %}
+{% block body %}
+<header class="border-b border-[#EAE5DC] bg-white">
+  <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+    <span class="text-lg font-bold text-charcoal">PensionBee · BeeKeeper</span>
+    <nav class="flex gap-4 text-sm font-semibold text-[#6B6560]">
+      <a href="/customer" class="hover:text-charcoal">Customer</a>
+      <a href="/agent" class="text-charcoal">Agent</a>
+      <a href="/sandbox" class="hover:text-charcoal">Sandbox</a>
+    </nav>
+  </div>
+</header>
+<main class="mx-auto grid max-w-5xl gap-8 px-4 py-8 lg:grid-cols-5 sm:px-6 sm:py-10">
+  <div class="lg:col-span-3">
+  {% with read_only=true %}
+  {% include "partials/journey_workspace.html" %}
+  {% endwith %}
+  </div>
+  <aside class="lg:col-span-2">
+    <div class="sticky top-8 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-[#9A6200]">Agent intel</h2>
+      <div class="mt-4">
+        {% include "partials/agent_intel.html" %}
+      </div>
+    </div>
+  </aside>
+</main>
+{% endblock %}
