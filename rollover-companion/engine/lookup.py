@@ -96,13 +96,7 @@ class LookupService:
             and matcher_result.provider != advizor_result.provider
         )
 
-        if tier == ConfidenceTier.LOW:
-            disambiguation_question = (
-                "Do you mean your former employer, or the financial company "
-                "that holds the 401(k) (like Fidelity or Vanguard)?"
-            )
-            disambiguation_options = ["Former employer", "The 401(k) provider"]
-        elif disagree:
+        if disagree:
             disambiguation_question = (
                 "We found two possible recordkeepers. Which sounds right for your old 401(k)?"
             )

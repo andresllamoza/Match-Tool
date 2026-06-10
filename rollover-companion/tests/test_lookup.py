@@ -22,6 +22,13 @@ def test_low_confidence_no_match(lookup_service: LookupService):
     assert outcome.resolved_provider is None
 
 
+def test_google_maps_to_vanguard(lookup_service: LookupService):
+    outcome = lookup_service.lookup("google")
+    assert outcome.resolved_provider == "Vanguard"
+    assert outcome.confidence_tier == ConfidenceTier.HIGH
+    assert outcome.disambiguation_question is None
+
+
 def test_target_maps_to_alight_solutions(lookup_service: LookupService):
     outcome = lookup_service.lookup("Target Corporation")
     assert outcome.resolved_provider == "Alight Solutions"

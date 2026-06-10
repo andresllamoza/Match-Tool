@@ -130,8 +130,8 @@ def _render_find_step(view: JourneyView) -> None:
         _render_progress(screen.phase.value, variant="minimal")
         st.markdown(
             '<h1 class="pb-find-h1">Find your old 401(k)</h1>'
-            "<p class=\"pb-find-sub\">Tell us your former employer or plan provider. We'll handle "
-            "the lookup to locate the exact distribution details required by your old custodian.</p>",
+            "<p class=\"pb-find-sub\">Tell us your former employer. We'll match you to the 401(k) "
+            "provider and guide you through login, rollover, or a phone call.</p>",
             unsafe_allow_html=True,
         )
         try:
@@ -140,9 +140,9 @@ def _render_find_step(view: JourneyView) -> None:
             form_ctx = st.form("employer_lookup_form", clear_on_submit=False)
         with form_ctx:
             employer = st.text_input(
-                "Former employer or plan provider",
+                "Former employer",
                 key="employer_draft",
-                placeholder="e.g. Target, FedEx, Walmart",
+                placeholder="e.g. Google, Target, FedEx",
                 label_visibility="visible",
             )
             submitted = form_submit_primary(screen.primary_action)
@@ -352,6 +352,13 @@ def run_journey_app() -> None:
                 result = apply_action({"type": "lookup", "employer": employer})
             if isinstance(result, str):
                 st.session_state.ui_error = result
+            elif result.ctx.state == JourneyState.PROVIDER_UNKNOWN and not (
+                result.screen.disambiguation_question and result.screen.disambiguation_options
+            ):
+                st.session_state.ui_error = (
+                    "We couldn't find a 401(k) plan for that employer. "
+                    "Try the full company name (e.g. Google LLC), or pick your provider below."
+                )
             else:
                 st.session_state.pop("ui_error", None)
         st.rerun()

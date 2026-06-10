@@ -32,8 +32,8 @@ def _build_engine() -> JourneyEngine:
     from engine.knowledge import KnowledgeBase
     from engine.lookup import LookupService
 
-    # Streamlit Cloud: fast synthetic lookups unless secrets explicitly disable.
-    use_synthetic = os.environ.get("USE_SYNTHETIC", "1") == "1"
+    # Default: real 5500 matcher (e.g. google → Vanguard). Set USE_SYNTHETIC=1 for offline dev.
+    use_synthetic = os.environ.get("USE_SYNTHETIC", "0") == "1"
     matcher_ready, _ = Local5500Adapter.matcher_deps_available()
     if use_synthetic or not matcher_ready:
         matcher = Local5500Adapter.from_synthetic()
