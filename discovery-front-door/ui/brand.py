@@ -391,8 +391,9 @@ def inject_brand_css() -> None:
         margin-bottom: 0.75rem;
     }}
     .pb-badge-warn {{
-        border: 2px solid #F59E0B; background: #FFFBEB; border-radius: 12px;
-        padding: 0.75rem 1rem; font-size: 0.88rem; margin-bottom: 1rem;
+        border: 1px solid #E8D4B8; background: #FFF8F0; border-radius: 12px;
+        padding: 0.75rem 1rem; font-size: 0.88rem; line-height: 1.5;
+        color: {CHARCOAL}; margin-bottom: 1rem;
     }}
     .pb-channel-header {{ margin: 0 0 2rem 0; }}
     .pb-channel-step-id {{
@@ -408,12 +409,16 @@ def inject_brand_css() -> None:
         transition: width 0.3s ease;
     }}
     .pb-call-script {{
-        border: 1px solid {BORDER}; border-left: 4px solid {YELLOW};
-        border-radius: 1rem; background: {CARD}; padding: 2rem 2.25rem;
-        margin: 1.25rem 0 1.5rem; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.05);
+        border: 1px solid {BORDER}; border-radius: 1rem; background: {CARD};
+        padding: 24px; margin: 0.75rem 0 1rem;
+        box-shadow: 0 1px 3px rgba(17, 17, 17, 0.05);
     }}
     .pb-call-intro {{
-        font-size: 0.9rem; line-height: 1.5; color: {SUBCOPY}; margin: 0 0 0.65rem 0;
+        font-size: 0.82rem; line-height: 1.45; color: {MUTED}; margin: 0 0 0.5rem 0;
+    }}
+    .pb-call-quote {{
+        font-size: 1.05rem; font-weight: 700; line-height: 1.5;
+        color: {CHARCOAL}; margin: 0;
     }}
     .pb-channel-kicker {{
         font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
@@ -654,10 +659,21 @@ def inject_brand_css() -> None:
         border-color: #111111 !important;
     }}
 
+    /* No browser-blue links on customer surfaces */
+    .main a:not(.call-card) {{
+        color: {CHARCOAL} !important;
+        text-decoration: underline;
+        text-decoration-color: {BORDER};
+    }}
+    .main a:not(.call-card):hover {{
+        color: {INK} !important;
+    }}
+
     /* Link buttons */
     .stLinkButton > a {{
         border-radius: {RADIUS} !important;
         font-weight: 600 !important;
+        color: {CHARCOAL} !important;
     }}
 
     /* Text-link escape hatches on find screen */
