@@ -14,6 +14,9 @@ MUTED = "#6B6560"
 BORDER = "#EAE5DC"
 YELLOW = "#FFC72C"
 YELLOW_SOFT = "#FFF4D6"
+PERK_BG = "#FFF9E6"
+INPUT_BORDER = "#D1C9BC"
+SUBCOPY = "#555555"
 GREEN = "#1B7F4B"
 GREEN_SOFT = "#E8F5EE"
 RADIUS = "16px"
@@ -192,6 +195,100 @@ def inject_brand_css() -> None:
         padding: 1rem;
     }}
 
+    /* ── Minimal step tracker (find screen) ── */
+    .pb-step-nav {{
+        display: flex;
+        gap: 1.5rem;
+        margin: 0 0 2rem 0;
+        text-align: left;
+    }}
+    .pb-step-item {{
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }}
+    .pb-step-label {{
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #9CA3AF;
+    }}
+    .pb-step-label.active, .pb-step-label.done {{
+        color: {CHARCOAL};
+    }}
+    .pb-step-pill {{
+        width: 1.5rem;
+        height: 0.25rem;
+        border-radius: 999px;
+        background: {YELLOW};
+        margin-top: 0.25rem;
+    }}
+
+    /* ── Premium find card ── */
+    .pb-find-shell {{
+        background: {CARD};
+        border: 1px solid {BORDER};
+        border-radius: 1rem;
+        box-shadow: 0 1px 3px rgba(17, 17, 17, 0.06);
+        padding: 2rem;
+        margin: 2rem auto 0;
+        max-width: 32rem;
+        text-align: left;
+    }}
+    .pb-find-shell [data-testid="stForm"] {{
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+    }}
+    .pb-find-card {{
+        text-align: left;
+    }}
+    .pb-find-h1 {{
+        font-size: clamp(1.875rem, 5vw, 2.25rem);
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        color: {CHARCOAL};
+        margin: 0 0 0.5rem 0;
+        line-height: 1.15;
+    }}
+    .pb-find-sub {{
+        font-size: 1rem;
+        line-height: 1.625;
+        color: {SUBCOPY};
+        margin: 0 0 1.5rem 0;
+    }}
+    .pb-perk-below {{
+        background: {PERK_BG};
+        border: 1px solid {BORDER};
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        margin: 1rem auto 0;
+        max-width: 32rem;
+        text-align: left;
+    }}
+    .pb-perk-below .pb-perk-kicker {{
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: {MUTED};
+        margin: 0;
+    }}
+    .pb-perk-below .pb-perk-body {{
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1.55;
+        color: {CHARCOAL};
+        margin: 0.35rem 0 0;
+    }}
+    .pb-find-links {{
+        border-top: 1px solid {BORDER};
+        margin-top: 1rem;
+        padding-top: 1rem;
+    }}
+
     /* ── Journey-specific ── */
     .pb-phase-bar {{ display: flex; gap: 4px; margin-bottom: 1.25rem; }}
     .pb-phase {{ flex: 1; text-align: center; font-size: 0.72rem; font-weight: 600; color: {MUTED}; }}
@@ -231,15 +328,17 @@ def inject_brand_css() -> None:
     textarea {{
         background-color: {CARD} !important;
         color: {CHARCOAL} !important;
-        border: 2px solid {BORDER} !important;
-        border-radius: {RADIUS} !important;
-        min-height: 3.25rem !important;
-        font-size: 1rem !important;
+        border: 1px solid {INPUT_BORDER} !important;
+        border-radius: 0.75rem !important;
+        min-height: 3.5rem !important;
+        font-size: 1.125rem !important;
         box-shadow: none !important;
+        transition: border-color 0.15s ease !important;
     }}
     .stTextInput input:focus {{
-        border-color: {YELLOW} !important;
-        box-shadow: 0 0 0 3px rgba(255, 199, 44, 0.35) !important;
+        border: 2px solid {CHARCOAL} !important;
+        box-shadow: none !important;
+        outline: none !important;
     }}
 
     label[data-testid="stWidgetLabel"] p {{
@@ -264,8 +363,8 @@ def inject_brand_css() -> None:
     .stButton > button[kind="primary"],
     .stButton > button[data-testid="stBaseButton-primary"] {{
         width: 100% !important;
-        min-height: 3.25rem !important;
-        border-radius: {RADIUS} !important;
+        min-height: 3.5rem !important;
+        border-radius: 0.75rem !important;
         background: {CHARCOAL} !important;
         color: #fff !important;
         font-weight: 600 !important;
@@ -295,6 +394,29 @@ def inject_brand_css() -> None:
     .stLinkButton > a {{
         border-radius: {RADIUS} !important;
         font-weight: 600 !important;
+    }}
+
+    /* Text-link escape hatches on find screen */
+    .stButton > button[kind="tertiary"],
+    .stButton > button[data-testid="stBaseButton-tertiary"] {{
+        width: 100% !important;
+        min-height: auto !important;
+        padding: 0.35rem 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: {SUBCOPY} !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        text-align: left !important;
+        white-space: normal !important;
+        line-height: 1.4 !important;
+    }}
+    .stButton > button[kind="tertiary"]:hover,
+    .stButton > button[data-testid="stBaseButton-tertiary"]:hover {{
+        color: {CHARCOAL} !important;
+        background: transparent !important;
     }}
 
     div[data-testid="stProgressBar"] > div > div {{

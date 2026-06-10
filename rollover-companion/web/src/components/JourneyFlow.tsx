@@ -8,12 +8,12 @@ import { AgentPanel } from "./AgentPanel";
 import { AssistantDrawer } from "./AssistantDrawer";
 import { ChannelWalkthrough } from "./ChannelWalkthrough";
 import { EdgeCaseAlerts } from "./EdgeCaseAlerts";
+import { FindEmployerStep } from "./FindEmployerStep";
 import { LookupBanner } from "./LookupBanner";
 import { ProgressSteps } from "./ProgressSteps";
 import { ProvenanceBadge } from "./ProvenanceBadge";
 import { TrackPanel } from "./TrackPanel";
 import { Button } from "./ui/Button";
-import { InputField } from "./ui/InputField";
 import { SelectionBlock } from "./ui/SelectionBlock";
 import { SourceStatusBadge } from "./ui/SourceStatusBadge";
 
@@ -253,34 +253,6 @@ export function JourneyFlow({
       );
     }
 
-    if (decision === "employer") {
-      return (
-        <div className="space-y-4">
-          <InputField
-            label="Former employer or plan provider"
-            helper="We need your former employer's name to match the exact distribution address required by your old custodian."
-            value={employerInput}
-            onChange={setEmployerInput}
-            onSubmit={handlePrimary}
-            placeholder="e.g. Target, Citigroup, Walmart"
-            disabled={loading}
-          />
-          <Button onClick={handlePrimary} disabled={loading || !employerInput.trim()}>
-            {screen.primary_action}
-          </Button>
-          {screen.secondary_actions.some((a) => a.toLowerCase().includes("provider")) && (
-            <button
-              type="button"
-              onClick={() => setShowProviderPicker(true)}
-              className="w-full py-2 text-center text-sm font-semibold text-bee-muted transition-colors hover:text-bee-charcoal"
-            >
-              I already know my 401(k) provider →
-            </button>
-          )}
-        </div>
-      );
-    }
-
     if (decision === "provider_pick") {
       return (
         <div className="space-y-3">
@@ -474,13 +446,38 @@ export function JourneyFlow({
     );
   }
 
+  const isFindStep = decision === "employer";
+
+  const findStepView = isFindStep ? (
+    <div className="w-full">
+      {error && (
+        <div className="mx-auto mb-4 max-w-lg rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </div>
+      )}
+      <FindEmployerStep
+        employer={employerInput}
+        onEmployerChange={setEmployerInput}
+        onSearch={handlePrimary}
+        onKnowProvider={() => setShowProviderPicker(true)}
+        onAskQuestion={() => setAssistantOpen(true)}
+        searchLabel={screen.primary_action}
+        loading={loading}
+        showKnowProvider={screen.secondary_actions.some((a) =>
+          a.toLowerCase().includes("provider")
+        )}
+        showPerk={screen.body.includes("1%")}
+      />
+    </div>
+  ) : null;
+
   const journeyCard = (
     <div
       className={`pb-card p-6 lg:p-10 ${
         theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"
       }`}
     >
-      {showProgress && <ProgressSteps current={screen.phase} />}
+      {showProgress && !isFindStep && <ProgressSteps current={screen.phase} />}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <SourceStatusBadge status={sourceStatus} />
@@ -499,11 +496,13 @@ export function JourneyFlow({
           </p>
         )}
 
-      <h1 className="mb-3 text-2xl font-bold leading-tight text-bee-charcoal lg:text-3xl lg:leading-snug">
-        {screen.headline}
-      </h1>
+      {!isFindStep && (
+        <h1 className="mb-3 text-2xl font-bold leading-tight text-bee-charcoal lg:text-3xl lg:leading-snug">
+          {screen.headline}
+        </h1>
+      )}
 
-      {screen.body && !inChannel && decision !== "disambiguation" && (
+      {screen.body && !inChannel && decision !== "disambiguation" && !isFindStep && (
         <p className="mb-5 whitespace-pre-line text-base leading-relaxed text-bee-ink lg:text-lg">
           {screen.body}
         </p>
@@ -518,17 +517,6 @@ export function JourneyFlow({
             {context.uncovered_provider
               ? `Your plan is with ${context.uncovered_provider}. We'll use our general online or phone steps — a BeeKeeper is available if you get stuck.`
               : "We'll use our general online or phone rollover steps for your provider."}
-          </p>
-        </div>
-      )}
-
-      {screen.state === "provider_unknown" && screen.body.includes("1%") && (
-        <div className="mb-5 rounded-card border border-bee-yellow/40 bg-bee-yellow-soft/80 p-4 lg:p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-bee-muted">
-            PensionBee perk
-          </p>
-          <p className="mt-1 text-sm font-semibold text-bee-charcoal lg:text-base">
-            Roll your old 401(k) to PensionBee and get a 1% match on eligible transfers.
           </p>
         </div>
       )}
@@ -592,7 +580,7 @@ export function JourneyFlow({
         </div>
       )}
 
-      {decision !== "done" && (
+      {decision !== "done" && !isFindStep && (
         <div className="space-y-3">
           {renderDecision()}
           <button
@@ -641,11 +629,13 @@ export function JourneyFlow({
 
       {isAgent ? (
         <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
-          <div className="lg:col-span-7">{journeyCard}</div>
+          <div className="lg:col-span-7">{isFindStep ? findStepView : journeyCard}</div>
           <div className="lg:col-span-5">
             <AgentPanel data={data} />
           </div>
         </div>
+      ) : isFindStep ? (
+        findStepView
       ) : (
         journeyCard
       )}
