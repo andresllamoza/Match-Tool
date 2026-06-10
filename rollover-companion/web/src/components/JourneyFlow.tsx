@@ -17,6 +17,7 @@ import { TrackPanel } from "./TrackPanel";
 import { Button } from "./ui/Button";
 import { SelectionBlock } from "./ui/SelectionBlock";
 import { SourceStatusBadge } from "./ui/SourceStatusBadge";
+import { StepTransition } from "./ui/StepTransition";
 
 interface JourneyFlowProps {
   mode?: "customer" | "agent" | "embed";
@@ -469,14 +470,17 @@ export function JourneyFlow({
     </div>
   ) : null;
 
+  const stepTransitionKey = `${screen.state}-${step_index}-${decision}`;
+
   const journeyCard = (
     <div
       className={
         isSandbox
           ? "text-left"
-          : `pb-card p-6 lg:p-10 ${theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"}`
+          : `pb-card p-8 sm:p-10 ${theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"}`
       }
     >
+      <StepTransition stepKey={stepTransitionKey}>
       {showProgress && !isFindStep && <ProgressSteps current={screen.phase} />}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -583,13 +587,13 @@ export function JourneyFlow({
       )}
 
       {decision !== "done" && !isFindStep && !readOnly && (
-        <div className="space-y-3">
+        <div className="mt-8 space-y-4">
           {renderDecision()}
           {!hideAssistant && (
             <button
               type="button"
               onClick={() => setAssistantOpen(true)}
-              className="w-full py-3 text-center text-sm font-semibold text-bee-muted transition-colors hover:text-bee-charcoal lg:text-base"
+              className="pb-interactive w-full py-4 text-center text-sm font-semibold text-bee-muted hover:text-[#1E242B] lg:text-base"
             >
               Ask a question about this step
             </button>
@@ -615,6 +619,7 @@ export function JourneyFlow({
           <p className="mt-2 text-sm text-bee-muted lg:text-base">{screen.body}</p>
         </div>
       )}
+      </StepTransition>
     </div>
   );
 

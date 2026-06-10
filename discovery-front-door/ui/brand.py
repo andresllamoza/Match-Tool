@@ -329,7 +329,7 @@ def inject_brand_css() -> None:
         border: 2px solid #F59E0B; background: #FFFBEB; border-radius: 12px;
         padding: 0.75rem 1rem; font-size: 0.88rem; margin-bottom: 1rem;
     }}
-    .pb-channel-header {{ margin: 0 0 1.25rem 0; }}
+    .pb-channel-header {{ margin: 0 0 2rem 0; }}
     .pb-channel-step-id {{
         font-size: 1.25rem; font-weight: 500; letter-spacing: -0.025em;
         color: #6B7280; margin: 0 0 0.75rem 0;
@@ -344,8 +344,8 @@ def inject_brand_css() -> None:
     }}
     .pb-call-script {{
         border: 1px solid {BORDER}; border-left: 4px solid {YELLOW};
-        border-radius: 1rem; background: {CARD}; padding: 1.15rem 1.2rem;
-        margin: 0.75rem 0; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.05);
+        border-radius: 1rem; background: {CARD}; padding: 2rem 2.25rem;
+        margin: 1.25rem 0 1.5rem; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.05);
     }}
     .pb-call-intro {{
         font-size: 0.9rem; line-height: 1.5; color: {SUBCOPY}; margin: 0 0 0.65rem 0;
@@ -361,21 +361,33 @@ def inject_brand_css() -> None:
     .pb-phone-cta {{
         display: flex; align-items: center; justify-content: space-between;
         background: {CHARCOAL}; color: #fff; border-radius: 1rem;
-        padding: 1rem 1.25rem; text-decoration: none; margin: 0.5rem 0 0.75rem;
+        padding: 1.25rem 1.5rem; text-decoration: none; margin: 0.75rem 0 1.25rem;
         box-shadow: 0 2px 8px rgba(17, 17, 17, 0.15);
-        transition: background 0.15s ease;
+        transition: all 0.2s ease-out;
     }}
     .pb-phone-cta:hover {{ background: {INK}; color: #fff; }}
+    .pb-phone-cta:active {{ transform: scale(0.98); }}
     .pb-phone-kicker {{
         display: block; font-size: 0.72rem; font-weight: 600;
         text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85;
     }}
     .pb-phone-num {{ display: block; font-size: 1.25rem; font-weight: 700; margin-top: 0.15rem; }}
+    .pb-routing-panel {{
+        border-top: 1px solid {BORDER}; margin-top: 1.5rem; padding-top: 2rem;
+        display: grid; gap: 1.25rem;
+    }}
+    .pb-routing-kicker {{
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: {MUTED}; margin: 0 0 0.35rem;
+    }}
+    .pb-routing-body {{
+        font-size: 0.9rem; line-height: 1.55; color: {INK}; margin: 0;
+    }}
     .pb-fbo-card {{
         border: 2px solid rgba(255, 199, 44, 0.55); border-radius: 1rem;
         background: linear-gradient(145deg, #FFF9E6 0%, #FFFFFF 55%, #FFF4D6 100%);
-        padding: 1.15rem 1.2rem; margin: 0.75rem 0 0.5rem;
-        box-shadow: 0 4px 24px rgba(255, 199, 44, 0.18);
+        padding: 2rem 2.25rem; margin: 0;
+        box-shadow: 0 6px 28px rgba(255, 199, 44, 0.16);
     }}
     .pb-fbo-card-top {{
         display: flex; align-items: flex-start; justify-content: space-between;
@@ -403,7 +415,7 @@ def inject_brand_css() -> None:
         transition: background 0.15s ease, transform 0.1s ease;
     }}
     .pb-fbo-copy:hover, .pb-financial-copy:hover {{ background: {INK}; }}
-    .pb-financial-grid {{ display: grid; gap: 0.65rem; margin: 0.5rem 0 0.75rem; }}
+    .pb-fbo-copy:active, .pb-financial-copy:active {{ transform: scale(0.98); }}
     .pb-financial-field {{
         border: 1px solid {BORDER}; border-radius: 0.85rem; background: {CARD};
         overflow: hidden; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.04);

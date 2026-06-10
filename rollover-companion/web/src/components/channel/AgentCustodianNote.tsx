@@ -11,11 +11,11 @@ export function AgentCustodianNote({
   const mechanism = enrichment.mechanism ?? "unknown";
 
   return (
-    <div className="rounded-xl border border-dashed border-[#6B6560]/40 bg-[#FAF8F5] px-4 py-3 text-sm leading-relaxed text-[#555555]">
+    <div className="rounded-2xl border border-dashed border-[#6B6560]/35 bg-[#FAF8F5] px-6 py-5 text-sm leading-relaxed text-[#555555] sm:px-8">
       <p className="text-xs font-bold uppercase tracking-wider text-[#6B6560]">
         BeeKeeper — routing rationale
       </p>
-      <p className="mt-1.5 text-[#111111]">
+      <p className="mt-2 text-[#1E242B]">
         <span className="font-semibold">{enrichment.check_destination}</span>
         {directToCustodian ? (
           <>

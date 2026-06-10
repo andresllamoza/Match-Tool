@@ -62,4 +62,37 @@ body {
   .embed-theme-dark input {
     @apply border-white/20 bg-[#1E242B] text-white;
   }
+
+  .pb-interactive {
+    @apply transition-all duration-200 ease-out active:scale-[0.98];
+  }
+
+  .pb-surface-card {
+    @apply rounded-2xl border border-[#EAE5DC] bg-white p-8 shadow-sm sm:p-10;
+  }
+
+  @keyframes pb-step-enter {
+    from {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .pb-step-enter {
+    animation: pb-step-enter 0.3s ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pb-step-enter {
+      animation: none;
+    }
+
+    .pb-interactive {
+      @apply active:scale-100;
+    }
+  }
 }

@@ -12,6 +12,7 @@ from ui.channel_step import (  # noqa: E402
     channel_step_header,
     fbo_security_card,
     financial_copy_field,
+    phone_routing_intro,
 )
 from .widgets import form_submit_primary, icon_button, primary_button, secondary_button, text_link_button
 
@@ -232,7 +233,9 @@ def _render_channel_context(view: JourneyView) -> None:
     if _show_mailing_details(ctx_data.say_this, view.step_index, view.total_steps):
         payable = ctx_data.check_payable or ""
         mail = ctx_data.mailing_address or en.mailing_address
-        parts: list[str] = []
+        parts: list[str] = ['<div class="pb-routing-panel">']
+        if ch == "phone":
+            parts.append(phone_routing_intro())
         fbo_html = fbo_security_card(payable)
         if fbo_html:
             parts.append(fbo_html)
@@ -240,8 +243,9 @@ def _render_channel_context(view: JourneyView) -> None:
             parts.append(financial_copy_field("Payee name", payable, "pb-payable"))
         if mail:
             parts.append(financial_copy_field("Mailing address", mail, "pb-mail"))
-        if parts:
-            st.markdown('<div class="pb-financial-grid">' + "".join(parts) + "</div>", unsafe_allow_html=True)
+        parts.append("</div>")
+        if len(parts) > 2:
+            st.markdown("".join(parts), unsafe_allow_html=True)
 
     if en.forward_step_required:
         st.markdown(

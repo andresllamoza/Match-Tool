@@ -2,8 +2,10 @@ import type { ChannelContext, ScreenEnrichment } from "@/lib/types";
 import { isFboPayableLine, showMailingDetails } from "@/lib/checkPayable";
 import { AgentCustodianNote } from "./channel/AgentCustodianNote";
 import { CallScriptCard } from "./channel/CallScriptCard";
+import { ChannelSection } from "./channel/ChannelSection";
 import { FboSecurityCard } from "./channel/FboSecurityCard";
 import { FinancialCopyField } from "./channel/FinancialCopyField";
+import { PhoneRoutingPanel } from "./channel/PhoneRoutingPanel";
 
 export type ChannelSurface = "customer" | "agent" | "embed";
 
@@ -77,12 +79,12 @@ function MailingBlock({
   const showPayableField = payable && !showFbo;
 
   return (
-    <div className="space-y-3">
+    <ChannelSection className="border-t border-[#EAE5DC] pt-8">
       {showFbo && <FboSecurityCard payableLine={payable} />}
 
       {surface === "agent" && <AgentCustodianNote enrichment={enrichment} />}
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         {includeDestination && (
           <FinancialCopyField label="Destination" value={enrichment.destination_name} />
         )}
@@ -91,7 +93,7 @@ function MailingBlock({
         )}
         {mail && <FinancialCopyField label="Mailing address" value={mail} />}
       </div>
-    </div>
+    </ChannelSection>
   );
 }
 
@@ -108,53 +110,55 @@ function PhoneWalkthrough({
   totalSteps: number;
   surface: ChannelSurface;
 }) {
+  const showRouting = showMailingDetails(ctx.say_this, stepIndex, totalSteps);
+
   return (
-    <div className="mb-5 space-y-3">
+    <ChannelSection className="mb-8">
       {ctx.phone && (
         <a
           href={`tel:${ctx.phone.replace(/[^\d+]/g, "")}`}
-          className="flex items-center justify-between rounded-2xl bg-[#111111] px-5 py-4 text-white shadow-sm transition-all hover:bg-[#1E242B] active:scale-[0.98]"
+          className="pb-interactive flex items-center justify-between rounded-2xl bg-[#111111] px-6 py-5 text-white shadow-sm hover:bg-[#1E242B] sm:px-8 sm:py-6"
         >
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
               Tap to call
             </p>
-            <p className="text-xl font-bold">{ctx.phone}</p>
+            <p className="mt-1 text-xl font-bold sm:text-2xl">{ctx.phone}</p>
           </div>
-          <span className="text-2xl" aria-hidden>
+          <span className="text-2xl sm:text-3xl" aria-hidden>
             📞
           </span>
         </a>
       )}
 
       {ctx.intro && ctx.step_label === "Step 1" && (
-        <div className="rounded-xl border border-[#EAE5DC] bg-[#FAF8F5] px-4 py-3 text-sm text-[#1E242B]">
+        <div className="rounded-2xl border border-[#EAE5DC] bg-[#FAF8F5] px-6 py-5 sm:px-8 sm:py-6">
           <p className="text-xs font-bold uppercase text-[#6B6560]">Opening line</p>
-          <p className="mt-1 font-medium">{ctx.intro}</p>
+          <p className="mt-2 text-base font-medium leading-relaxed text-[#1E242B]">
+            {ctx.intro}
+          </p>
         </div>
       )}
 
       <CallScriptCard channel="phone" script={ctx.say_this} surface={surface} />
 
-      <MailingBlock
-        ctx={ctx}
-        enrichment={enrichment}
-        stepIndex={stepIndex}
-        totalSteps={totalSteps}
-        surface={surface}
-      />
+      {showRouting && (
+        <PhoneRoutingPanel ctx={ctx} enrichment={enrichment} surface={surface} />
+      )}
 
       {ctx.rep_questions.length > 0 && (
-        <div className="rounded-xl border border-[#EAE5DC] bg-[#FFF9E6]/60 p-4 lg:p-5">
-          <p className="mb-3 text-sm font-bold text-[#111111]">If the rep asks…</p>
-          <dl className="space-y-3">
+        <div className="rounded-2xl border border-[#EAE5DC] bg-[#FFF9E6]/50 p-6 sm:p-8">
+          <p className="mb-4 text-sm font-bold text-[#1E242B]">If the rep asks…</p>
+          <dl className="space-y-4">
             {ctx.rep_questions.map((q, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-[#EAE5DC] bg-white px-4 py-3"
+                className="rounded-xl border border-[#EAE5DC] bg-white px-5 py-4 sm:px-6 sm:py-5"
               >
                 <dt className="font-semibold text-[#1E242B]">{q.question}</dt>
-                <dd className="mt-1 text-sm text-[#6B6560] lg:text-base">{q.answer}</dd>
+                <dd className="mt-2 text-sm leading-relaxed text-[#6B6560] sm:text-base">
+                  {q.answer}
+                </dd>
               </div>
             ))}
           </dl>
@@ -162,12 +166,12 @@ function PhoneWalkthrough({
       )}
 
       {enrichment.forward_step_required && (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5 text-sm leading-relaxed text-amber-900 sm:px-8">
           This provider mails the check to you first — PensionBee will send a prepaid
           envelope to forward it.
         </p>
       )}
-    </div>
+    </ChannelSection>
   );
 }
 
@@ -185,9 +189,9 @@ function OnlineWalkthrough({
   surface: ChannelSurface;
 }) {
   return (
-    <div className="mb-5 space-y-3">
+    <ChannelSection className="mb-8">
       {enrichment.general_path && (
-        <p className="rounded-xl border border-[#FFC72C]/40 bg-[#FFF9E6] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#111111]">
+        <p className="rounded-2xl border border-[#FFC72C]/35 bg-[#FFF9E6] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-[#1E242B] sm:px-8">
           General rollover guide — look for Withdrawals / Rollovers in your provider
           portal
         </p>
@@ -196,22 +200,22 @@ function OnlineWalkthrough({
       <CallScriptCard channel="online" script={ctx.say_this} surface={surface} />
 
       {ctx.portal_menu_hints && ctx.portal_menu_hints.length > 0 && (
-        <div className="rounded-xl border border-[#EAE5DC] bg-[#FAF8F5] px-4 py-3">
+        <div className="rounded-2xl border border-[#EAE5DC] bg-[#FAF8F5] px-6 py-5 sm:px-8">
           <p className="text-xs font-bold uppercase text-[#6B6560]">
             Look for these menu labels
           </p>
-          <p className="mt-1 text-sm text-[#1E242B] lg:text-base">
+          <p className="mt-2 text-sm leading-relaxed text-[#1E242B] sm:text-base">
             {ctx.portal_menu_hints.join(" · ")}
           </p>
         </div>
       )}
 
       {ctx.destination_hints && ctx.destination_hints.length > 0 && (
-        <div className="rounded-xl border border-[#EAE5DC] bg-[#FAF8F5] px-4 py-3">
+        <div className="rounded-2xl border border-[#EAE5DC] bg-[#FAF8F5] px-6 py-5 sm:px-8">
           <p className="text-xs font-bold uppercase text-[#6B6560]">
             Destination dropdown options
           </p>
-          <p className="mt-1 text-sm text-[#1E242B] lg:text-base">
+          <p className="mt-2 text-sm leading-relaxed text-[#1E242B] sm:text-base">
             {ctx.destination_hints.join(" · ")}
           </p>
         </div>
@@ -227,11 +231,11 @@ function OnlineWalkthrough({
       />
 
       {enrichment.forward_step_required && (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5 text-sm leading-relaxed text-amber-900 sm:px-8">
           Expect the check at your home address — not PensionBee directly.
         </p>
       )}
-    </div>
+    </ChannelSection>
   );
 }
 
@@ -249,7 +253,7 @@ function FormsWalkthrough({
   surface: ChannelSurface;
 }) {
   return (
-    <div className="mb-5 space-y-3">
+    <ChannelSection className="mb-8">
       <CallScriptCard
         channel="forms"
         script={ctx.say_this}
@@ -265,6 +269,6 @@ function FormsWalkthrough({
         surface={surface}
         includeDestination
       />
-    </div>
+    </ChannelSection>
   );
 }

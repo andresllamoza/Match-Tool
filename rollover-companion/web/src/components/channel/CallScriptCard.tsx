@@ -25,18 +25,17 @@ export function CallScriptCard({
   fieldLabel?: string | null;
   surface?: "customer" | "agent" | "embed";
 }) {
-  const intro =
-    surface === "customer" ? CUSTOMER_INTROS[channel] : null;
+  const intro = surface === "customer" ? CUSTOMER_INTROS[channel] : null;
 
   return (
-    <div className="rounded-2xl border border-[#EAE5DC] border-l-4 border-l-[#FFC72C] bg-white p-5 shadow-sm lg:p-6">
+    <div className="rounded-2xl border border-[#EAE5DC] border-l-4 border-l-[#FFC72C] bg-white p-8 shadow-sm sm:p-10">
       {intro && (
-        <p className="mb-3 text-sm leading-relaxed text-[#555555]">{intro}</p>
+        <p className="mb-4 text-sm leading-relaxed text-[#555555]">{intro}</p>
       )}
       <p className="text-xs font-bold uppercase tracking-wider text-[#6B6560]">
         {channel === "forms" && fieldLabel ? fieldLabel : LABELS[channel]}
       </p>
-      <p className="mt-2 text-lg font-semibold leading-relaxed text-[#111111] lg:text-xl">
+      <p className="mt-3 text-lg font-semibold leading-relaxed text-[#1E242B] sm:text-xl">
         {channel === "phone" ? `\u201C${script}\u201D` : script}
       </p>
     </div>

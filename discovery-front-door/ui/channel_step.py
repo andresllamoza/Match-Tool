@@ -81,6 +81,16 @@ def fbo_security_card(payable_line: str) -> str:
     )
 
 
+def phone_routing_intro() -> str:
+    return (
+        '<div class="pb-routing-intro">'
+        '<p class="pb-routing-kicker">Check routing</p>'
+        "<p class=\"pb-routing-body\">When the rep asks how to make the check payable, "
+        "use the exact payee line below — then confirm where they will mail it.</p>"
+        "</div>"
+    )
+
+
 def financial_copy_field(label: str, value: str, field_id: str) -> str:
     payload = json.dumps(value)
     return (
