@@ -25,6 +25,19 @@ Open **http://localhost:8000/customer**, **/agent**, **/embed**, **/sandbox**.
 
 Sessions survive refresh via the HTTP-only `pb_session` cookie and `data/pb_sessions.db`.
 
+## Streamlit 3-surface sandbox
+
+Polished executive demo — same engine, fourth renderer:
+
+```bash
+cd rollover-companion
+streamlit run sandbox/app.py
+```
+
+- **3-column desktop layout:** Customer (interactive) · Agent intel · Embed preview
+- **Persistence:** `?jid=` URL param + SQLite — survives refresh and simulated RAM purge
+- **Mechanism-aware FBO:** Voya/Vanguard → `PensionBee FBO [name]`; Empower → participant payee
+
 ## Quick start (Next.js — optional)
 
 ```bash
