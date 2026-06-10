@@ -1,7 +1,7 @@
 {
   "name": "match-tool",
   "private": true,
-  "description": "Monorepo root — customer web app lives in rollover-companion/web",
+  "description": "Monorepo root — customer Next.js app is in rollover-companion/web",
   "scripts": {
     "build": "npm run build --prefix rollover-companion/web",
     "vercel-build": "npm run build --prefix rollover-companion/web"
