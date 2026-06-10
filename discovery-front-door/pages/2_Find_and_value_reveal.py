@@ -31,7 +31,7 @@ from ui.components import (  # noqa: E402
     value_reveal_card,
     warm_message,
 )
-from journey.widgets import form_submit_primary  # noqa: E402
+from journey.widgets import form_submit_primary, text_link_button  # noqa: E402
 from ui.states import UiState, classify_ui_state, run_discovery_safe  # noqa: E402
 
 st.set_page_config(page_title="Find & value | PensionBee", page_icon="🔍", layout="centered")
@@ -127,7 +127,7 @@ elif state == UiState.RESULT:
     if st.button("Continue to full Rollover Companion →", type="primary", use_container_width=True):
         st.session_state.pending_lookup = disc.employer_query
         st.switch_page("app.py")
-    if st.button("Search another employer"):
+    if text_link_button("← Search another employer", key="find_result_reset"):
         st.session_state.find_ui_state = UiState.INPUT.value
         st.session_state.find_outcome = None
         st.rerun()
@@ -163,7 +163,7 @@ elif state == UiState.LOW_CONFIDENCE:
         "No dead ends",
         "A BeeKeeper can help locate your old 401(k) — real humans, Monday–Friday 9:30am–5pm ET.",
     )
-    if st.button("Start over"):
+    if text_link_button("← Start over", key="find_low_conf_reset"):
         st.session_state.find_ui_state = UiState.INPUT.value
         st.session_state.find_outcome = None
         st.rerun()
