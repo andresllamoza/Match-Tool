@@ -6,7 +6,7 @@ import streamlit as st
 
 from ui.components import brand_header_bar  # noqa: E402
 
-from .engine_bridge import JourneyView, apply_action, current_view, get_engine, list_providers
+from .engine_bridge import JourneyView, apply_action, current_view, get_engine, list_providers, save_context
 from .widgets import form_submit_primary, icon_button, primary_button, secondary_button, text_link_button
 
 # Engine imports after companion path is on sys.path (via engine_bridge).
@@ -84,13 +84,49 @@ def _render_provider_picker() -> None:
         st.rerun()
 
 
+def _find_surface(view: JourneyView) -> str:
+    """Match Next.js resolveDecisionMode — disambiguation before employer form."""
+    screen = view.screen
+    if st.session_state.get("show_provider_picker"):
+        return "provider_picker"
+    if screen.disambiguation_question and screen.disambiguation_options:
+        return "disambiguation"
+    return "employer_form"
+
+
+def _find_card():
+    try:
+        return st.container(border=True)
+    except TypeError:
+        return st.container()
+
+
+def _render_find_disambiguation(view: JourneyView) -> None:
+    screen = view.screen
+    with _find_card():
+        _render_progress(screen.phase.value, variant="minimal")
+        st.markdown(
+            '<h1 class="pb-find-h1">Narrow it down</h1>'
+            "<p class=\"pb-find-sub\">We need one more detail to locate the right 401(k) plan.</p>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**{screen.disambiguation_question}**")
+        for opt in screen.disambiguation_options:
+            if _selection_button(opt, f"find_dis_{opt}"):
+                _go({"type": "disambiguate", "answer": opt})
+        if text_link_button("← Search a different employer", key="find_disambig_reset"):
+            save_context(get_engine().start())
+            st.session_state.show_provider_picker = False
+            st.session_state.show_find_assistant = False
+            st.session_state.pop("ui_error", None)
+            st.session_state.employer_draft = ""
+            st.rerun()
+    _render_find_perk(screen.body)
+
+
 def _render_find_step(view: JourneyView) -> None:
     screen = view.screen
-    try:
-        card = st.container(border=True)
-    except TypeError:
-        card = st.container()
-    with card:
+    with _find_card():
         _render_progress(screen.phase.value, variant="minimal")
         st.markdown(
             '<h1 class="pb-find-h1">Find your old 401(k)</h1>'
@@ -113,7 +149,8 @@ def _render_find_step(view: JourneyView) -> None:
         if submitted:
             name = (employer or st.session_state.get("employer_draft", "")).strip()
             if name:
-                _go({"type": "lookup", "employer": name})
+                st.session_state.pending_lookup = name
+                st.rerun()
             else:
                 st.session_state.ui_error = "Enter your former employer to continue."
                 st.rerun()
@@ -311,12 +348,13 @@ def run_journey_app() -> None:
         del st.session_state.pending_lookup
         if employer:
             st.session_state.employer_draft = employer
-            result = apply_action({"type": "lookup", "employer": employer})
+            with st.spinner("Looking up your former employer…"):
+                result = apply_action({"type": "lookup", "employer": employer})
             if isinstance(result, str):
                 st.session_state.ui_error = result
             else:
                 st.session_state.pop("ui_error", None)
-                st.rerun()
+        st.rerun()
 
     header_left, header_right = st.columns([6, 1])
     with header_left:
@@ -388,8 +426,11 @@ def run_journey_app() -> None:
     elif screen.state == JourneyState.ESCALATED:
         st.info("A BeeKeeper will take it from here.")
     elif is_find_step:
-        if st.session_state.get("show_provider_picker"):
+        surface = _find_surface(view)
+        if surface == "provider_picker":
             _render_provider_picker()
+        elif surface == "disambiguation":
+            _render_find_disambiguation(view)
         else:
             _render_find_step(view)
     else:

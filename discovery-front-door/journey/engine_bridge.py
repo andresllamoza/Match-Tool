@@ -32,7 +32,8 @@ def _build_engine() -> JourneyEngine:
     from engine.knowledge import KnowledgeBase
     from engine.lookup import LookupService
 
-    use_synthetic = os.environ.get("USE_SYNTHETIC") == "1"
+    # Streamlit Cloud: fast synthetic lookups unless secrets explicitly disable.
+    use_synthetic = os.environ.get("USE_SYNTHETIC", "1") == "1"
     matcher_ready, _ = Local5500Adapter.matcher_deps_available()
     if use_synthetic or not matcher_ready:
         matcher = Local5500Adapter.from_synthetic()
