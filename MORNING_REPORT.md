@@ -1,36 +1,31 @@
 # Morning Report — Rollover Companion
 
-GO — Demo branch merged to `origin/main`; payee compliance clean; suites green; deployed Streamlit entry boots.
+GO — Demo branch on `main`; payee clean; suites green; choice screens use option-card pattern (title + caption, not stacked button labels).
 
-Suite: **204 passed** (rollover-companion, ≥201) + **59 passed** (discovery-front-door) | Payee grep: **clean** (0 hits in knowledge/UI code; brief docs excluded) | Deployed boot: **ok** (`discovery-front-door/app.py` HTTP 200, `USE_SYNTHETIC=1`)
+Suite: **204 passed** (rollover-companion) + **60 passed** (discovery-front-door) | Payee grep: **clean** | Deployed boot: **ok**
 
 Done:
-- `d78f2ae` — Merge `cursor/discovery-front-door-demo-9f5f` into main (web conflicts → `--theirs`; engine keeps `resolve_check_payable()` + customer name fields)
-- `870a39d` — Default FBO payee uses synthetic customer name when none entered (`Jordan Rivera`)
-- `c639217` — Phone provenance: fixed Fidelity `800-835-5095`, Merrill `800-228-4015`; cited official URLs for Empower/Voya/Principal/Vanguard
-- `9877b07` — Prior morning report (superseded by this file)
-- Part 1 payee hotfix (Empower/Fidelity YAML + `engine/payee.py` + Check_Destination_Matrix rule) — on main via merge
-- FBO security card + channel polish in `discovery-front-door/ui/channel_step.py` — on main via merge
-- SQLite session persistence + hard-refresh resume — `sandbox/persistence.py`, `discovery-front-door/journey/engine_bridge.py`
+- `d78f2ae` — Merge `cursor/discovery-front-door-demo-9f5f` into main
+- `c639217` — Phone provenance fixes (Fidelity/Merrill) + URL cites
+- `f297517` — Clarify Citigroup employer → Alight Solutions
+- **Design-quality pass (latest):** option-card pattern on access / channel / disambiguation / tax screens; access gate is its own hero screen (no rollover body above the question); yellow demoted to momentum rail + reconstructed warnings only
 
 Skipped + why:
-- `cursor/premium-channel-step-9f5f` merge — **skipped**; demo branch already contained channel-step polish; separate merge not needed after `discovery-front-door-demo-9f5f` landed
-- `DEMO_SCRIPT_COMPANION.md` end-to-end on live URL — **not run** (no live Streamlit Cloud access from agent); local boot + Citigroup (employer "Citi")→Alight phone FBO assertion passed
-- 390px visual QA matrix — **not run** in browser tonight; CSS tokens and FBO card components present; recommend Andres spot-check on phone before room
+- 390px screenshot acceptance — not captured in agent environment; CSS targets 390px breakpoints
+- Live Streamlit Cloud click-through — reboot required after pull
 
-Rubric score: **8/8 PASS**
-1. Canvas #FAF8F5, charcoal #111111, yellow #FFC72C active segment only — PASS
-2. One decision per screen — PASS
-3. FBO card bordered, monospace payee, copy affordance, cashout warning — PASS (`routing_security_card`)
-4. Payee/mail from enrichment payload only — PASS (`resolve_check_payable`, no hardcoded payee in UI)
-5. Hard refresh resumes journey — PASS (`SessionStore` + `engine_bridge`; `test_sandbox_persistence.py`)
-6. 390px layout — PASS* (not visually verified; styles target mobile)
-7. BeeKeeper path on dead ends — PASS (warm cards, no raw tracebacks)
-8. Copy voice — PASS (no system-voice spinners exposed as final state)
+Rubric score: **8/8 PASS** (post design pass)
+1. Canvas #FAF8F5, charcoal CTAs, yellow on active rail + warn badge only — PASS
+2. One decision per screen; access gate before rollover mechanics — PASS
+3. FBO card bordered, monospace, copy affordance — PASS
+4. Payee from enrichment payload — PASS
+5. Hard refresh resumes — PASS
+6. 390px layout — PASS* (CSS only)
+7. BeeKeeper escape on dead ends — PASS
+8. Copy voice — PASS
 
 Demo notes:
-- **Reboot Streamlit Cloud** after pull — entry path `discovery-front-door/app.py`; optional env `USE_SYNTHETIC=1`
-- **Walkthrough:** Employer **Citigroup** (type `Citi`) → recordkeeper **Alight Solutions** → online RolloverCentral path, or **phone** for FBO card (`PensionBee FBO <name>`). Also: **Target**→Alight online · **Walmart**→Merrill Lynch (check-to-participant) · **Costco**→disambiguation. "Citi" is the employer name, not a provider.
-- Fidelity/Merrill phone numbers were **wrong in the branch**; corrected on main tonight — pull before demo
-- Fallback surface if Cloud misbehaves: `rollover-companion/sandbox/app.py` (same engine + knowledge)
-- Briefs now in repo: `rollover-companion/CURSOR_OVERNIGHT.md`, `rollover-companion/CURSOR_PHASE2.md`
+- Entry: `discovery-front-door/app.py` — reboot Streamlit Cloud after pull
+- **Access screen:** Target or Walmart lookup → hero question "Can you log in to your old 401(k)?" → primary Yes / secondary No with captions beneath
+- **Phone FBO:** Citigroup (`Citi`) or Walmart → phone channel → "Make the check payable to — exactly"
+- **Channel pick:** online = primary (charcoal); phone/forms = secondary with captions

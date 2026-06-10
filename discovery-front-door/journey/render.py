@@ -22,7 +22,14 @@ from ui.channel_step import (  # noqa: E402
     phone_routing_intro,
     routing_security_card,
 )
-from .widgets import form_submit_primary, icon_button, primary_button, secondary_button, text_link_button
+from .widgets import (
+    form_submit_primary,
+    icon_button,
+    option_card,
+    primary_button,
+    secondary_button,
+    text_link_button,
+)
 
 # Engine imports after companion path is on sys.path (via engine_bridge).
 from engine.assistant import ScopedAssistant  # noqa: E402
@@ -90,10 +97,31 @@ def _render_find_perk(body: str) -> None:
     )
 
 
+def _decision_hero(title: str, lead: str | None = None) -> None:
+    st.markdown(f'<h1 class="pb-decision-hero">{title}</h1>', unsafe_allow_html=True)
+    if lead:
+        st.markdown(f'<p class="pb-decision-lead">{lead}</p>', unsafe_allow_html=True)
+
+
+def _screen_owns_headline(view: JourneyView) -> bool:
+    """Decision screens render their own hero — skip engine headline/body."""
+    screen = view.screen
+    ctx = view.ctx
+    if screen.state in (JourneyState.PROVIDER_IDENTIFIED, JourneyState.PROVIDER_NOT_COVERED):
+        return True
+    if view.enrichment.requires_tax_selection:
+        return True
+    if screen.state == JourneyState.ACCESS_RECOVERED and ctx.customer_first_name and ctx.tax_fund_type:
+        return True
+    if screen.disambiguation_question and screen.disambiguation_options:
+        return True
+    return False
+
+
 def _render_provider_picker() -> None:
-    st.markdown("**Select your 401(k) provider**")
+    _decision_hero("Select your 401(k) provider", "Pick the company that holds your old plan.")
     for p in list_providers():
-        if _selection_button(p, f"prov_{p}"):
+        if secondary_button(p, key=f"prov_{p}"):
             st.session_state.show_provider_picker = False
             _go({"type": "provider_direct", "provider": p})
     if secondary_button("← Search by employer instead", key="hide_provider_picker"):
@@ -127,9 +155,9 @@ def _render_find_disambiguation(view: JourneyView) -> None:
             "<p class=\"pb-find-sub\">We need one more detail to locate the right 401(k) plan.</p>",
             unsafe_allow_html=True,
         )
-        st.markdown(f"**{screen.disambiguation_question}**")
+        _decision_hero(screen.disambiguation_question or "Narrow it down")
         for opt in screen.disambiguation_options:
-            if _selection_button(opt, f"find_dis_{opt}"):
+            if option_card(opt, key=f"find_dis_{opt}"):
                 _go({"type": "disambiguate", "answer": opt})
         if text_link_button("← Search a different employer", key="find_disambig_reset"):
             save_context(get_engine().start())
@@ -180,13 +208,6 @@ def _render_find_step(view: JourneyView) -> None:
     _render_find_perk(screen.body)
     if st.session_state.get("show_find_assistant"):
         _render_assistant(view)
-
-
-def _selection_button(label: str, key: str, description: str | None = None) -> bool:
-    text = label
-    if description:
-        text = f"{label}\n\n{description}"
-    return secondary_button(text, key=key)
 
 
 def _show_mailing_details(channel: str, payable: str, say_this: str, step_index: int, total_steps: int) -> bool:
@@ -307,14 +328,22 @@ def _render_decisions(view: JourneyView) -> None:
         return
 
     if en.requires_tax_selection:
-        st.markdown("**How is your old 401(k) taxed?**")
+        _decision_hero(
+            "What kind of money is it?",
+            "Pre-tax goes to a Traditional IRA, Roth to a Roth IRA.",
+        )
         options = en.tax_options or [
             {"id": "pre_tax", "label": "Pre-tax (Traditional IRA)", "hint": "Most common"},
             {"id": "roth", "label": "Roth (Roth IRA)", "hint": "After-tax bucket"},
             {"id": "both", "label": "Both", "hint": "Split across IRA types"},
         ]
         for opt in options:
-            if _selection_button(opt["label"], f"tax_{opt['id']}", opt.get("hint")):
+            if option_card(
+                opt["label"],
+                key=f"tax_{opt['id']}",
+                caption=opt.get("hint"),
+                primary=opt["id"] == "pre_tax",
+            ):
                 _go({"type": "tax_type", "tax_type": opt["id"]})
         return
 
@@ -323,9 +352,9 @@ def _render_decisions(view: JourneyView) -> None:
         return
 
     if screen.disambiguation_question and screen.disambiguation_options:
-        st.markdown(f"**{screen.disambiguation_question}**")
+        _decision_hero(screen.disambiguation_question)
         for opt in screen.disambiguation_options:
-            if _selection_button(opt, f"dis_{opt}"):
+            if option_card(opt, key=f"dis_{opt}"):
                 _go({"type": "disambiguate", "answer": opt})
         return
 
@@ -333,17 +362,21 @@ def _render_decisions(view: JourneyView) -> None:
         return
 
     if state in (JourneyState.PROVIDER_IDENTIFIED, JourneyState.PROVIDER_NOT_COVERED):
-        st.markdown("**Can you log in to your old 401(k) account right now?**")
-        if _selection_button(
+        _decision_hero(
+            "Can you log in to your old 401(k)?",
+            "We'll tailor the next steps to how you get in.",
+        )
+        if option_card(
             "Yes, I can log in",
-            "access_yes",
-            "We'll walk you through the rollover online or by phone.",
+            key="access_yes",
+            caption="We'll walk you through it online or by phone.",
+            primary=True,
         ):
             _go({"type": "access", "can_login": True})
-        if _selection_button(
-            "No, I'm locked out or never had access",
-            "access_no",
-            "We'll help you recover access or connect you with a BeeKeeper.",
+        if option_card(
+            "No — I'm locked out or never set it up",
+            key="access_no",
+            caption="We'll recover access or bring in a BeeKeeper.",
         ):
             _go({"type": "access", "can_login": False})
         if state == JourneyState.PROVIDER_NOT_COVERED and secondary_button(
@@ -355,22 +388,30 @@ def _render_decisions(view: JourneyView) -> None:
     if state == JourneyState.ACCESS_RECOVERED and any(
         "phone" in a.lower() or "form" in a.lower() for a in screen.secondary_actions
     ):
-        st.markdown("**How would you like to start your rollover?**")
-        if screen.sla_note:
-            st.markdown(f'<p class="pb-helper">⏱ {screen.sla_note}</p>', unsafe_allow_html=True)
+        _decision_hero(
+            "How would you like to start your rollover?",
+            screen.sla_note if screen.sla_note else None,
+        )
         pb = get_engine().knowledge.playbook_for(view.ctx) if view.ctx.provider else None
         is_two_hop = pb and pb.mechanism.value == "two_hop_acat"
-        online_hint = "Usually 2–5 business days" if is_two_hop else "Fastest when you can log in."
-        if _selection_button("Do it online", "ch_online", online_hint):
+        online_hint = (
+            "Usually 2–5 business days (vs 7–10 by check)"
+            if is_two_hop
+            else "Fastest when you can log in."
+        )
+        if option_card("Do it online", key="ch_online", caption=online_hint, primary=True):
             _go({"type": "channel", "channel": "online"})
-        if is_two_hop:
-            st.markdown(
-                '<p class="pb-helper">vs 7–10 by check</p>',
-                unsafe_allow_html=True,
-            )
-        if _selection_button("By phone", "ch_phone", "We'll give you the number and script."):
+        if option_card(
+            "By phone",
+            key="ch_phone",
+            caption="We'll give you the number and a read-along script.",
+        ):
             _go({"type": "channel", "channel": "phone"})
-        if _selection_button("Paper forms", "ch_forms", "Download, fill, and mail."):
+        if option_card(
+            "Paper forms",
+            key="ch_forms",
+            caption="Download, fill, and mail.",
+        ):
             _go({"type": "channel", "channel": "forms"})
         return
 
@@ -578,10 +619,14 @@ def run_journey_app() -> None:
     ):
         st.caption(f"{screen.provider}" + (f" · {screen.channel.value}" if screen.channel else ""))
 
-    if not screen.has_reconstructed_content and screen.provider and screen.state in (
-        JourneyState.PROVIDER_IDENTIFIED,
-        JourneyState.ONLINE_IN_PROGRESS,
-        JourneyState.PHONE_IN_PROGRESS,
+    if (
+        not screen.has_reconstructed_content
+        and screen.provider
+        and screen.state
+        in (
+            JourneyState.ONLINE_IN_PROGRESS,
+            JourneyState.PHONE_IN_PROGRESS,
+        )
     ):
         st.markdown('<span class="pb-badge-ok">✓ Verified Transfer Path</span>', unsafe_allow_html=True)
     elif screen.has_reconstructed_content:
@@ -611,14 +656,14 @@ def run_journey_app() -> None:
                 f'<div class="pb-edge-tip">{screen.edge_cases[0]}</div>',
                 unsafe_allow_html=True,
             )
-    elif not is_find_step:
+    elif not is_find_step and not _screen_owns_headline(view):
         st.markdown(f'<h1 class="pb-headline">{screen.headline}</h1>', unsafe_allow_html=True)
         if screen.body:
             st.markdown(f'<p class="pb-body">{screen.body}</p>', unsafe_allow_html=True)
 
     if screen.edge_cases and screen.state not in IN_CHANNEL:
         for ec in screen.edge_cases:
-            st.warning(ec)
+            st.markdown(f'<p class="pb-muted-note">{ec}</p>', unsafe_allow_html=True)
 
     if screen.provenance_warning:
         st.warning(screen.provenance_warning)

@@ -68,11 +68,18 @@ def inject_brand_css() -> None:
 
     .block-container {{
         padding-top: 1.5rem;
-        padding-bottom: 2.5rem;
+        padding-bottom: 2rem;
         max-width: 28rem;
         padding-left: 1rem;
         padding-right: 1rem;
     }}
+    /* Spacing system: 8 / 12 / 16 / 24 / 32px only */
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
+    [data-testid="stVerticalBlock"] > .stMarkdown,
+    [data-testid="stVerticalBlock"] > .stButton {{
+        margin-bottom: 0;
+    }}
+    .pb-phase-bar {{ margin-bottom: 16px !important; }}
 
     /* ── Brand header ── */
     .pb-header-bar {{
@@ -119,8 +126,35 @@ def inject_brand_css() -> None:
         font-weight: 700;
         line-height: 1.2;
         color: {CHARCOAL};
-        margin: 0 0 0.5rem 0;
+        margin: 0 0 24px 0;
         letter-spacing: -0.02em;
+    }}
+    .pb-decision-hero {{
+        font-size: clamp(1.125rem, 4.5vw, 1.25rem);
+        font-weight: 700;
+        line-height: 1.25;
+        color: {CHARCOAL};
+        margin: 24px 0 8px 0;
+        letter-spacing: -0.02em;
+    }}
+    .pb-decision-lead {{
+        font-size: 0.95rem;
+        line-height: 1.5;
+        color: #8A857B;
+        margin: 0 0 32px 0;
+    }}
+    .pb-option-group {{ margin-top: 32px; }}
+    .opt-caption {{
+        color: #8A857B;
+        font-size: 0.86rem;
+        margin: 4px 2px 16px;
+        line-height: 1.4;
+    }}
+    .pb-muted-note {{
+        font-size: 0.88rem;
+        line-height: 1.5;
+        color: #8A857B;
+        margin: 0 0 16px 0;
     }}
 
     .pb-subcopy {{
@@ -320,7 +354,12 @@ def inject_brand_css() -> None:
         box-shadow: 0 2px 12px rgba(17, 17, 17, 0.06);
     }}
     .pb-h1 {{ font-size: 1.65rem; font-weight: 700; color: {CHARCOAL}; line-height: 1.2; margin: 0 0 0.5rem; }}
-    .pb-body {{ color: {INK}; line-height: 1.55; margin-bottom: 1rem; font-size: 1rem; }}
+    .pb-body {{
+        color: #8A857B;
+        line-height: 1.55;
+        margin: 0 0 16px 0;
+        font-size: 0.95rem;
+    }}
     .pb-badge-ok {{
         display: inline-block; background: {GREEN_SOFT}; color: {GREEN};
         font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.7rem; border-radius: 999px;
@@ -469,9 +508,8 @@ def inject_brand_css() -> None:
         font-size: 0.9rem; color: {INK}; line-height: 1.5; margin: 0;
     }}
     .pb-forward-note {{
-        font-size: 0.88rem; line-height: 1.5; color: #92400E;
-        background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 0.85rem;
-        padding: 0.85rem 1rem; margin: 0.5rem 0;
+        font-size: 0.88rem; line-height: 1.5; color: #8A857B;
+        margin: 8px 0 16px 0;
     }}
     .pb-agent-note {{
         border: 1px dashed rgba(107, 101, 96, 0.45); border-radius: 0.85rem;
@@ -484,9 +522,8 @@ def inject_brand_css() -> None:
     }}
     .pb-agent-note-body {{ margin: 0; color: {INK}; }}
     .pb-edge-tip {{
-        background: {YELLOW_SOFT}; border: 1px solid rgba(255, 199, 44, 0.35);
-        border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.88rem;
-        color: {INK}; margin-bottom: 0.75rem; line-height: 1.5;
+        font-size: 0.88rem; line-height: 1.5; color: #8A857B;
+        margin: 0 0 16px 0;
     }}
     .pb-helper {{
         font-size: 0.88rem; color: {MUTED}; line-height: 1.5; margin: 0.35rem 0 1rem;
@@ -529,19 +566,29 @@ def inject_brand_css() -> None:
         z-index: 2 !important;
     }}
 
+    /* Option cards + CTAs */
+    .stButton > button {{
+        text-align: left !important;
+        justify-content: flex-start !important;
+        border-radius: 12px !important;
+        padding: 14px 18px !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        min-height: auto !important;
+        line-height: 1.3 !important;
+        width: 100% !important;
+        white-space: normal !important;
+    }}
+
     /* Primary CTA — charcoal (form submit + type=primary) */
     [data-testid="stFormSubmitButton"] > button,
     [data-testid="stFormSubmitButton"] button,
     .stButton > button[kind="primary"],
     .stButton > button[data-testid="stBaseButton-primary"],
     form button[data-testid="baseButton-primary"] {{
-        width: 100% !important;
         min-height: 3.5rem !important;
-        border-radius: 0.75rem !important;
-        background: {CHARCOAL} !important;
+        background: #111111 !important;
         color: #fff !important;
-        font-weight: 600 !important;
-        font-size: 1rem !important;
         border: none !important;
         box-shadow: 0 2px 8px rgba(17, 17, 17, 0.15) !important;
     }}
@@ -552,25 +599,21 @@ def inject_brand_css() -> None:
     }}
     [data-testid="stFormSubmitButton"] > button:hover:not(:disabled),
     .stButton > button[kind="primary"]:hover:not(:disabled) {{
-        background: {INK} !important;
+        background: #2b2b2b !important;
         transition: background 0.15s ease !important;
     }}
 
     /* Selection blocks — secondary only (explicit kind) */
     .stButton > button[kind="secondary"],
     .stButton > button[data-testid="stBaseButton-secondary"] {{
-        width: 100% !important;
-        min-height: 4rem !important;
-        border-radius: {RADIUS} !important;
-        background: {CARD} !important;
-        color: {CHARCOAL} !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-        border: 2px solid {BORDER} !important;
+        background: #fff !important;
+        color: #111111 !important;
+        border: 1.5px solid #E2DDD3 !important;
         box-shadow: none !important;
-        text-align: left !important;
-        white-space: pre-wrap !important;
-        line-height: 1.35 !important;
+    }}
+    .stButton > button[kind="secondary"]:hover,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover {{
+        border-color: #111111 !important;
     }}
 
     /* Link buttons */
@@ -603,7 +646,7 @@ def inject_brand_css() -> None:
     }}
 
     div[data-testid="stProgressBar"] > div > div {{
-        background-color: {YELLOW} !important;
+        background-color: {CHARCOAL} !important;
     }}
 
     /* FBO st.code copy block — matches security card */
