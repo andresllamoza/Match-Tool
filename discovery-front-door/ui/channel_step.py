@@ -14,7 +14,7 @@ _CHANNEL_INTROS = {
 }
 
 _CHANNEL_LABELS = {
-    "phone": "Say this",
+    "phone": "SAY THIS",
     "online": "Do this now",
     "forms": "Fill in this field",
 }
@@ -68,13 +68,16 @@ def call_card(phone: str) -> str:
 def call_script_card(channel: str, script: str, *, field_label: str | None = None) -> str:
     intro = _CHANNEL_INTROS.get(channel, "")
     label = field_label if channel == "forms" and field_label else _CHANNEL_LABELS.get(channel, "")
-    quote = f"&ldquo;{_esc(script)}&rdquo;" if channel == "phone" else _esc(script)
+    if channel == "phone":
+        quote_html = f'<p class="pb-call-quote">&ldquo;{_esc(script)}&rdquo;</p>'
+    else:
+        quote_html = f'<p class="pb-channel-action">{_esc(script)}</p>'
     intro_html = f'<p class="pb-call-intro">{_esc(intro)}</p>' if intro else ""
     return (
         f'<div class="pb-call-script">'
         f"{intro_html}"
         f'<p class="pb-channel-kicker">{_esc(label)}</p>'
-        f'<p class="pb-channel-action">{quote}</p>'
+        f"{quote_html}"
         f"</div>"
     )
 
