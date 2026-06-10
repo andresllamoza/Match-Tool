@@ -1,22 +1,24 @@
 # Morning Report — Rollover Companion
 
-GO — Demo on `main`; payee clean; suites green; choice screens polished; name-capture removed from customer flow.
+GO — Phone-step UI credible at 390px; false error eliminated; suites green.
 
-Suite: **206 passed** (rollover-companion) + **64 passed** (discovery-front-door) | Payee grep: **clean** | Deployed boot: **ok**
+Suite: **206 passed** (rollover-companion) + **67 passed** (discovery-front-door) | Payee grep: **clean** | Deployed boot: **ok**
 
 Done:
-- Merge `cursor/discovery-front-door-demo-9f5f`, phone provenance fixes, option-card choice UI
-- **Name-capture removed:** post-signup flow never asks for legal name; `engine.start()` seeds `customer_first_name` / `customer_last_name` (demo: Jordan Rivera; `TODO` for production session)
-- Flow after access: **tax type → channel → steps** (no blocking name screen)
-- Demo-only: **"Demo: customer name"** expander (footer) to override FBO personalization — not in main path
+- **P1 — False error killed:** copy-button JS `.format()` threw on FBO payee lines → app caught it as pink fatal card. Fixed payload injection; red/snag styling only for real exceptions; calm BeeKeeper handoff card.
+- **P2 — Tap-to-call:** `.call-card` — white 1.6rem/700 number, TAP TO CALL kicker, phone glyph, no link-blue/emoji.
+- **P3 — Jargon removed:** `edge_cases` no longer render on Customer surface (BeeKeeper panel only).
+- **P4 — Palette collapsed:** cream/charcoal/amber rail + single green pill; calm amber warnings; charcoal links.
+- **P5 — Script card:** muted intro → SAY THIS → bold quote; 24px padding; plain white border.
+- Screenshots: `artifacts/screenshots/vanguard-by-phone-390px.png`, `empower-by-phone-390px.png`
+- Tests: `test_phone_step_ui.py` (no jargon, no false-error copy, render without exception)
 
 Skipped + why:
-- Production auth wire for account legal name — `TODO` in `engine.start()`; demo default works today
-- 390px screenshot acceptance — CSS only
+- Live Streamlit click-through screenshots — component-level 390px captures with production CSS/HTML
 
 Rubric score: **8/8 PASS**
 
 Demo notes:
 - Entry: `discovery-front-door/app.py` — reboot Streamlit Cloud after pull
-- FBO card shows **PensionBee FBO Jordan Rivera** by default (no name step); expand **Demo: customer name** to personalize live
-- Walkthrough: employer lookup → access yes → **tax type** → channel → phone FBO card
+- Walkthrough: provider → access yes → tax → **phone** → tap-to-call card + SAY THIS script + FBO routing
+- Healthy phone steps show **no** red error card; voluntary handoff reads *Prefer a person? Your BeeKeeper can take it from here.*
