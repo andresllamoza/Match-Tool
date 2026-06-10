@@ -44,6 +44,7 @@ Routing logic for the rollover playbook. Three mechanisms.
 
 ## Rules
 
+- **PAYEE vs DESTINATION — never confuse them.** Every rollover check, for every provider, is payable to **PensionBee FBO [user's name]**. "Check destination" above is only WHERE the check is MAILED. A check made payable to the participant personally is a **withdrawal/cashout** (taxable event), not a rollover — stop and escalate to a BeeKeeper before anything is cashed.
 - **Fidelity:** prefer the two-hop ACAT (no check). Phone fallback puts the check with the participant.
 - **Empower:** check goes to the **participant first**; they forward via prepaid envelope.
 - **Vanguard / Voya:** check can usually be sent **directly to the IRA provider (PensionBee)** — no forward step.

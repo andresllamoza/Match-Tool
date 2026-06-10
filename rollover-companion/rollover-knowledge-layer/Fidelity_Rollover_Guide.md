@@ -73,6 +73,7 @@ steps:
 
 edge_cases:
   - "Phone/check fallback puts the check with the participant; prefer Avenue 3 (ACAT) to avoid it entirely."
+  - "If the check arrives payable to YOU personally (not 'PensionBee FBO …'), stop — that's a withdrawal/cashout, not a rollover, and taxes/penalties may apply. Don't cash it; contact your BeeKeeper."
 
 escalation_triggers: []
 
@@ -128,9 +129,9 @@ call_script:
       answer: "Pre-tax → Traditional/Rollover IRA. Roth → Roth IRA. Mixed → two separate rollovers."
       source_status: verified
     - question: "Who should the check be payable to?"
-      answer: "For phone/check path: payable to you; you forward to PensionBee. Prefer online Express rollover to avoid a check."
+      answer: "Payable to PensionBee FBO [your name] — that keeps it a direct rollover. (Prefer the online Express rollover to avoid a check entirely.)"
       source_status: verified
-  check_payable: "Participant name (phone/check fallback only)"
+  check_payable: "PensionBee FBO [your name]"
   mailing_address: "PO Box 72, New York, NY 10272"
 
 form_guidance:
