@@ -8,8 +8,7 @@ Pages (sidebar):
   • Home (app.py) — full guided rollover journey
   • Find & value reveal — optional pre-signup employer lookup + 1% match teaser
 
-Streamlit Cloud: uses the real 5500 employer matcher by default (e.g. Google → Vanguard).
-Set USE_SYNTHETIC=1 in secrets only for offline demo mode.
+No secrets or env vars required — deploy and run as-is on Streamlit Cloud.
 """
 
 from __future__ import annotations

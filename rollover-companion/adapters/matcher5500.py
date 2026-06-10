@@ -51,9 +51,6 @@ class Local5500Adapter:
 
     @classmethod
     def from_matcher(cls, repo_root: Path | None = None) -> Local5500Adapter:
-        if os.environ.get("USE_SYNTHETIC") == "1":
-            return cls.from_synthetic()
-
         ok, missing = cls.matcher_deps_available()
         if not ok:
             return cls.from_synthetic()

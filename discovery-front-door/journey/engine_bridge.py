@@ -32,16 +32,15 @@ def _build_engine() -> JourneyEngine:
     from engine.knowledge import KnowledgeBase
     from engine.lookup import LookupService
 
-    # Default: real 5500 matcher (e.g. google → Vanguard). Set USE_SYNTHETIC=1 for offline dev.
-    use_synthetic = os.environ.get("USE_SYNTHETIC", "0") == "1"
+    # Always try the real 5500 matcher first (google → Vanguard). Fall back to bundled
+    # synthetic employers if deps or data are unavailable — no secrets or env vars needed.
+    matcher = Local5500Adapter.from_synthetic()
     matcher_ready, _ = Local5500Adapter.matcher_deps_available()
-    if use_synthetic or not matcher_ready:
-        matcher = Local5500Adapter.from_synthetic()
-    else:
+    if matcher_ready:
         try:
             matcher = Local5500Adapter.from_matcher(_COMPANION.parent)
         except Exception:
-            matcher = Local5500Adapter.from_synthetic()
+            pass
 
     knowledge = KnowledgeBase.from_dir(_COMPANION / "rollover-knowledge-layer")
     lookup = LookupService(knowledge, matcher, AdvizorProAdapter())
