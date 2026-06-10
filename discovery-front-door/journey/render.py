@@ -149,8 +149,8 @@ def _render_find_step(view: JourneyView) -> None:
         if submitted:
             name = (employer or st.session_state.get("employer_draft", "")).strip()
             if name:
-                st.session_state.employer_draft = name
-                _go({"type": "lookup", "employer": name})
+                st.session_state.pending_lookup = name
+                st.rerun()
             else:
                 st.session_state.ui_error = "Enter your former employer to continue."
                 st.rerun()
@@ -326,8 +326,7 @@ def _go(action: dict) -> None:
         if action.get("type") == "restart":
             st.session_state.show_provider_picker = False
             st.session_state.show_find_assistant = False
-            if "employer_draft" in st.session_state:
-                del st.session_state["employer_draft"]
+            st.session_state.employer_draft = ""
     st.rerun()
 
 
@@ -356,6 +355,17 @@ def run_journey_app() -> None:
         st.session_state.show_find_assistant = False
     if "employer_draft" not in st.session_state:
         st.session_state.employer_draft = ""
+
+    # Process employer search before any widgets render (Streamlit forbids mutating
+    # session keys that are bound to widgets after those widgets are drawn).
+    if st.session_state.get("pending_lookup"):
+        employer = str(st.session_state.pending_lookup).strip()
+        del st.session_state.pending_lookup
+        if employer:
+            _go({"type": "lookup", "employer": employer})
+        else:
+            st.session_state.ui_error = "Enter your former employer to continue."
+            st.rerun()
 
     header_left, header_right = st.columns([6, 1])
     with header_left:
