@@ -1,10 +1,14 @@
 """
-PensionBee Rollover Companion — FULL PRODUCT (Streamlit Cloud entrypoint).
+PensionBee Rollover Companion — Streamlit Cloud entrypoint (no local install needed).
 
-This is the real guided rollover: find → access → roll over → track.
-Uses the same JourneyEngine + knowledge layer as rollover-companion/web (/customer).
+This IS the full customer product in your browser: find → access → roll over → track.
+Runs the same JourneyEngine as rollover-companion/engine (Next.js is optional dev UI only).
 
-Optional sidebar page: Find & value reveal (pre-signup employer lookup + $ match teaser).
+Pages (sidebar):
+  • Home (app.py) — full guided rollover journey
+  • Find & value reveal — optional pre-signup employer lookup + 1% match teaser
+
+Streamlit Cloud: set USE_SYNTHETIC=1 in secrets, then reboot after deploys.
 """
 
 from __future__ import annotations
