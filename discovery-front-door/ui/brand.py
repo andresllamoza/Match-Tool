@@ -413,8 +413,8 @@ def inject_brand_css() -> None:
     }}
 
     /* Text-link escape hatches on find screen */
-    .stButton > button[kind="tertiary"],
-    .stButton > button[data-testid="stBaseButton-tertiary"] {{
+    .stButton > button[kind="tertiary"]:not([title="Restart journey"]),
+    .stButton > button[data-testid="stBaseButton-tertiary"]:not([title="Restart journey"]) {{
         width: 100% !important;
         min-height: auto !important;
         padding: 0.35rem 0 !important;

@@ -17,6 +17,7 @@ export interface JourneyController {
   setAssistantOpen: (value: boolean) => void;
   act: (body: Record<string, unknown>) => Promise<void>;
   restart: () => Promise<void>;
+  setError: (message: string | null) => void;
 }
 
 interface UseJourneyControllerOptions {
@@ -127,5 +128,6 @@ export function useJourneyController({
     setAssistantOpen,
     act,
     restart,
+    setError,
   };
 }

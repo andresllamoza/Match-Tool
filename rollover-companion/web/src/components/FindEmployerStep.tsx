@@ -50,7 +50,10 @@ export function FindEmployerStep({
           value={employer}
           onChange={(e) => onEmployerChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && employer.trim() && !loading) onSearch();
+            if (e.key === "Enter" && !loading) {
+              e.preventDefault();
+              onSearch();
+            }
           }}
           placeholder="e.g. Target, FedEx, Walmart"
           disabled={loading}
@@ -59,7 +62,7 @@ export function FindEmployerStep({
 
         <Button
           onClick={onSearch}
-          disabled={loading || !employer.trim()}
+          disabled={loading}
           className="mb-4 h-14 min-h-[56px] rounded-xl bg-[#111111] text-base font-semibold text-white active:scale-[0.99] transition-transform duration-100"
         >
           {searchLabel}

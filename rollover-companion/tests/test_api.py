@@ -72,6 +72,17 @@ def test_provider_not_covered_handoff():
     assert r["screen"]["state"] == "escalated"
 
 
+def test_employer_lookup_target():
+    start = client.post("/api/journey/start").json()
+    jid = start["context"]["journey_id"]
+    r = client.post(
+        f"/api/journey/{jid}/action",
+        json={"type": "lookup", "employer": "Target"},
+    ).json()
+    assert r["screen"]["state"] in ("provider_identified", "provider_not_covered")
+    assert r["context"]["provider"] or r["context"]["uncovered_provider"]
+
+
 def test_walmart_lookup_merrill_playbook():
     start = client.post("/api/journey/start").json()
     jid = start["context"]["journey_id"]

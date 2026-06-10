@@ -100,6 +100,7 @@ export function JourneyFlow({
     assistantOpen,
     setAssistantOpen,
     act,
+    setError,
   } = externalController ?? internalController;
 
   const disabled = loading || readOnly;
@@ -132,9 +133,13 @@ export function JourneyFlow({
     const s = screen.state;
     const primary = screen.primary_action.toLowerCase();
 
-    if (s === "provider_unknown" && primary.includes("search")) {
-      if (!employerInput.trim()) return;
-      await act({ type: "lookup", employer: employerInput.trim() });
+    if (s === "provider_unknown") {
+      const name = employerInput.trim();
+      if (!name) {
+        setError("Enter your former employer to continue.");
+        return;
+      }
+      await act({ type: "lookup", employer: name });
       return;
     }
     if (s === "access_blocked" && primary.includes("in now")) {
@@ -425,7 +430,10 @@ export function JourneyFlow({
       )}
       <FindEmployerStep
         employer={employerInput}
-        onEmployerChange={setEmployerInput}
+        onEmployerChange={(value) => {
+          setEmployerInput(value);
+          if (error) setError(null);
+        }}
         onSearch={handlePrimary}
         onKnowProvider={() => setShowProviderPicker(true)}
         onAskQuestion={() => setAssistantOpen(true)}

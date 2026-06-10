@@ -73,6 +73,17 @@ def _render_find_perk(body: str) -> None:
     )
 
 
+def _render_provider_picker() -> None:
+    st.markdown("**Select your 401(k) provider**")
+    for p in list_providers():
+        if _selection_button(p, f"prov_{p}"):
+            st.session_state.show_provider_picker = False
+            _go({"type": "provider_direct", "provider": p})
+    if secondary_button("← Search by employer instead", key="hide_provider_picker"):
+        st.session_state.show_provider_picker = False
+        st.rerun()
+
+
 def _render_find_step(view: JourneyView) -> None:
     screen = view.screen
     try:
@@ -100,10 +111,12 @@ def _render_find_step(view: JourneyView) -> None:
             )
             submitted = form_submit_primary(screen.primary_action)
         if submitted:
-            if employer.strip():
-                _go({"type": "lookup", "employer": employer.strip()})
+            name = (employer or st.session_state.get("employer_draft", "")).strip()
+            if name:
+                _go({"type": "lookup", "employer": name})
             else:
                 st.session_state.ui_error = "Enter your former employer to continue."
+                st.rerun()
         if text_link_button("I already know my 401(k) provider →", key="show_provider_picker_btn"):
             st.session_state.show_provider_picker = True
             st.rerun()
@@ -167,14 +180,7 @@ def _render_decisions(view: JourneyView) -> None:
         return
 
     if st.session_state.get("show_provider_picker"):
-        st.markdown("**Select your 401(k) provider**")
-        for p in list_providers():
-            if _selection_button(p, f"prov_{p}"):
-                st.session_state.show_provider_picker = False
-                _go({"type": "provider_direct", "provider": p})
-        if secondary_button("← Search by employer instead", key="hide_provider_picker"):
-            st.session_state.show_provider_picker = False
-            st.rerun()
+        _render_provider_picker()
         return
 
     if screen.disambiguation_question and screen.disambiguation_options:
@@ -264,13 +270,13 @@ def _go(action: dict) -> None:
     result = apply_action(action)
     if isinstance(result, str):
         st.session_state.ui_error = result
-        return
-    st.session_state.pop("ui_error", None)
-    if action.get("type") == "restart":
-        st.session_state.show_provider_picker = False
-        st.session_state.show_find_assistant = False
-        if "employer_draft" in st.session_state:
-            del st.session_state["employer_draft"]
+    else:
+        st.session_state.pop("ui_error", None)
+        if action.get("type") == "restart":
+            st.session_state.show_provider_picker = False
+            st.session_state.show_find_assistant = False
+            if "employer_draft" in st.session_state:
+                del st.session_state["employer_draft"]
     st.rerun()
 
 
@@ -382,7 +388,10 @@ def run_journey_app() -> None:
     elif screen.state == JourneyState.ESCALATED:
         st.info("A BeeKeeper will take it from here.")
     elif is_find_step:
-        _render_find_step(view)
+        if st.session_state.get("show_provider_picker"):
+            _render_provider_picker()
+        else:
+            _render_find_step(view)
     else:
         _render_decisions(view)
         _render_assistant(view)
