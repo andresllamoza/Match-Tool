@@ -1,7 +1,7 @@
 # Streamlit Cloud installs this file when entrypoint is discovery-front-door/app.py.
 -r ../requirements.txt
 # Explicit pins so matcher imports never fail even if -r resolution breaks on Cloud.
-streamlit>=1.28
+streamlit>=1.50
 pydantic>=2
 pyyaml
 pandas>=2.0

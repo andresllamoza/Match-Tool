@@ -72,16 +72,41 @@ def warm_lookup_cache() -> bool:
     return True
 
 
+@st.cache_resource
+def get_session_store():
+    from sandbox.persistence import SessionStore
+
+    return SessionStore(_COMPANION / "data" / "rollover_sessions.db")
+
+
+def _sync_journey_url(journey_id: str) -> None:
+    if st.query_params.get("journey") != journey_id:
+        st.query_params["journey"] = journey_id
+
+
 def load_context() -> JourneyContext:
+    store = get_session_store()
     if "journey_ctx" not in st.session_state:
-        engine = get_engine()
-        ctx = engine.start()
-        st.session_state.journey_ctx = ctx.model_dump(mode="json")
+        qp = st.query_params.get("journey")
+        restored = store.load(qp) if qp else None
+        if restored:
+            st.session_state.journey_ctx = restored.model_dump(mode="json")
+            st.session_state.journey_restored = True
+        else:
+            engine = get_engine()
+            ctx = engine.start()
+            st.session_state.journey_ctx = ctx.model_dump(mode="json")
+            st.session_state.journey_restored = False
+        ctx = JourneyContext.model_validate(st.session_state.journey_ctx)
+        store.save(ctx)
+        _sync_journey_url(ctx.journey_id)
     return JourneyContext.model_validate(st.session_state.journey_ctx)
 
 
-def save_context(ctx: JourneyContext) -> None:
+def save_context(ctx: JourneyContext, *, surface: str = "customer") -> None:
     st.session_state.journey_ctx = ctx.model_dump(mode="json")
+    get_session_store().save(ctx, surface=surface)
+    _sync_journey_url(ctx.journey_id)
 
 
 def step_totals(ctx: JourneyContext) -> tuple[int, int]:
@@ -146,8 +171,13 @@ def apply_action(action: dict[str, Any]) -> JourneyView | str:
             screen = engine.take_handoff(ctx, action.get("reason", "provider_not_covered"))
         elif kind == "resume":
             screen = engine.resume_from_stuck(ctx)
+        elif kind == "set_name":
+            ctx.customer_first_name = action["first_name"].strip()
+            ctx.customer_last_name = action["last_name"].strip()
+            screen = engine.render(ctx)
         elif kind == "restart":
             ctx = engine.start()
+            st.session_state.journey_restored = False
             screen = engine.render(ctx)
         else:
             return f"Unknown action: {kind}"

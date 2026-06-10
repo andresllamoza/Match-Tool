@@ -384,9 +384,30 @@ def inject_brand_css() -> None:
         font-size: 0.9rem; line-height: 1.55; color: {INK}; margin: 0;
     }}
     .pb-routing-security {{ margin: 0; }}
+    .pb-welcome {{
+        background: {CARD}; border: 1px solid {BORDER}; border-radius: {RADIUS};
+        padding: 1.25rem 1.5rem; margin: 0 0 1rem;
+        animation: pbSlideIn 0.45s ease-out;
+    }}
+    @keyframes pbSlideIn {{
+        from {{ opacity: 0; transform: translateY(8px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .pb-welcome-kicker {{
+        font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;
+        text-transform: uppercase; color: #9A6200; margin: 0;
+    }}
+    .pb-welcome-body {{
+        font-size: 1.0625rem; line-height: 1.55; color: {INK}; margin: 0.5rem 0 0;
+    }}
     .pb-fbo-header {{
         display: flex; align-items: flex-start; gap: 0.75rem;
         margin-bottom: 1rem;
+    }}
+    .pb-fbo-header--card + .pb-security-compound--fbo {{
+        border: 2px solid {CHARCOAL} !important;
+        border-radius: {RADIUS} !important;
+        box-shadow: none !important;
     }}
     .pb-fbo-lock {{
         width: 2.5rem; height: 2.5rem; border-radius: 999px;
@@ -582,6 +603,46 @@ def inject_brand_css() -> None:
 
     div[data-testid="stProgressBar"] > div > div {{
         background-color: {YELLOW} !important;
+    }}
+
+    /* FBO st.code copy block — matches security card */
+    div[data-testid="stCode"] pre,
+    div[data-testid="stCodeBlock"] pre {{
+        background: {CARD} !important;
+        border: 2px solid {CHARCOAL} !important;
+        border-radius: 14px !important;
+        font-size: 1.1rem !important;
+        color: {CHARCOAL} !important;
+        font-family: ui-monospace, Menlo, monospace !important;
+        padding: 14px 16px !important;
+        word-break: break-word !important;
+    }}
+    div[data-testid="stCode"] button {{ opacity: 0.55; }}
+    div[data-testid="stCode"]:hover button {{ opacity: 1; }}
+
+    /* BeeKeeper ops panel */
+    .pb-agent-panel {{
+        background: {CHARCOAL}; color: #f4f1ea; border-radius: {RADIUS};
+        padding: 1.25rem 1.35rem; font-size: 0.92rem; line-height: 1.55; margin-top: 1rem;
+    }}
+    .pb-agent-panel h4 {{
+        color: {YELLOW}; font-size: 0.72rem; font-weight: 800;
+        letter-spacing: 0.1em; text-transform: uppercase; margin: 1rem 0 0.35rem;
+    }}
+    .pb-agent-panel h4:first-child {{ margin-top: 0; }}
+    .pb-agent-say {{ font-size: 1.05rem; line-height: 1.5; }}
+    .pb-agent-debug {{
+        max-height: 8rem; overflow: auto; font-family: monospace;
+        font-size: 0.75rem; background: rgba(255,255,255,0.06);
+        padding: 0.5rem; border-radius: 0.5rem; margin-top: 0.35rem;
+    }}
+
+    @media (max-width: 390px) {{
+        .block-container {{ padding-left: 0.85rem; padding-right: 0.85rem; }}
+        .pb-phase-bar .pb-phase {{ font-size: 0.62rem; }}
+        .pb-step-label {{ font-size: 0.62rem; }}
+        .pb-security-value--prominent {{ font-size: 1.1rem !important; }}
+        .pb-header-bar {{ flex-wrap: wrap; }}
     }}
 
     @media (max-width: 480px) {{

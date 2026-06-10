@@ -6,7 +6,15 @@ import streamlit as st
 
 from ui.components import brand_header_bar  # noqa: E402
 
-from .engine_bridge import JourneyView, apply_action, current_view, get_engine, list_providers, save_context
+from .engine_bridge import (
+    JourneyView,
+    apply_action,
+    current_view,
+    get_engine,
+    get_session_store,
+    list_providers,
+    save_context,
+)
 from ui.channel_step import (  # noqa: E402
     call_script_card,
     channel_step_header,
@@ -32,6 +40,8 @@ IN_CHANNEL = {
     JourneyState.PHONE_IN_PROGRESS,
     JourneyState.FORMS_IN_PROGRESS,
 }
+
+SURFACES = ["Customer", "BeeKeeper", "Funnel"]
 
 
 def _render_progress(phase: str, *, variant: str = "default") -> None:
@@ -179,13 +189,31 @@ def _selection_button(label: str, key: str, description: str | None = None) -> b
     return secondary_button(text, key=key)
 
 
-def _show_mailing_details(say_this: str, step_index: int, total_steps: int) -> bool:
+def _show_mailing_details(channel: str, payable: str, say_this: str, step_index: int, total_steps: int) -> bool:
+    if payable and channel in ("phone", "forms"):
+        return True
     lower = say_this.lower()
     if any(w in lower for w in ("check", "payable", "mail", "pensionbee", "destination", "ira")):
         return True
     if total_steps <= 0:
         return False
     return step_index >= total_steps - 3
+
+
+def _render_fbo_copy(payable: str) -> None:
+    if payable:
+        st.code(payable, language=None)
+
+
+def _render_initiated_fbo(view: JourneyView) -> None:
+    cc = view.enrichment.channel_context
+    if not cc or not cc.check_payable:
+        return
+    mail = cc.mailing_address or view.enrichment.mailing_address
+    security_html = routing_security_card(cc.check_payable, mail)
+    if security_html:
+        st.markdown(f'<div class="pb-routing-panel">{security_html}</div>', unsafe_allow_html=True)
+        _render_fbo_copy(cc.check_payable)
 
 
 def _render_channel_context(view: JourneyView) -> None:
@@ -230,9 +258,9 @@ def _render_channel_context(view: JourneyView) -> None:
             unsafe_allow_html=True,
         )
 
-    if _show_mailing_details(ctx_data.say_this, view.step_index, view.total_steps):
-        payable = ctx_data.check_payable or ""
-        mail = ctx_data.mailing_address or en.mailing_address
+    payable = ctx_data.check_payable or ""
+    mail = ctx_data.mailing_address or en.mailing_address
+    if _show_mailing_details(ch, payable, ctx_data.say_this, view.step_index, view.total_steps):
         panel: list[str] = ['<div class="pb-routing-panel">']
         if ch == "phone":
             panel.append(phone_routing_intro())
@@ -242,6 +270,8 @@ def _render_channel_context(view: JourneyView) -> None:
         panel.append("</div>")
         if security_html:
             st.markdown("".join(panel), unsafe_allow_html=True)
+            if payable:
+                _render_fbo_copy(payable)
 
     if en.forward_step_required:
         st.markdown(
@@ -262,6 +292,18 @@ def _render_decisions(view: JourneyView) -> None:
     state = screen.state
 
     if state in (JourneyState.COMPLETE, JourneyState.ESCALATED):
+        return
+
+    if state == JourneyState.ACCESS_RECOVERED and not view.ctx.customer_first_name:
+        st.markdown(
+            '<p class="pb-body">Checks get made out to you by name — we print it exactly.</p>',
+            unsafe_allow_html=True,
+        )
+        c1, c2 = st.columns(2)
+        first = c1.text_input("First name", key="cust_first")
+        last = c2.text_input("Last name", key="cust_last")
+        if primary_button("Save my name", key="save_name") and first.strip() and last.strip():
+            _go({"type": "set_name", "first_name": first.strip(), "last_name": last.strip()})
         return
 
     if en.requires_tax_selection:
@@ -314,8 +356,18 @@ def _render_decisions(view: JourneyView) -> None:
         "phone" in a.lower() or "form" in a.lower() for a in screen.secondary_actions
     ):
         st.markdown("**How would you like to start your rollover?**")
-        if _selection_button("Online", "ch_online", "Fastest when you can log in."):
+        if screen.sla_note:
+            st.markdown(f'<p class="pb-helper">⏱ {screen.sla_note}</p>', unsafe_allow_html=True)
+        pb = get_engine().knowledge.playbook_for(view.ctx) if view.ctx.provider else None
+        is_two_hop = pb and pb.mechanism.value == "two_hop_acat"
+        online_hint = "Usually 2–5 business days" if is_two_hop else "Fastest when you can log in."
+        if _selection_button("Do it online", "ch_online", online_hint):
             _go({"type": "channel", "channel": "online"})
+        if is_two_hop:
+            st.markdown(
+                '<p class="pb-helper">vs 7–10 by check</p>',
+                unsafe_allow_html=True,
+            )
         if _selection_button("By phone", "ch_phone", "We'll give you the number and script."):
             _go({"type": "channel", "channel": "phone"})
         if _selection_button("Paper forms", "ch_forms", "Download, fill, and mail."):
@@ -363,6 +415,7 @@ def _render_decisions(view: JourneyView) -> None:
 
 
 def _go(action: dict) -> None:
+    st.session_state.journey_restored = False
     result = apply_action(action)
     if isinstance(result, str):
         st.session_state.ui_error = result
@@ -407,6 +460,56 @@ def _render_assistant(view: JourneyView) -> None:
             _go({"type": "escalate", "reason": "assistant_handoff"})
 
 
+def _render_funnel_surface() -> None:
+    from engine.funnel import load_funnel_summary
+
+    st.markdown('<h1 class="pb-headline">Journey funnel</h1>', unsafe_allow_html=True)
+    st.caption("Stall points and handoff demand from the event stream.")
+    summary = load_funnel_summary()
+    if summary.total_journeys == 0 and not summary.by_state:
+        st.markdown(
+            '<div class="pb-channel-hint-card">No journeys yet — run one from the '
+            "<b>Customer</b> surface, then come back here.</div>",
+            unsafe_allow_html=True,
+        )
+        return
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Journeys", summary.total_journeys)
+    m2.metric("Handoffs offered", summary.handoff_offered_count)
+    m3.metric("Handoffs taken", summary.handoff_taken_count)
+    m4.metric("Not covered", summary.provider_not_covered_count)
+    if summary.by_state:
+        st.markdown("##### Events by state")
+        st.bar_chart({k: v for k, v in summary.by_state.items() if v > 0})
+    if summary.stall_points:
+        st.markdown("##### Stall points by provider")
+        rows = [
+            {"Provider": sp.provider or "—", "State": sp.state, "Count": sp.count}
+            for sp in summary.stall_points
+        ]
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _render_beekeeper_surface(view: JourneyView) -> None:
+    screen = view.screen
+    notes = "".join(f"<li>{n}</li>" for n in screen.agent_notes) or "<li>—</li>"
+    esc = "".join(f"<li>{e.action}</li>" for e in screen.active_escalations)
+    edge = "".join(f"<li>{e}</li>" for e in screen.edge_cases)
+    say = screen.next_beekeeper_script or "—"
+    st.markdown(
+        f"""<div class="pb-agent-panel">
+        <h4>Say next</h4><div class="pb-agent-say">{say}</div>
+        <h4>Agent notes</h4><ul>{notes}</ul>
+        {f'<h4>Active escalations</h4><ul>{esc}</ul>' if esc else ''}
+        {f'<h4>Edge cases</h4><ul>{edge}</ul>' if edge else ''}
+        <h4>State debug</h4>
+        <div class="pb-agent-debug">{view.ctx.state.value} · {view.ctx.provider or "?"} · step {view.ctx.step_index}
+        · stuck×{view.ctx.stuck_count} · {view.ctx.journey_id}</div></div>""",
+        unsafe_allow_html=True,
+    )
+    st.code(say, language=None)
+
+
 def run_journey_app() -> None:
     if "show_provider_picker" not in st.session_state:
         st.session_state.show_provider_picker = False
@@ -414,6 +517,8 @@ def run_journey_app() -> None:
         st.session_state.show_find_assistant = False
     if "employer_draft" not in st.session_state:
         st.session_state.employer_draft = ""
+    if "journey_restored" not in st.session_state:
+        st.session_state.journey_restored = False
 
     # Process employer search before any widgets render (Streamlit forbids mutating
     # session keys that are bound to widgets after those widgets are drawn).
@@ -426,12 +531,22 @@ def run_journey_app() -> None:
             st.session_state.ui_error = "Enter your former employer to continue."
             st.rerun()
 
-    header_left, header_right = st.columns([6, 1])
+    header_left, header_mid, header_right = st.columns([4, 3, 1])
     with header_left:
         brand_header_bar()
+    with header_mid:
+        try:
+            surface = st.segmented_control("Surface", SURFACES, default="Customer", label_visibility="collapsed")
+        except (AttributeError, TypeError):
+            surface = st.radio("Surface", SURFACES, horizontal=True, label_visibility="collapsed")
     with header_right:
         if icon_button("↺", key="restart_journey", help="Restart journey"):
             _go({"type": "restart"})
+    surface = surface or "Customer"
+
+    if surface == "Funnel":
+        _render_funnel_surface()
+        st.stop()
 
     if st.session_state.get("ui_error"):
         st.error(st.session_state.ui_error)
@@ -440,6 +555,18 @@ def run_journey_app() -> None:
     screen = view.screen
 
     is_find_step = screen.state == JourneyState.PROVIDER_UNKNOWN
+
+    if st.session_state.get("journey_restored"):
+        provider = view.ctx.provider or view.ctx.uncovered_provider or "your provider"
+        stage = screen.headline or view.ctx.state.value.replace("_", " ")
+        st.markdown(
+            f'<div class="pb-welcome" role="status">'
+            f'<p class="pb-welcome-kicker">🐝 Welcome back — we saved your spot</p>'
+            f'<p class="pb-welcome-body">Continuing your <strong>{provider}</strong> rollover — {stage}.</p>'
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+        st.session_state.journey_restored = False
 
     if screen.state not in (JourneyState.COMPLETE, JourneyState.ESCALATED) and not is_find_step:
         _render_progress(screen.phase.value)
@@ -511,6 +638,9 @@ def run_journey_app() -> None:
             f"**Day {track.follow_up_days}:** {track.nothing_arrived_message}"
         )
 
+    if screen.state == JourneyState.INITIATED:
+        _render_initiated_fbo(view)
+
     if screen.state == JourneyState.COMPLETE:
         st.success("🎉 You're all set! Your rollover is complete.")
     elif screen.state == JourneyState.ESCALATED:
@@ -525,4 +655,35 @@ def run_journey_app() -> None:
             _render_find_step(view)
     else:
         _render_decisions(view)
+        if screen.state not in (
+            JourneyState.COMPLETE,
+            JourneyState.ESCALATED,
+            JourneyState.PROVIDER_NOT_COVERED,
+        ):
+            if st.button("🐝 Talk to your BeeKeeper", type="tertiary", key="voluntary_bk"):
+                get_engine().log_handoff_taken(view.ctx, f"voluntary:{screen.state.value}")
+                save_context(view.ctx)
+                st.toast("Your BeeKeeper has the full context of this journey.")
         _render_assistant(view)
+
+    if surface == "BeeKeeper":
+        _render_beekeeper_surface(view)
+
+    with st.expander("Resume a saved journey"):
+        store = get_session_store()
+        rows = store.recent()
+        if not rows:
+            st.caption("No saved journeys yet.")
+        for r in rows:
+            c1, c2 = st.columns([4, 1])
+            c1.markdown(
+                f"`{r['journey_id']}` — **{r['state']}**"
+                + (f" · {r['provider']}" if r["provider"] else "")
+                + f" · {r['updated_at'][:16]}"
+            )
+            if c2.button("Resume", key=f"res_{r['journey_id']}"):
+                restored = store.load(r["journey_id"])
+                if restored:
+                    save_context(restored)
+                    st.session_state.journey_restored = True
+                    st.rerun()

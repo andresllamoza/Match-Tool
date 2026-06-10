@@ -5,10 +5,7 @@ from __future__ import annotations
 import html
 import json
 
-
-def _is_fbo_payable_line(text: str) -> bool:
-    lower = text.lower()
-    return "fbo" in lower and "pensionbee" in lower
+from engine.customer_copy import is_fbo_payable_line as _is_fbo_payable_line
 
 _CHANNEL_INTROS = {
     "phone": "When speaking with your provider, use these exact phrases:",
@@ -94,15 +91,17 @@ def routing_security_card(
 
     if show_fbo:
         parts.append(
-            '<div class="pb-fbo-header">'
+            '<div class="pb-fbo-header pb-fbo-header--card">'
             '<span class="pb-fbo-lock" aria-hidden="true">🔒</span>'
             "<div>"
-            '<p class="pb-fbo-kicker">Critical — check payable to</p>'
-            '<p class="pb-fbo-sub">Use these exact details or your rollover may be rejected.</p>'
+            '<p class="pb-fbo-kicker">Make the check payable to — exactly</p>'
+            '<p class="pb-fbo-sub">If a check ever arrives payable to <strong>you personally</strong>, '
+            "don't cash it — that's a withdrawal, not a rollover. Your BeeKeeper will fix it.</p>"
             "</div></div>"
         )
 
-    parts.append('<div class="pb-security-compound">')
+    compound_cls = "pb-security-compound pb-security-compound--fbo" if show_fbo else "pb-security-compound"
+    parts.append(f'<div class="{compound_cls}">')
     if has_payee:
         label = "Check payable to" if show_fbo else "Payee name"
         parts.append(_security_row(label, payee_line or "", prominent=show_fbo))
