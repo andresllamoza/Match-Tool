@@ -310,7 +310,8 @@ def inject_brand_css() -> None:
     .pb-phase {{ flex: 1; text-align: center; font-size: 0.72rem; font-weight: 600; color: {MUTED}; }}
     .pb-phase.active {{ color: {CHARCOAL}; font-weight: 700; }}
     .pb-phase-dot {{ height: 4px; border-radius: 999px; background: {BORDER}; margin-bottom: 6px; }}
-    .pb-phase-dot.done, .pb-phase-dot.active {{ background: {YELLOW}; }}
+    .pb-phase-dot.done {{ background: {BORDER}; }}
+    .pb-phase-dot.active {{ background: {YELLOW}; }}
     .pb-card-j {{
         background: {CARD};
         border: 1px solid {BORDER};
