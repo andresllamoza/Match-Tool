@@ -202,7 +202,7 @@ def _render_decisions(view: JourneyView) -> None:
         ):
             _go({"type": "access", "can_login": True})
         if _selection_button(
-            "No, I'm locked out",
+            "No, I'm locked out or never had access",
             "access_no",
             "We'll help you recover access or connect you with a BeeKeeper.",
         ):

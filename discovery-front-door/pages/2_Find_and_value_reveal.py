@@ -31,6 +31,7 @@ from ui.components import (  # noqa: E402
     value_reveal_card,
     warm_message,
 )
+from journey.widgets import form_submit_primary  # noqa: E402
 from ui.states import UiState, classify_ui_state, run_discovery_safe  # noqa: E402
 
 st.set_page_config(page_title="Find & value | PensionBee", page_icon="🔍", layout="centered")
@@ -83,21 +84,28 @@ if state == UiState.INPUT:
         "Find your old 401(k)",
         "Pre-signup lookup + illustrative 1% match. For the full guided rollover, open Home in the sidebar.",
     )
-    employer = st.text_input("Former employer", value=st.session_state.find_last_employer)
-    balance_key = st.selectbox(
-        "Balance range",
-        options=[b.value for b in BalanceRange],
-        format_func=format_balance_label,
-    )
-    if st.button("Find my 401(k)", type="primary", use_container_width=True) and employer.strip():
-        st.session_state.find_last_employer = employer.strip()
-        with st.spinner("Looking up…"):
-            outcome, err = run_discovery_safe(flow, employer.strip(), BalanceRange(balance_key))
-        if err or outcome is None:
-            st.session_state.find_ui_state = UiState.ERROR.value
-        else:
-            st.session_state.find_outcome = outcome
-            st.session_state.find_ui_state = classify_ui_state(outcome).value
+    try:
+        form_ctx = st.form("find_value_form", clear_on_submit=False, border=False)
+    except TypeError:
+        form_ctx = st.form("find_value_form", clear_on_submit=False)
+    with form_ctx:
+        employer = st.text_input("Former employer", value=st.session_state.find_last_employer)
+        balance_key = st.selectbox(
+            "Balance range",
+            options=[b.value for b in BalanceRange],
+            format_func=format_balance_label,
+        )
+        submitted = form_submit_primary("Find my 401(k)")
+    if submitted:
+        if employer.strip():
+            st.session_state.find_last_employer = employer.strip()
+            with st.spinner("Looking up…"):
+                outcome, err = run_discovery_safe(flow, employer.strip(), BalanceRange(balance_key))
+            if err or outcome is None:
+                st.session_state.find_ui_state = UiState.ERROR.value
+            else:
+                st.session_state.find_outcome = outcome
+                st.session_state.find_ui_state = classify_ui_state(outcome).value
         st.rerun()
 
 elif state == UiState.RESULT:

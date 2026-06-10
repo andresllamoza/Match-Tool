@@ -13,15 +13,22 @@ export default function FunnelPage() {
   }, []);
 
   return (
-    <main className="mx-auto min-h-dvh max-w-desktop px-4 py-6 lg:px-8 lg:py-10">
-      <BrandHeader mode="customer" />
-      <h1 className="mb-2 text-2xl font-bold text-bee-charcoal lg:text-3xl">Funnel view</h1>
-      <p className="mb-8 text-bee-muted lg:text-lg">
-        Stall points by provider and channel — powered by JourneyEvent JSONL.
-      </p>
+    <main className="mx-auto min-h-dvh max-w-desktop bg-canvas px-4 py-6 lg:px-8 lg:py-10">
+      <BrandHeader mode="agent" />
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4 lg:mb-8">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-bee-muted">Internal · Analytics</p>
+          <h1 className="mt-1 text-2xl font-bold text-bee-charcoal lg:text-3xl">Funnel view</h1>
+          <p className="mt-1 text-bee-muted lg:text-lg">
+            Stall points by provider and channel — powered by journey event logs.
+          </p>
+        </div>
+      </div>
 
       {!data ? (
-        <p className="text-bee-muted">No journey data yet. Run a few rollovers first.</p>
+        <div className="rounded-card border border-bee-border bg-white p-8 text-center shadow-card">
+          <p className="text-bee-muted">No journey data yet. Run a few rollovers first.</p>
+        </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
           <StatCard label="Journeys" value={String(data.total_journeys)} />
@@ -80,7 +87,7 @@ export default function FunnelPage() {
       )}
 
       <p className="mt-8 text-center">
-        <Link href="/" className="font-semibold text-bee-charcoal hover:underline">
+        <Link href="/customer" className="font-semibold text-bee-charcoal hover:underline">
           ← Back to customer flow
         </Link>
       </p>

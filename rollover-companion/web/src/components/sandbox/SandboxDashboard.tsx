@@ -15,12 +15,12 @@ export function SandboxDashboard() {
 
   const journeyId = controller.data?.context.journey_id ?? "…";
   const mountTheme = embedTheme === "light" ? "LIGHT (PensionBee)" : "DARK (Custom Partner)";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://your-host";
   const mountCode = `<iframe
-  src="${typeof window !== "undefined" ? window.location.origin : "https://your-host"}/embed?employer="
-  component="RolloverCompanion"
-  theme="${embedTheme === "light" ? "LIGHT" : "DARK"}"
-  api="${apiEndpoint}"
-  journeyId="${journeyId}"
+  src="${origin}/embed?theme=${embedTheme}"
+  title="PensionBee Rollover Companion"
+  style="width:100%;min-height:640px;border:none;border-radius:16px"
+  allow="clipboard-write"
 />`;
 
   return (

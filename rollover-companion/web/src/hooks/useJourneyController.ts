@@ -23,6 +23,7 @@ export interface JourneyController {
 interface UseJourneyControllerOptions {
   withAgentIntel?: boolean;
   initialEmployer?: string;
+  initialProvider?: string;
   onPhaseChange?: (phase: JourneyPhase) => void;
   autoStart?: boolean;
 }
@@ -30,6 +31,7 @@ interface UseJourneyControllerOptions {
 export function useJourneyController({
   withAgentIntel = false,
   initialEmployer = "",
+  initialProvider = "",
   onPhaseChange,
   autoStart = true,
 }: UseJourneyControllerOptions = {}): JourneyController {
@@ -81,6 +83,7 @@ export function useJourneyController({
 
     let cancelled = false;
     const employerSeed = initialEmployer.trim();
+    const providerSeed = initialProvider.trim();
     if (employerSeed) setEmployerInput(employerSeed);
 
     (async () => {
@@ -88,7 +91,14 @@ export function useJourneyController({
         let res = await startJourney(withAgentIntel);
         if (cancelled) return;
 
-        if (employerSeed && res.screen.state === "provider_unknown") {
+        if (providerSeed && res.screen.state === "provider_unknown") {
+          res = await journeyAction(
+            res.context.journey_id,
+            { type: "provider_direct", provider: providerSeed },
+            withAgentIntel
+          );
+          if (cancelled) return;
+        } else if (employerSeed && res.screen.state === "provider_unknown") {
           res = await journeyAction(
             res.context.journey_id,
             { type: "lookup", employer: employerSeed },
@@ -113,7 +123,7 @@ export function useJourneyController({
     return () => {
       cancelled = true;
     };
-  }, [autoStart, initialEmployer, onPhaseChange, withAgentIntel]);
+  }, [autoStart, initialEmployer, initialProvider, onPhaseChange, withAgentIntel]);
 
   return {
     data,

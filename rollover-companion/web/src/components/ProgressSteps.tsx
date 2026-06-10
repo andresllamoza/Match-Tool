@@ -24,14 +24,14 @@ export function ProgressSteps({ current, variant = "default" }: ProgressStepsPro
             <div key={step.id} className="inline-flex flex-col items-stretch">
               <span
                 className={`text-xs font-bold uppercase tracking-wider ${
-                  active ? "text-[#111111]" : "text-gray-400"
+                  active ? "text-bee-charcoal" : "text-bee-muted"
                 }`}
               >
                 {step.label}
               </span>
               {active && (
                 <span
-                  className="mt-1 h-1 w-full rounded-full bg-[#FFC72C]"
+                  className="mt-1 h-1 w-full rounded-full bg-bee-yellow"
                   aria-hidden
                 />
               )}
