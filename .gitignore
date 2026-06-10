@@ -1,6 +1,7 @@
 # Data — never commit real DOL files or any client-adjacent data
 data/*
 !data/.gitkeep
+!data/employer_rk_index.csv
 discovery-front-door/data/*
 !discovery-front-door/data/.gitkeep
 rollover-playbook-engine/data/*
