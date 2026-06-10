@@ -10,9 +10,9 @@ from .engine_bridge import JourneyView, apply_action, current_view, get_engine, 
 from ui.channel_step import (  # noqa: E402
     call_script_card,
     channel_step_header,
-    fbo_security_card,
     financial_copy_field,
     phone_routing_intro,
+    routing_security_card,
 )
 from .widgets import form_submit_primary, icon_button, primary_button, secondary_button, text_link_button
 
@@ -233,19 +233,15 @@ def _render_channel_context(view: JourneyView) -> None:
     if _show_mailing_details(ctx_data.say_this, view.step_index, view.total_steps):
         payable = ctx_data.check_payable or ""
         mail = ctx_data.mailing_address or en.mailing_address
-        parts: list[str] = ['<div class="pb-routing-panel">']
+        panel: list[str] = ['<div class="pb-routing-panel">']
         if ch == "phone":
-            parts.append(phone_routing_intro())
-        fbo_html = fbo_security_card(payable)
-        if fbo_html:
-            parts.append(fbo_html)
-        elif payable:
-            parts.append(financial_copy_field("Payee name", payable, "pb-payable"))
-        if mail:
-            parts.append(financial_copy_field("Mailing address", mail, "pb-mail"))
-        parts.append("</div>")
-        if len(parts) > 2:
-            st.markdown("".join(parts), unsafe_allow_html=True)
+            panel.append(phone_routing_intro())
+        security_html = routing_security_card(payable or None, mail or None)
+        if security_html:
+            panel.append(security_html)
+        panel.append("</div>")
+        if security_html:
+            st.markdown("".join(panel), unsafe_allow_html=True)
 
     if en.forward_step_required:
         st.markdown(

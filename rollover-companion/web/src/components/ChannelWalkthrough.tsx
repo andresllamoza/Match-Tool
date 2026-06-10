@@ -1,11 +1,11 @@
 import type { ChannelContext, ScreenEnrichment } from "@/lib/types";
-import { isFboPayableLine, showMailingDetails } from "@/lib/checkPayable";
+import { showMailingDetails } from "@/lib/checkPayable";
 import { AgentCustodianNote } from "./channel/AgentCustodianNote";
 import { CallScriptCard } from "./channel/CallScriptCard";
 import { ChannelSection } from "./channel/ChannelSection";
-import { FboSecurityCard } from "./channel/FboSecurityCard";
 import { FinancialCopyField } from "./channel/FinancialCopyField";
 import { PhoneRoutingPanel } from "./channel/PhoneRoutingPanel";
+import { RoutingSecurityCard } from "./channel/RoutingSecurityCard";
 
 export type ChannelSurface = "customer" | "agent" | "embed";
 
@@ -75,24 +75,19 @@ function MailingBlock({
 
   const payable = ctx.check_payable ?? "";
   const mail = ctx.mailing_address || enrichment.mailing_address;
-  const showFbo = payable && isFboPayableLine(payable);
-  const showPayableField = payable && !showFbo;
+  const hasRoutingFields = Boolean(payable || mail);
 
   return (
     <ChannelSection className="border-t border-[#EAE5DC] pt-8">
-      {showFbo && <FboSecurityCard payableLine={payable} />}
+      {hasRoutingFields && (
+        <RoutingSecurityCard payeeLine={payable || undefined} mailingAddress={mail || undefined} />
+      )}
 
       {surface === "agent" && <AgentCustodianNote enrichment={enrichment} />}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {includeDestination && (
-          <FinancialCopyField label="Destination" value={enrichment.destination_name} />
-        )}
-        {showPayableField && (
-          <FinancialCopyField label="Payee name" value={payable} />
-        )}
-        {mail && <FinancialCopyField label="Mailing address" value={mail} />}
-      </div>
+      {includeDestination && (
+        <FinancialCopyField label="Destination" value={enrichment.destination_name} />
+      )}
     </ChannelSection>
   );
 }

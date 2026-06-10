@@ -1,12 +1,10 @@
 import type { ChannelContext, ScreenEnrichment } from "@/lib/types";
-import { isFboPayableLine } from "@/lib/checkPayable";
 import type { ChannelSurface } from "../ChannelWalkthrough";
 import { AgentCustodianNote } from "./AgentCustodianNote";
-import { FboSecurityCard } from "./FboSecurityCard";
-import { FinancialCopyField } from "./FinancialCopyField";
+import { RoutingSecurityCard } from "./RoutingSecurityCard";
 
 /**
- * Step 5+ phone routing block — FBO guardrail first, then mailing utilities.
+ * Step 5+ phone routing block — compound security card for payee + mail.
  */
 export function PhoneRoutingPanel({
   ctx,
@@ -19,9 +17,8 @@ export function PhoneRoutingPanel({
 }) {
   const payable = ctx.check_payable ?? "";
   const mail = ctx.mailing_address || enrichment.mailing_address;
-  const showFbo = payable && isFboPayableLine(payable);
 
-  if (!showFbo && !mail && !payable) return null;
+  if (!payable && !mail) return null;
 
   return (
     <div className="space-y-6 border-t border-[#EAE5DC] pt-8">
@@ -35,16 +32,9 @@ export function PhoneRoutingPanel({
         </p>
       </div>
 
-      {showFbo && <FboSecurityCard payableLine={payable} />}
+      <RoutingSecurityCard payeeLine={payable || undefined} mailingAddress={mail || undefined} />
 
       {surface === "agent" && <AgentCustodianNote enrichment={enrichment} />}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {!showFbo && payable && (
-          <FinancialCopyField label="Payee name" value={payable} />
-        )}
-        {mail && <FinancialCopyField label="Mailing address" value={mail} />}
-      </div>
     </div>
   );
 }

@@ -22,6 +22,12 @@ _CHANNEL_LABELS = {
     "forms": "Fill in this field",
 }
 
+_COPY_FEEDBACK_JS = (
+    "(function(b,t){navigator.clipboard.writeText(t);"
+    "b.textContent='\\u2713';b.classList.add('pb-copy-success');"
+    "setTimeout(function(){b.textContent='Copy';b.classList.remove('pb-copy-success');},2000);})(this,{payload})"
+)
+
 
 def _esc(text: str) -> str:
     return html.escape(text, quote=True)
@@ -59,26 +65,51 @@ def call_script_card(channel: str, script: str, *, field_label: str | None = Non
     )
 
 
-def fbo_security_card(payable_line: str) -> str:
-    if not payable_line or not _is_fbo_payable_line(payable_line):
-        return ""
-    safe = _esc(payable_line)
-    payload = json.dumps(payable_line)
+def _security_row(label: str, value: str, *, prominent: bool = False) -> str:
+    payload = json.dumps(value)
+    onclick = _COPY_FEEDBACK_JS.format(payload=payload)
+    value_cls = "pb-security-value pb-security-value--prominent" if prominent else "pb-security-value"
     return (
-        f'<div class="pb-fbo-card" role="region" aria-label="Check payable-to security instruction">'
-        f'<div class="pb-fbo-card-top">'
-        f'<div class="pb-fbo-lock-row">'
-        f'<span class="pb-fbo-lock" aria-hidden="true">🔒</span>'
-        f"<div>"
-        f'<p class="pb-fbo-kicker">Critical — check payable to</p>'
-        f'<p class="pb-fbo-sub">Use this exact wording or your rollover may be rejected.</p>'
-        f"</div></div>"
-        f'<button type="button" class="pb-fbo-copy" '
-        f"onclick=\"navigator.clipboard.writeText({payload})\">Copy</button>"
+        f'<div class="pb-security-row">'
+        f'<div class="pb-security-row-body">'
+        f'<p class="pb-security-label">{_esc(label)}</p>'
+        f'<p class="{value_cls}">{_esc(value)}</p>'
         f"</div>"
-        f'<p class="pb-fbo-line">{safe}</p>'
+        f'<button type="button" class="pb-copy-micro" onclick="{onclick}">Copy</button>'
         f"</div>"
     )
+
+
+def routing_security_card(
+    payee_line: str | None,
+    mailing_address: str | None,
+) -> str:
+    has_payee = bool(payee_line)
+    has_mail = bool(mailing_address)
+    if not has_payee and not has_mail:
+        return ""
+
+    show_fbo = _is_fbo_payable_line(payee_line or "")
+    parts: list[str] = ['<div class="pb-routing-security" role="region" aria-label="Check routing security">']
+
+    if show_fbo:
+        parts.append(
+            '<div class="pb-fbo-header">'
+            '<span class="pb-fbo-lock" aria-hidden="true">🔒</span>'
+            "<div>"
+            '<p class="pb-fbo-kicker">Critical — check payable to</p>'
+            '<p class="pb-fbo-sub">Use these exact details or your rollover may be rejected.</p>'
+            "</div></div>"
+        )
+
+    parts.append('<div class="pb-security-compound">')
+    if has_payee:
+        label = "Check payable to" if show_fbo else "Payee name"
+        parts.append(_security_row(label, payee_line or "", prominent=show_fbo))
+    if has_mail:
+        parts.append(_security_row("Mailing address", mailing_address or ""))
+    parts.append("</div></div>")
+    return "".join(parts)
 
 
 def phone_routing_intro() -> str:
@@ -93,14 +124,15 @@ def phone_routing_intro() -> str:
 
 def financial_copy_field(label: str, value: str, field_id: str) -> str:
     payload = json.dumps(value)
+    onclick = _COPY_FEEDBACK_JS.format(payload=payload)
     return (
-        f'<div class="pb-financial-field">'
-        f'<p class="pb-financial-label">{_esc(label)}</p>'
-        f'<div class="pb-financial-row">'
-        f'<p class="pb-financial-value" id="{field_id}">{_esc(value)}</p>'
-        f'<button type="button" class="pb-financial-copy" '
-        f"onclick=\"navigator.clipboard.writeText({payload})\">Copy</button>"
-        f"</div></div>"
+        f'<div class="pb-financial-standalone" id="{field_id}">'
+        f'<div class="pb-security-row-body">'
+        f'<p class="pb-security-label">{_esc(label)}</p>'
+        f'<p class="pb-security-value">{_esc(value)}</p>'
+        f"</div>"
+        f'<button type="button" class="pb-copy-micro" onclick="{onclick}">Copy</button>'
+        f"</div>"
     )
 
 

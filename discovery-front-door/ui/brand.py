@@ -383,19 +383,13 @@ def inject_brand_css() -> None:
     .pb-routing-body {{
         font-size: 0.9rem; line-height: 1.55; color: {INK}; margin: 0;
     }}
-    .pb-fbo-card {{
-        border: 2px solid rgba(255, 199, 44, 0.55); border-radius: 1rem;
-        background: linear-gradient(145deg, #FFF9E6 0%, #FFFFFF 55%, #FFF4D6 100%);
-        padding: 2rem 2.25rem; margin: 0;
-        box-shadow: 0 6px 28px rgba(255, 199, 44, 0.16);
+    .pb-routing-security {{ margin: 0; }}
+    .pb-fbo-header {{
+        display: flex; align-items: flex-start; gap: 0.75rem;
+        margin-bottom: 1rem;
     }}
-    .pb-fbo-card-top {{
-        display: flex; align-items: flex-start; justify-content: space-between;
-        gap: 0.75rem; margin-bottom: 0.75rem;
-    }}
-    .pb-fbo-lock-row {{ display: flex; align-items: center; gap: 0.65rem; }}
     .pb-fbo-lock {{
-        width: 2.25rem; height: 2.25rem; border-radius: 999px;
+        width: 2.5rem; height: 2.5rem; border-radius: 999px;
         background: {CHARCOAL}; color: #fff; display: flex;
         align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;
     }}
@@ -403,41 +397,44 @@ def inject_brand_css() -> None:
         font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
         text-transform: uppercase; color: #9A6200; margin: 0;
     }}
-    .pb-fbo-sub {{ font-size: 0.85rem; color: {SUBCOPY}; margin: 0.15rem 0 0; }}
-    .pb-fbo-line {{
-        font-size: clamp(1.35rem, 4.5vw, 1.75rem); font-weight: 700;
-        line-height: 1.2; letter-spacing: -0.02em; color: {CHARCOAL}; margin: 0;
-    }}
-    .pb-fbo-copy, .pb-financial-copy {{
-        flex-shrink: 0; border: none; border-radius: 0.65rem;
-        background: {CHARCOAL}; color: #fff; font-size: 0.85rem; font-weight: 600;
-        padding: 0.45rem 0.85rem; cursor: pointer;
-        transition: background 0.15s ease, transform 0.1s ease;
-    }}
-    .pb-fbo-copy:hover, .pb-financial-copy:hover {{ background: {INK}; }}
-    .pb-fbo-copy:active, .pb-financial-copy:active {{ transform: scale(0.98); }}
-    .pb-financial-field {{
-        border: 1px solid {BORDER}; border-radius: 0.85rem; background: {CARD};
+    .pb-fbo-sub {{ font-size: 0.85rem; color: {SUBCOPY}; margin: 0.25rem 0 0; line-height: 1.5; }}
+    .pb-security-compound {{
+        background: #FDFDFD; border: 1px solid {BORDER}; border-radius: 0.85rem;
         overflow: hidden; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.04);
     }}
-    .pb-financial-label {{
+    .pb-security-compound .pb-security-row + .pb-security-row {{
+        border-top: 1px solid #F0E6D2;
+    }}
+    .pb-security-row, .pb-financial-standalone {{
+        display: flex; align-items: flex-start; justify-content: space-between;
+        gap: 1rem; padding: 1.25rem 1.5rem;
+    }}
+    .pb-financial-standalone {{
+        background: #FDFDFD; border: 1px solid {BORDER}; border-radius: 0.85rem;
+        margin-top: 0.75rem; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.04);
+    }}
+    .pb-security-row-body {{ min-width: 0; flex: 1; }}
+    .pb-security-label {{
         font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
-        text-transform: uppercase; color: {MUTED}; margin: 0; padding: 0.75rem 1rem 0;
+        text-transform: uppercase; color: {MUTED}; margin: 0;
     }}
-    .pb-financial-row {{
-        display: flex; align-items: stretch; gap: 0;
+    .pb-security-value {{
+        font-size: 1rem; font-weight: 600; line-height: 1.45;
+        color: {INK}; margin: 0.5rem 0 0; word-break: break-word;
     }}
-    .pb-financial-value {{
-        flex: 1; font-size: 1rem; font-weight: 600; line-height: 1.45;
-        color: {CHARCOAL}; margin: 0.35rem 0 0.75rem; padding: 0 1rem;
-        word-break: break-word;
+    .pb-security-value--prominent {{
+        font-size: clamp(1.2rem, 4vw, 1.5rem); font-weight: 700;
+        letter-spacing: -0.02em; color: {CHARCOAL};
     }}
-    .pb-financial-copy {{
-        border-left: 1px solid {BORDER}; border-radius: 0;
-        background: {CANVAS}; align-self: stretch; padding: 0 1rem;
-        min-width: 4.5rem;
+    .pb-copy-micro {{
+        flex-shrink: 0; border: none; background: transparent;
+        font-size: 0.75rem; font-weight: 600; color: {MUTED};
+        padding: 0.35rem 0.65rem; border-radius: 0.5rem; cursor: pointer;
+        transition: color 0.2s ease-out, background 0.2s ease-out, transform 0.2s ease-out;
     }}
-    .pb-financial-copy:hover {{ background: {YELLOW_SOFT}; }}
+    .pb-copy-micro:hover {{ color: {INK}; background: {CANVAS}; }}
+    .pb-copy-micro:active {{ transform: scale(0.98); }}
+    .pb-copy-micro.pb-copy-success {{ color: #059669; }}
     .pb-channel-hint-card {{
         border: 1px solid {BORDER}; border-radius: 0.85rem;
         background: {CANVAS_DEEP}; padding: 0.85rem 1rem; margin: 0.5rem 0;
