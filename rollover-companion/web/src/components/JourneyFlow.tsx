@@ -20,6 +20,7 @@ import { SourceStatusBadge } from "./ui/SourceStatusBadge";
 interface JourneyFlowProps {
   mode?: "customer" | "agent" | "embed";
   theme?: "default" | "minimal" | "dark";
+  surface?: "default" | "sandbox";
   initialEmployer?: string;
   onPhaseChange?: (phase: import("@/lib/types").JourneyPhase) => void;
   controller?: JourneyController;
@@ -75,12 +76,14 @@ function resolveDecisionMode(
 export function JourneyFlow({
   mode = "customer",
   theme = "default",
+  surface = "default",
   initialEmployer = "",
   onPhaseChange,
   controller: externalController,
   readOnly = false,
   hideAssistant = false,
 }: JourneyFlowProps) {
+  const isSandbox = surface === "sandbox";
   const isAgent = mode === "agent";
   const internalController = useJourneyController({
     withAgentIntel: isAgent,
@@ -422,9 +425,13 @@ export function JourneyFlow({
   const isFindStep = decision === "employer";
 
   const findStepView = isFindStep ? (
-    <div className="w-full">
+    <div className="w-full text-left">
       {error && (
-        <div className="mx-auto mb-4 max-w-lg rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div
+          className={`mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 ${
+            isSandbox ? "" : "mx-auto max-w-lg"
+          }`}
+        >
           {error}
         </div>
       )}
@@ -443,15 +450,18 @@ export function JourneyFlow({
           a.toLowerCase().includes("provider")
         )}
         showPerk={screen.body.includes("1%")}
+        embedded={isSandbox}
       />
     </div>
   ) : null;
 
   const journeyCard = (
     <div
-      className={`pb-card p-6 lg:p-10 ${
-        theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"
-      }`}
+      className={
+        isSandbox
+          ? "text-left"
+          : `pb-card p-6 lg:p-10 ${theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"}`
+      }
     >
       {showProgress && !isFindStep && <ProgressSteps current={screen.phase} />}
 
