@@ -57,6 +57,7 @@ export interface LookupContext {
 export interface ScreenEnrichment {
   mailing_address: string;
   destination_name: string;
+  customer_display_name?: string;
   mechanism?: string | null;
   check_destination?: string | null;
   forward_step_required: boolean;

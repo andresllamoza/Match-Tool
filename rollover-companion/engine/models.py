@@ -344,6 +344,7 @@ class LookupContext(BaseModel):
 class ScreenEnrichment(BaseModel):
     mailing_address: str = ""
     destination_name: str = ""
+    customer_display_name: str = "Jordan Rivera"
     mechanism: Optional[str] = None
     check_destination: Optional[str] = None
     forward_step_required: bool = False

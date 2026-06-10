@@ -7,6 +7,12 @@ import streamlit as st
 from ui.components import brand_header_bar  # noqa: E402
 
 from .engine_bridge import JourneyView, apply_action, current_view, get_engine, list_providers, save_context
+from ui.channel_step import (  # noqa: E402
+    call_script_card,
+    channel_step_header,
+    fbo_security_card,
+    financial_copy_field,
+)
 from .widgets import form_submit_primary, icon_button, primary_button, secondary_button, text_link_button
 
 # Engine imports after companion path is on sys.path (via engine_bridge).
@@ -172,14 +178,6 @@ def _selection_button(label: str, key: str, description: str | None = None) -> b
     return secondary_button(text, key=key)
 
 
-def _channel_action_label(channel: str) -> str:
-    if channel == "phone":
-        return "Say this"
-    if channel == "forms":
-        return "Fill in this field"
-    return "Do this now"
-
-
 def _show_mailing_details(say_this: str, step_index: int, total_steps: int) -> bool:
     lower = say_this.lower()
     if any(w in lower for w in ("check", "payable", "mail", "pensionbee", "destination", "ira")):
@@ -194,36 +192,64 @@ def _render_channel_context(view: JourneyView) -> None:
     if not ctx_data:
         return
     ch = ctx_data.channel
+    en = view.enrichment
+
     if ch == "phone" and ctx_data.phone:
-        st.markdown(f"**Call:** [{ctx_data.phone}](tel:{ctx_data.phone})")
-    label = _channel_action_label(ch)
+        st.markdown(
+            f'<a class="pb-phone-cta" href="tel:{ctx_data.phone}">'
+            f'<span><span class="pb-phone-kicker">Tap to call</span>'
+            f'<span class="pb-phone-num">{ctx_data.phone}</span></span>'
+            f'<span aria-hidden="true">📞</span></a>',
+            unsafe_allow_html=True,
+        )
+
     st.markdown(
-        f'<div class="pb-say">'
-        f'<p class="pb-channel-kicker">{label}</p>'
-        f'<p class="pb-channel-action">{ctx_data.say_this}</p>'
-        f"</div>",
+        call_script_card(
+            ch,
+            ctx_data.say_this,
+            field_label=ctx_data.form_field_label,
+        ),
         unsafe_allow_html=True,
     )
+
     if ctx_data.portal_menu_hints:
         st.markdown(
-            '<p class="pb-channel-hint"><strong>Look for:</strong> '
+            '<div class="pb-channel-hint-card"><p class="pb-channel-hint-kicker">'
+            "Look for these menu labels</p><p class=\"pb-channel-hint\">"
             + " · ".join(ctx_data.portal_menu_hints)
-            + "</p>",
+            + "</p></div>",
             unsafe_allow_html=True,
         )
     if ctx_data.destination_hints:
         st.markdown(
-            '<p class="pb-channel-hint"><strong>Destination options:</strong> '
+            '<div class="pb-channel-hint-card"><p class="pb-channel-hint-kicker">'
+            "Destination dropdown options</p><p class=\"pb-channel-hint\">"
             + " · ".join(ctx_data.destination_hints)
-            + "</p>",
+            + "</p></div>",
             unsafe_allow_html=True,
         )
+
     if _show_mailing_details(ctx_data.say_this, view.step_index, view.total_steps):
-        if ctx_data.check_payable:
-            st.code(f"Check payable to: {ctx_data.check_payable}", language=None)
-        mail = ctx_data.mailing_address or view.enrichment.mailing_address
+        payable = ctx_data.check_payable or ""
+        mail = ctx_data.mailing_address or en.mailing_address
+        parts: list[str] = []
+        fbo_html = fbo_security_card(payable)
+        if fbo_html:
+            parts.append(fbo_html)
+        elif payable:
+            parts.append(financial_copy_field("Payee name", payable, "pb-payable"))
         if mail:
-            st.code(f"Mail to: {mail}", language=None)
+            parts.append(financial_copy_field("Mailing address", mail, "pb-mail"))
+        if parts:
+            st.markdown('<div class="pb-financial-grid">' + "".join(parts) + "</div>", unsafe_allow_html=True)
+
+    if en.forward_step_required:
+        st.markdown(
+            '<p class="pb-forward-note">This provider may mail the check to your home address '
+            "first — PensionBee will send a prepaid envelope to forward it.</p>",
+            unsafe_allow_html=True,
+        )
+
     if ctx_data.rep_questions:
         with st.expander("If the rep asks…"):
             for q in ctx_data.rep_questions:
@@ -445,8 +471,12 @@ def run_journey_app() -> None:
             ctx.channel, ""
         )
         st.markdown(
-            f'<p class="pb-step-kicker">Step {view.step_index + 1} of {view.total_steps}'
-            f" · {provider} {channel_label}</p>",
+            channel_step_header(
+                view.step_index,
+                view.total_steps,
+                provider,
+                channel_label,
+            ),
             unsafe_allow_html=True,
         )
         if screen.edge_cases and view.step_index == 0:

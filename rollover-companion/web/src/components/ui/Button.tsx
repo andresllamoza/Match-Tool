@@ -6,7 +6,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "beekeeper";
 
 const styles: Record<Variant, string> = {
   primary:
-    "bg-bee-charcoal text-white hover:bg-bee-ink shadow-sm active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-bee-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
+    "bg-[#111111] text-white hover:bg-[#1E242B] shadow-sm transition-colors duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-bee-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
   secondary:
     "bg-white text-bee-charcoal border-2 border-bee-border hover:border-bee-charcoal/30 hover:bg-cream-dark/50 active:scale-[0.98]",
   ghost: "bg-transparent text-bee-ink hover:bg-bee-yellow-soft/60 active:scale-[0.98]",

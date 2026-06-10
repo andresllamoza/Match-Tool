@@ -6,7 +6,8 @@ import { useJourneyController } from "@/hooks/useJourneyController";
 import type { JourneyResponse } from "@/lib/types";
 import { AgentPanel } from "./AgentPanel";
 import { AssistantDrawer } from "./AssistantDrawer";
-import { ChannelWalkthrough } from "./ChannelWalkthrough";
+import { ChannelWalkthrough, type ChannelSurface } from "./ChannelWalkthrough";
+import { ChannelStepHeader } from "./channel/ChannelStepHeader";
 import { EdgeCaseAlerts } from "./EdgeCaseAlerts";
 import { FindEmployerStep } from "./FindEmployerStep";
 import { LookupBanner } from "./LookupBanner";
@@ -20,11 +21,13 @@ import { SourceStatusBadge } from "./ui/SourceStatusBadge";
 interface JourneyFlowProps {
   mode?: "customer" | "agent" | "embed";
   theme?: "default" | "minimal" | "dark";
+  surface?: "default" | "sandbox";
   initialEmployer?: string;
   onPhaseChange?: (phase: import("@/lib/types").JourneyPhase) => void;
   controller?: JourneyController;
   readOnly?: boolean;
   hideAssistant?: boolean;
+  channelSurface?: ChannelSurface;
 }
 
 type DecisionMode =
@@ -75,12 +78,15 @@ function resolveDecisionMode(
 export function JourneyFlow({
   mode = "customer",
   theme = "default",
+  surface = "default",
   initialEmployer = "",
   onPhaseChange,
   controller: externalController,
   readOnly = false,
   hideAssistant = false,
+  channelSurface: channelSurfaceOverride,
 }: JourneyFlowProps) {
+  const isSandbox = surface === "sandbox";
   const isAgent = mode === "agent";
   const internalController = useJourneyController({
     withAgentIntel: isAgent,
@@ -128,6 +134,17 @@ export function JourneyFlow({
   );
   const decision = resolveDecisionMode(data, showProviderPicker);
   const sourceStatus = deriveSourceStatus(screen);
+  const channelSurface: ChannelSurface =
+    channelSurfaceOverride ??
+    (mode === "agent" ? "agent" : mode === "embed" ? "embed" : "customer");
+  const channelLabel =
+    screen.channel === "online"
+      ? "online"
+      : screen.channel === "phone"
+        ? "by phone"
+        : screen.channel === "forms"
+          ? "paper forms"
+          : "";
 
   async function handlePrimary() {
     const s = screen.state;
@@ -422,9 +439,13 @@ export function JourneyFlow({
   const isFindStep = decision === "employer";
 
   const findStepView = isFindStep ? (
-    <div className="w-full">
+    <div className="w-full text-left">
       {error && (
-        <div className="mx-auto mb-4 max-w-lg rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div
+          className={`mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 ${
+            isSandbox ? "" : "mx-auto max-w-lg"
+          }`}
+        >
           {error}
         </div>
       )}
@@ -443,15 +464,18 @@ export function JourneyFlow({
           a.toLowerCase().includes("provider")
         )}
         showPerk={screen.body.includes("1%")}
+        embedded={isSandbox}
       />
     </div>
   ) : null;
 
   const journeyCard = (
     <div
-      className={`pb-card p-6 lg:p-10 ${
-        theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"
-      }`}
+      className={
+        isSandbox
+          ? "text-left"
+          : `pb-card p-6 lg:p-10 ${theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"}`
+      }
     >
       {showProgress && !isFindStep && <ProgressSteps current={screen.phase} />}
 
@@ -464,7 +488,8 @@ export function JourneyFlow({
       {(screen.provider || context.uncovered_provider) &&
         !["provider_identified", "provider_not_covered", "provider_unknown"].includes(
           screen.state
-        ) && (
+        ) &&
+        !inChannel && (
           <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-bee-muted lg:text-base">
             {screen.provider || context.uncovered_provider}
             {screen.channel && ` · ${screen.channel}`}
@@ -472,7 +497,16 @@ export function JourneyFlow({
           </p>
         )}
 
-      {!isFindStep && (
+      {inChannel && total_steps > 0 && (
+        <ChannelStepHeader
+          stepIndex={step_index}
+          totalSteps={total_steps}
+          provider={screen.provider || context.uncovered_provider || ""}
+          channelLabel={channelLabel}
+        />
+      )}
+
+      {!isFindStep && !inChannel && (
         <h1 className="mb-3 text-2xl font-bold leading-tight text-bee-charcoal lg:text-3xl lg:leading-snug">
           {screen.headline}
         </h1>
@@ -497,10 +531,19 @@ export function JourneyFlow({
         </div>
       )}
 
-      <EdgeCaseAlerts items={screen.edge_cases} />
+      <EdgeCaseAlerts
+        items={inChannel && step_index > 0 ? [] : screen.edge_cases}
+      />
       <ProvenanceBadge warning={screen.provenance_warning} />
 
-      {inChannel && <ChannelWalkthrough enrichment={enrichment} />}
+      {inChannel && (
+        <ChannelWalkthrough
+          enrichment={enrichment}
+          stepIndex={step_index}
+          totalSteps={total_steps}
+          surface={channelSurface}
+        />
+      )}
 
       {screen.state === "access_blocked" && screen.guidance?.length > 0 && (
         <ol className="mb-5 space-y-2">
@@ -531,23 +574,6 @@ export function JourneyFlow({
 
       {(screen.phase === "track" || screen.state === "initiated") && (
         <TrackPanel enrichment={enrichment} />
-      )}
-
-      {total_steps > 0 && inChannel && (
-        <div className="mb-5">
-          <div className="mb-2 flex justify-between text-xs font-medium text-bee-muted lg:text-sm">
-            <span>Step progress</span>
-            <span>
-              {step_index + 1} of {total_steps}
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-pill bg-cream-deeper">
-            <div
-              className="h-full rounded-pill bg-bee-yellow transition-all duration-300"
-              style={{ width: `${((step_index + 1) / total_steps) * 100}%` }}
-            />
-          </div>
-        </div>
       )}
 
       {error && (
