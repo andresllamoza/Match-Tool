@@ -15,6 +15,7 @@ if not _COMPANION.exists():
 if str(_COMPANION) not in sys.path:
     sys.path.insert(0, str(_COMPANION))
 
+from engine.customer_copy import DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME
 from engine.enrichment import build_enrichment
 from engine.journey import InvalidTransitionError, JourneyEngine
 from engine.models import (
@@ -84,12 +85,22 @@ def _sync_journey_url(journey_id: str) -> None:
         st.query_params["journey"] = journey_id
 
 
+def _backfill_customer_name(ctx: JourneyContext) -> JourneyContext:
+    """Post-signup flow: name comes from account — backfill legacy sessions."""
+    if not ctx.customer_first_name:
+        ctx.customer_first_name = DEFAULT_FIRST_NAME
+    if not ctx.customer_last_name:
+        ctx.customer_last_name = DEFAULT_LAST_NAME
+    return ctx
+
+
 def load_context() -> JourneyContext:
     store = get_session_store()
     if "journey_ctx" not in st.session_state:
         qp = st.query_params.get("journey")
         restored = store.load(qp) if qp else None
         if restored:
+            restored = _backfill_customer_name(restored)
             st.session_state.journey_ctx = restored.model_dump(mode="json")
             st.session_state.journey_restored = True
         else:
@@ -100,7 +111,8 @@ def load_context() -> JourneyContext:
         ctx = JourneyContext.model_validate(st.session_state.journey_ctx)
         store.save(ctx)
         _sync_journey_url(ctx.journey_id)
-    return JourneyContext.model_validate(st.session_state.journey_ctx)
+    ctx = JourneyContext.model_validate(st.session_state.journey_ctx)
+    return _backfill_customer_name(ctx)
 
 
 def save_context(ctx: JourneyContext, *, surface: str = "customer") -> None:

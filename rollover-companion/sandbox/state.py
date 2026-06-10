@@ -151,10 +151,5 @@ def act(action: dict[str, Any]) -> JourneyView | str:
 
 
 def needs_name_capture(view: JourneyView) -> bool:
-    if st.session_state.get("name_captured"):
-        return False
-    if view.ctx.state != JourneyState.ACCESS_RECOVERED:
-        return False
-    if view.enrichment.requires_tax_selection:
-        return True
-    return view.ctx.tax_fund_type is None and not view.ctx.customer_first_name
+    """Name is seeded at engine.start() from the authenticated account (demo default)."""
+    return False

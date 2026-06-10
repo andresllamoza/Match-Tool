@@ -6,7 +6,7 @@ import streamlit as st
 
 from engine.models import JourneyState
 from sandbox.boot import list_providers
-from sandbox.state import JourneyView, act, needs_name_capture
+from sandbox.state import JourneyView, act
 from sandbox.ui.channel import (
     call_script_card,
     channel_step_header,
@@ -128,28 +128,6 @@ def render_customer(view: JourneyView, *, welcome_back: bool = False, read_only:
         st.markdown(f'<p class="pb-body">{screen.body}</p>', unsafe_allow_html=True)
         if primary_button("Start a new rollover", key="c_restart_done"):
             _go({"type": "restart"})
-        return
-
-    # Name capture (before tax)
-    if needs_name_capture(view):
-        st.markdown(
-            '<p class="pb-headline">What name should checks be made out to?</p>'
-            "<p class=\"pb-body\">Rollover checks are payable to you by name — we print it exactly "
-            "as you enter it here.</p>",
-            unsafe_allow_html=True,
-        )
-        with st.form("c_name"):
-            c1, c2 = st.columns(2)
-            with c1:
-                first = st.text_input("First name", value="Avery")
-            with c2:
-                last = st.text_input("Last name", value="Quinn")
-            if form_submit("Continue"):
-                if first.strip() and last.strip():
-                    _go({"type": "set_name", "first": first.strip(), "last": last.strip()})
-                else:
-                    st.session_state.ui_error = "Enter your first and last name."
-                    st.rerun()
         return
 
     # Channel step header

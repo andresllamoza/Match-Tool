@@ -111,7 +111,11 @@ def _screen_owns_headline(view: JourneyView) -> bool:
         return True
     if view.enrichment.requires_tax_selection:
         return True
-    if screen.state == JourneyState.ACCESS_RECOVERED and ctx.customer_first_name and ctx.tax_fund_type:
+    if (
+        screen.state == JourneyState.ACCESS_RECOVERED
+        and ctx.tax_fund_type
+        and not view.enrichment.requires_tax_selection
+    ):
         return True
     if screen.disambiguation_question and screen.disambiguation_options:
         return True
@@ -313,18 +317,6 @@ def _render_decisions(view: JourneyView) -> None:
     state = screen.state
 
     if state in (JourneyState.COMPLETE, JourneyState.ESCALATED):
-        return
-
-    if state == JourneyState.ACCESS_RECOVERED and not view.ctx.customer_first_name:
-        st.markdown(
-            '<p class="pb-body">Checks get made out to you by name — we print it exactly.</p>',
-            unsafe_allow_html=True,
-        )
-        c1, c2 = st.columns(2)
-        first = c1.text_input("First name", key="cust_first")
-        last = c2.text_input("Last name", key="cust_last")
-        if primary_button("Save my name", key="save_name") and first.strip() and last.strip():
-            _go({"type": "set_name", "first_name": first.strip(), "last_name": last.strip()})
         return
 
     if en.requires_tax_selection:
@@ -713,6 +705,29 @@ def run_journey_app() -> None:
 
     if surface == "BeeKeeper":
         _render_beekeeper_surface(view)
+
+    with st.expander("Demo: customer name", expanded=False):
+        from engine.customer_copy import DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME
+
+        c1, c2 = st.columns(2)
+        demo_first = c1.text_input(
+            "First",
+            value=view.ctx.customer_first_name or DEFAULT_FIRST_NAME,
+            key="demo_cust_first",
+        )
+        demo_last = c2.text_input(
+            "Last",
+            value=view.ctx.customer_last_name or DEFAULT_LAST_NAME,
+            key="demo_cust_last",
+        )
+        if st.button("Apply name", key="demo_apply_name") and demo_first.strip() and demo_last.strip():
+            _go(
+                {
+                    "type": "set_name",
+                    "first_name": demo_first.strip(),
+                    "last_name": demo_last.strip(),
+                }
+            )
 
     with st.expander("Resume a saved journey"):
         store = get_session_store()

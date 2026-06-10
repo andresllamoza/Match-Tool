@@ -18,3 +18,6 @@ def test_render_module_never_stacks_title_and_description_in_button():
     assert "_selection_button" not in source
     assert '\\n\\n' not in source
     assert "f\"{label}\\n\\n" not in source
+    assert "Save my name" not in source
+    assert 'key="cust_first"' not in source
+    assert 'key="save_name"' not in source

@@ -294,11 +294,8 @@ if st.session_state.get("restored"):
     st.session_state.restored = False
 
 _title = screen.headline
-if ctx.state == JourneyState.ACCESS_RECOVERED:
-    if not ctx.customer_first_name:
-        _title = "Who are we making this out to?"
-    elif not ctx.tax_fund_type:
-        _title = "What kind of money is it?"
+if ctx.state == JourneyState.ACCESS_RECOVERED and not ctx.tax_fund_type:
+    _title = "What kind of money is it?"
 st.title(_title)
 if screen.body and _title == screen.headline:
     st.markdown(
@@ -388,20 +385,7 @@ elif s == JourneyState.ACCESS_BLOCKED:
         act("escalate", "locked_out")
 
 elif s == JourneyState.ACCESS_RECOVERED:
-    if not ctx.customer_first_name:
-        st.markdown(
-            '<div class="card">Checks get made out to you by name — we print it exactly.</div>',
-            unsafe_allow_html=True,
-        )
-        c1, c2 = st.columns(2)
-        first = c1.text_input("First name")
-        last = c2.text_input("Last name")
-        if st.button("Save my name", type="primary") and first.strip() and last.strip():
-            ctx.customer_first_name = first.strip()
-            ctx.customer_last_name = last.strip()
-            store.save(ctx)
-            st.rerun()
-    elif not ctx.tax_fund_type:
+    if not ctx.tax_fund_type:
         st.markdown(
             '<div class="card">Pre-tax goes to a Traditional IRA, Roth to a Roth IRA.</div>',
             unsafe_allow_html=True,
@@ -506,6 +490,18 @@ if surface == "BeeKeeper":
         unsafe_allow_html=True,
     )
     st.code(say, language=None)
+
+with st.expander("Demo: customer name", expanded=False):
+    from engine.customer_copy import DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME
+
+    c1, c2 = st.columns(2)
+    demo_first = c1.text_input("First", value=ctx.customer_first_name or DEFAULT_FIRST_NAME)
+    demo_last = c2.text_input("Last", value=ctx.customer_last_name or DEFAULT_LAST_NAME)
+    if st.button("Apply name", key="demo_apply_name") and demo_first.strip() and demo_last.strip():
+        ctx.customer_first_name = demo_first.strip()
+        ctx.customer_last_name = demo_last.strip()
+        store.save(ctx)
+        st.rerun()
 
 with st.expander("Resume a saved journey"):
     rows = store.recent()
