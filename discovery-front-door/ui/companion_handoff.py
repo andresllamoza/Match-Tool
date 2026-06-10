@@ -38,7 +38,7 @@ def render_companion_handoff(
 
     if is_local_companion():
         st.caption(
-            "Local: start API on :8000 and `npm run dev` in rollover-companion/web before opening."
+            "Local: start API on :8000 and `npm run dev` in web/ before opening."
         )
 
     if embed_inline:

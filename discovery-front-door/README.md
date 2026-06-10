@@ -4,7 +4,7 @@
 
 **Streamlit Cloud entrypoint `discovery-front-door/app.py` is now the real guided rollover:**
 find → access → roll over → track. It runs the same `JourneyEngine` and knowledge
-layer as `rollover-companion/web` (`/customer`).
+layer as `web/` (`/customer`).
 
 Sidebar **Find & value reveal** is optional pre-signup teaser (employer + $ match).
 
@@ -89,7 +89,7 @@ Try: enter **Target** or **FedEx** on the Home page → access → channel → s
 
 ```bash
 cd rollover-companion && python3 -m uvicorn api.server:app --port 8000
-cd rollover-companion/web && npm run dev   # → http://localhost:3000/customer
+cd web && npm run dev   # → http://localhost:3000/customer
 ```
 
 ```bash

@@ -22,5 +22,5 @@ employer = st.text_input("Employer prefill", placeholder="Target")
 url = embed_url(employer=employer)
 st.code(url)
 if is_local_companion():
-    st.warning("Requires `npm run dev` in rollover-companion/web and API on :8000")
+    st.warning("Requires `npm run dev` in web/ and API on :8000")
 components.iframe(url, height=720, scrolling=True)

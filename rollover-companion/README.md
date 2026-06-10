@@ -116,7 +116,7 @@ Override with `JOURNEY_LOG_PATH` / `COMPARISON_LOG_PATH`.
 
 **React mount:**
 ```tsx
-import { EmbedWidget } from "./web/src/embed";
+import { EmbedWidget } from "../web/src/embed";
 <EmbedWidget theme="minimal" />
 ```
 

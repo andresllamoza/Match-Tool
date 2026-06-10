@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-# Authentic PensionBee US palette (matches rollover-companion/web)
+# Authentic PensionBee US palette (matches web/)
 CANVAS = "#FAF8F5"
 CANVAS_DEEP = "#F3EDE4"
 CARD = "#FFFFFF"

@@ -49,7 +49,7 @@ Automated: `discovery-front-door/tests/test_acceptance_walk.py`
 
 ## Web product path (in progress on `cursor/web-landing-app-route-9ebe`)
 
-- **Not in repo:** TanStack Start (landing claim was not committed). **In repo:** Next.js 14 + FastAPI at `rollover-companion/web/`.
+- **Not in repo:** TanStack Start (landing claim was not committed). **In repo:** Next.js 14 + FastAPI at `web/` (Vercel Root Directory: `web`).
 - **Added:** `/` motion landing (framer-motion), `/app` journey with AppShell (Back · rail · sticky footer), `go_back` in API dispatch.
 - **Streamlit** (`discovery-front-door/app.py`) remains ops/BeeKeeper + Streamlit Cloud demo until web deploy is wired.
 

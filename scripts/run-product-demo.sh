@@ -20,7 +20,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "==> Starting Next.js on :$WEB_PORT (rollover companion UI)"
-cd "$ROOT/rollover-companion/web"
+cd "$ROOT/web"
 if [[ ! -d node_modules ]]; then npm install; fi
 API_URL="http://127.0.0.1:$API_PORT" npm run dev -- --port "$WEB_PORT" &
 WEB_PID=$!
