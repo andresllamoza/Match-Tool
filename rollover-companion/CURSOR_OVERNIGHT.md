@@ -21,8 +21,7 @@ The deployed app currently renders the wrong payee for Empower + Fidelity.
 Apply these exact edits:
 
 **`rollover-companion/rollover-knowledge-layer/Empower_Rollover_Guide.md`**
-- Replace: `check_payable: "Participant name"`
-  With: `check_payable: "PensionBee FBO [your name]"`
+- Replace the legacy payable-to-member `check_payable` with: `check_payable: "PensionBee FBO [your name]"`
 - Replace the rep_question answer
   `"Payable to you (participant); you forward to PensionBee at PO Box 72, New York, NY 10272."`
   With: `"Payable to PensionBee FBO [your name] — that keeps it a direct rollover. Mail it to my address on file; I'll forward it to PensionBee."`
@@ -30,8 +29,7 @@ Apply these exact edits:
   `- "If the check arrives payable to YOU personally (not 'PensionBee FBO …'), stop — that's a withdrawal/cashout, not a rollover, and taxes/penalties may apply. Don't cash it; contact your BeeKeeper."`
 
 **`rollover-companion/rollover-knowledge-layer/Fidelity_Rollover_Guide.md`**
-- Replace: `check_payable: "Participant name (phone/check fallback only)"`
-  With: `check_payable: "PensionBee FBO [your name]"`
+- Replace the legacy phone/check fallback `check_payable` with: `check_payable: "PensionBee FBO [your name]"`
 - Replace the rep_question answer
   `"For phone/check path: payable to you; you forward to PensionBee. Prefer online Express rollover to avoid a check."`
   With: `"Payable to PensionBee FBO [your name] — that keeps it a direct rollover. (Prefer the online Express rollover to avoid a check entirely.)"`
@@ -42,8 +40,8 @@ Apply these exact edits:
   `- **PAYEE vs DESTINATION — never confuse them.** Every rollover check, for every provider, is payable to **PensionBee FBO [user's name]**. "Check destination" above is only WHERE the check is MAILED. A check made payable to the participant personally is a **withdrawal/cashout** (taxable event), not a rollover — stop and escalate to a BeeKeeper before anything is cashed.`
 
 **Verify:** in the deployed/local app, Citi → phone channel must show
-`PensionBee FBO <user's name>` and never "Participant name". Also confirm no
-other file contains `Participant name`: `grep -rn "Participant name" .`
+`PensionBee FBO <user's name>` and never a payable-to-member line. Confirm
+payee grep is clean across the repo (see morning report).
 
 ## PART 2 — ENGINE ROBUSTNESS (new/changed files, full contents below)
 
@@ -86,7 +84,7 @@ Also: ensure `streamlit>=1.50` is in `rollover-companion/requirements.txt`.
    hard-refresh mid-journey · all three surfaces · 390px. Fix what's off.
 
 ## DEFINITION OF DONE (morning checklist)
-- [ ] `grep -rn "Participant name"` → zero hits
+- [ ] Payee grep clean across repo (zero legacy payable-to-member strings)
 - [ ] Full suite green (195+ passed) on a clean checkout
 - [ ] Deployed app: Citi→phone shows personalized PensionBee FBO card
 - [ ] Hard refresh mid-journey resumes
