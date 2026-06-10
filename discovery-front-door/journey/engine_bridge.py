@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -28,19 +27,25 @@ from engine.models import (
 
 def _build_engine() -> JourneyEngine:
     from adapters.advizorpro import AdvizorProAdapter
-    from adapters.matcher5500 import Local5500Adapter
+    from adapters.employer_index import EmployerIndexAdapter
+    from adapters.hybrid5500 import Hybrid5500Adapter
+    from adapters.matcher5500 import Local5500Adapter, master_cache_available
     from engine.knowledge import KnowledgeBase
     from engine.lookup import LookupService
 
-    # Always try the real 5500 matcher first (google → Vanguard). Fall back to bundled
-    # synthetic employers if deps or data are unavailable — no secrets or env vars needed.
-    matcher = Local5500Adapter.from_synthetic()
-    matcher_ready, _ = Local5500Adapter.matcher_deps_available()
-    if matcher_ready:
+    # Fast path for Streamlit Cloud: synthetic → bundled index (~6 MB, no DOL download).
+    # Full 115 MB matcher only when recordkeeper_master.csv exists locally.
+    repo = _COMPANION.parent
+    adapters: list = [Local5500Adapter.from_synthetic()]
+    index = EmployerIndexAdapter.from_csv(repo / "data" / "employer_rk_index.csv")
+    if index is not None:
+        adapters.append(index)
+    if master_cache_available(repo):
         try:
-            matcher = Local5500Adapter.from_matcher(_COMPANION.parent)
+            adapters.append(Local5500Adapter.from_matcher(repo))
         except Exception:
             pass
+    matcher = Hybrid5500Adapter(adapters) if len(adapters) > 1 else adapters[0]
 
     knowledge = KnowledgeBase.from_dir(_COMPANION / "rollover-knowledge-layer")
     lookup = LookupService(knowledge, matcher, AdvizorProAdapter())

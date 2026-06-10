@@ -10,6 +10,14 @@ from engine.models import LookupResult
 from .synthetic_data import SYNTHETIC_EMPLOYERS
 
 
+def master_cache_available(repo_root: Path | None = None) -> bool:
+    root = repo_root or Path(__file__).resolve().parents[2]
+    data = root / "data"
+    return (data / "recordkeeper_master.csv").is_file() and (
+        data / "recordkeeper_master.version"
+    ).is_file()
+
+
 class Local5500Adapter:
     """5500 matcher adapter — synthetic or real `src.matcher.match`."""
 
@@ -56,6 +64,10 @@ class Local5500Adapter:
             return cls.from_synthetic()
 
         root = repo_root or Path(__file__).resolve().parents[2]
+        if not master_cache_available(root):
+            raise FileNotFoundError(
+                "recordkeeper_master.csv not present — use EmployerIndexAdapter on Streamlit Cloud"
+            )
         if str(root) not in sys.path:
             sys.path.insert(0, str(root))
 

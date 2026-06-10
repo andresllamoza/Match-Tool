@@ -49,7 +49,7 @@ def test_empty_employer_stays_on_find():
 
 def test_unknown_employer_stays_on_find():
     _fresh()
-    result = apply_action({"type": "lookup", "employer": "Totally Unknown XYZ Corp"})
+    result = apply_action({"type": "lookup", "employer": "Zzzzz Nonexistent Employer 99999"})
     assert not isinstance(result, str)
     assert result.ctx.state == JourneyState.PROVIDER_UNKNOWN
     assert result.ctx.provider is None
