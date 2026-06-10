@@ -11,6 +11,15 @@ PensionBee's guided **401(k) → IRA rollover engine** — one headless journey 
 
 ---
 
+## React SPA (mock journey — Head of Product demo)
+
+```bash
+cd rollover-companion/spa
+npm install && npm run dev
+```
+
+Customer flow at `/`, agent console at `/agent`. Journey logic in `useJourney()` + `journeyEngine.ts` — structured for FastAPI swap-in.
+
 ## Quick start (no Node.js — recommended)
 
 Pure Python UI: **FastAPI + Jinja2 + HTMX + Tailwind CDN**. One process, cookie + SQLite session persistence.
