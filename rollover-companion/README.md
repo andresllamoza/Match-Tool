@@ -34,18 +34,20 @@ Open **http://localhost:8000/customer**, **/agent**, **/embed**, **/sandbox**.
 
 Sessions survive refresh via the HTTP-only `pb_session` cookie and `data/pb_sessions.db`.
 
-## Streamlit 3-surface sandbox
+## Streamlit demo (production surface for tomorrow)
 
-Polished executive demo — same engine, fourth renderer:
+Customer / BeeKeeper / Funnel in one app — **this is the demo entrypoint**:
 
 ```bash
 cd rollover-companion
-streamlit run sandbox/app.py
+bash scripts/run-sandbox.sh
+# or: streamlit run sandbox/app.py
 ```
 
-- **3-column desktop layout:** Customer (interactive) · Agent intel · Embed preview
-- **Persistence:** `?jid=` URL param + SQLite — survives refresh and simulated RAM purge
-- **Mechanism-aware FBO:** Voya/Vanguard → `PensionBee FBO [name]`; Empower → participant payee
+- **Surfaces:** segmented control — Customer journey, BeeKeeper intel, Funnel analytics
+- **Persistence:** `?journey=` URL + SQLite write-through — survives hard refresh
+- **FBO compliance:** every provider shows `PensionBee FBO [name]` from `enrichment.channel_context`
+- **Deploy:** Streamlit Cloud main file `rollover-companion/sandbox/app.py`; optional `app_password` secret
 
 ## Quick start (Next.js — optional)
 
