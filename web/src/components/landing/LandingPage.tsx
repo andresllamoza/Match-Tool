@@ -12,6 +12,61 @@ const fadeUp = {
   }),
 };
 
+const TIMELINE = [
+  { id: "find", label: "Find" },
+  { id: "access", label: "Access" },
+  { id: "rollover", label: "Roll over" },
+  { id: "track", label: "Track" },
+] as const;
+
+const TRUST_CARDS = [
+  {
+    title: "Built-in Routing Safeguards",
+    copy: "Zero guesswork. Your check is automatically coded to protect your tax status and enforce absolute FBO payee compliance.",
+  },
+  {
+    title: "Verified Custodian Paths",
+    copy: "Step-by-step navigation and exact spoken phrases tailored directly to major 401(k) providers.",
+  },
+  {
+    title: "Save & Resume Anytime",
+    copy: "Continuous session state resilience. Your progress saves with every action—pause or resume without data loss.",
+  },
+] as const;
+
+function LandingTimeline() {
+  return (
+    <nav className="mb-10" aria-label="Rollover journey steps">
+      <div className="flex gap-2">
+        {TIMELINE.map((step, i) => {
+          const active = i === 0;
+          return (
+            <div key={step.id} className="flex flex-1 flex-col">
+              <div className="relative h-1 overflow-hidden rounded-full bg-[#EAE5DC]">
+                {active && (
+                  <motion.div
+                    className="absolute inset-y-0 left-0 rounded-full bg-[#FFC72C]"
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.15 }}
+                  />
+                )}
+              </div>
+              <span
+                className={`mt-2 text-[10px] font-bold uppercase tracking-[0.08em] ${
+                  active ? "text-[#111111]" : "text-[#6B6560]"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 export function LandingPage() {
   return (
     <div className="desktop-shell relative min-h-dvh overflow-hidden">
@@ -26,72 +81,74 @@ export function LandingPage() {
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
       />
 
-      <main className="relative mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-6 py-16">
-        <motion.p
-          custom={0}
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="mb-3 text-sm font-bold uppercase tracking-[0.12em] text-bee-muted"
-        >
-          Rollover companion
-        </motion.p>
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-4xl flex-col justify-center px-6 py-16">
+        <motion.div custom={0} variants={fadeUp} initial="hidden" animate="show">
+          <LandingTimeline />
+        </motion.div>
+
         <motion.h1
           custom={1}
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="text-4xl font-bold leading-[1.08] tracking-tight text-bee-charcoal sm:text-5xl"
+          className="mb-2 text-4xl font-bold tracking-tight text-[#111111]"
         >
-          Roll your old 401(k) into PensionBee — calmly, step by step.
+          Rollover Companion
         </motion.h1>
+
         <motion.p
           custom={2}
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-5 text-lg leading-relaxed text-bee-ink/90"
+          className="mb-4 text-xl font-medium leading-relaxed text-[#555555]"
         >
-          Find your plan, recover access, and move your money with exact phrases and verified
-          check routing. A real BeeKeeper is one tap away.
+          Move your old 401(k) to PensionBee — calmly, step by step.
         </motion.p>
 
-        <motion.div
+        <motion.p
           custom={3}
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-10 flex flex-col gap-3"
+          className="mb-8 max-w-xl text-base leading-relaxed text-gray-600"
         >
-          <Link
-            href="/app"
-            className="pb-interactive flex min-h-[3.25rem] items-center justify-center rounded-card bg-bee-charcoal px-6 text-center text-base font-semibold text-white shadow-card hover:bg-bee-ink"
-          >
-            Start my rollover
-          </Link>
-          <p className="text-center text-xs text-bee-muted">
-            Same engine as your advisor tools — FBO payee compliance built in.
-          </p>
-        </motion.div>
+          Find your plan, recover missing access, and move your savings using verified routing
+          rules and exact phone scripts. A dedicated BeeKeeper is always one tap away.
+        </motion.p>
 
-        <motion.ul
+        <motion.div
           custom={4}
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-12 space-y-3 border-t border-bee-border pt-8 text-sm text-bee-ink"
+          className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3"
         >
-          {[
-            "Find → Access → Roll over → Track",
-            "Verified transfer paths for major providers",
-            "Save & resume anytime",
-          ].map((line) => (
-            <li key={line} className="flex items-start gap-2">
-              <span className="mt-0.5 text-bee-yellow">✓</span>
-              <span>{line}</span>
-            </li>
+          {TRUST_CARDS.map((card) => (
+            <article
+              key={card.title}
+              className="rounded-xl border border-[#EAE5DC] bg-white p-5 shadow-card"
+            >
+              <h2 className="text-sm font-bold leading-snug text-[#111111]">{card.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-[#555555]">{card.copy}</p>
+            </article>
           ))}
-        </motion.ul>
+        </motion.div>
+
+        <motion.div
+          custom={5}
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          className="mt-2 max-w-xl"
+        >
+          <Link
+            href="/app"
+            className="pb-interactive flex min-h-[3.5rem] w-full items-center justify-center rounded-card bg-[#111111] px-6 text-center text-base font-bold text-white shadow-card hover:bg-[#1E242B]"
+          >
+            Start my rollover
+          </Link>
+        </motion.div>
       </main>
     </div>
   );
