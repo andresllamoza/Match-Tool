@@ -1,0 +1,28 @@
+{% include "partials/journey_step.html" %}
+
+{% if 'sandbox-agent' in oob_targets and agent_oob is defined %}
+<div id="sandbox-agent-panel" hx-swap-oob="outerHTML">
+  <div id="sandbox-agent-panel" class="rounded-2xl border border-[#EAE5DC] bg-white p-4 sm:p-6">
+    <p class="mb-4 text-xs font-bold uppercase tracking-wider text-[#6B6560]">Agent mirror</p>
+    {% with welcome_back=false, show_provider_picker=agent_oob.show_provider_picker, journey_id=agent_oob.journey_id, mode=agent_oob.mode, screen=agent_oob.screen, data=agent_oob.data, enrichment=agent_oob.enrichment, decision=agent_oob.decision, read_only=true, embed_theme=agent_oob.embed_theme, error=agent_oob.error, provider_name=agent_oob.provider_name, step_number=agent_oob.step_number %}
+    {% include "partials/journey_step.html" %}
+    {% endwith %}
+    <div class="mt-6 border-t border-[#EAE5DC] pt-6">
+      {% with data=agent_oob.data %}
+      {% include "partials/agent_intel.html" %}
+      {% endwith %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if 'sandbox-embed' in oob_targets and embed_oob is defined %}
+<div id="sandbox-embed-panel" hx-swap-oob="outerHTML">
+  <div id="sandbox-embed-panel" class="rounded-2xl border border-[#EAE5DC] bg-[#FAFAFA] p-4 sm:p-6">
+    <p class="mb-4 text-xs font-bold uppercase tracking-wider text-[#6B6560]">Embed preview</p>
+    {% with welcome_back=false, show_provider_picker=embed_oob.show_provider_picker, journey_id=embed_oob.journey_id, mode=embed_oob.mode, screen=embed_oob.screen, data=embed_oob.data, enrichment=embed_oob.enrichment, decision=embed_oob.decision, read_only=true, embed_theme='minimal', error=embed_oob.error, provider_name=embed_oob.provider_name, step_number=embed_oob.step_number %}
+    {% include "partials/journey_step.html" %}
+    {% endwith %}
+  </div>
+</div>
+{% endif %}

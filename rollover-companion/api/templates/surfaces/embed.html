@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Embed — Rollover Companion{% endblock %}
+{% block body %}
+<div class="{% if embed_theme == 'minimal' %}bg-white{% else %}bg-canvas{% endif %} min-h-dvh p-4 sm:p-6">
+  <div class="mx-auto max-w-lg">
+    {% include "partials/journey_workspace.html" %}
+  </div>
+</div>
+{% endblock %}

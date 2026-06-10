@@ -20,13 +20,13 @@ export function SelectionBlock({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex min-h-[64px] w-full flex-col justify-center rounded-card border-2 px-5 py-4 text-left transition-all duration-150 active:scale-[0.98] disabled:opacity-50 ${
+      className={`pb-interactive flex min-h-[72px] w-full flex-col justify-center rounded-card border-2 px-6 py-5 text-left disabled:opacity-50 sm:px-8 sm:py-6 ${
         selected
           ? "border-bee-charcoal bg-bee-yellow-soft/50 shadow-sm"
           : "border-bee-border bg-white hover:border-bee-charcoal/25 hover:bg-cream-dark/30"
       }`}
     >
-      <span className="text-base font-semibold leading-snug text-bee-charcoal lg:text-lg">
+      <span className="text-base font-semibold leading-snug text-[#1E242B] lg:text-lg">
         {label}
       </span>
       {description && (

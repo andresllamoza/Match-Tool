@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from .customer_copy import (
+    DEFAULT_FIRST_NAME,
+    DEFAULT_LAST_NAME,
+    customer_full_name,
+)
 from .knowledge import KnowledgeBase
 from .payee import resolve_check_payable
 from .models import (
@@ -21,9 +26,14 @@ def build_enrichment(
     screen: JourneyScreen,
 ) -> ScreenEnrichment:
     general = knowledge.general_guide
+    first_name = ctx.customer_first_name or DEFAULT_FIRST_NAME
+    last_name = ctx.customer_last_name or DEFAULT_LAST_NAME
     enrichment = ScreenEnrichment(
         mailing_address=general.mailing_address,
         destination_name=general.destination_name,
+        customer_display_name=customer_full_name(first_name, last_name),
+        customer_first_name=first_name,
+        customer_last_name=last_name,
         general_path=knowledge.is_general_path(ctx),
         requires_tax_selection=_needs_tax_selection(ctx),
         tax_options=_tax_options(knowledge) if _needs_tax_selection(ctx) else [],

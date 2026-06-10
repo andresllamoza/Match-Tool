@@ -30,7 +30,8 @@ def test_general_online_enrichment_has_payable_and_menu_hints():
     assert enrichment.general_path is True
     assert enrichment.channel_context is not None
     assert enrichment.channel_context.check_payable
-    assert "PensionBee FBO" in enrichment.channel_context.check_payable
+    assert enrichment.channel_context.check_payable == "PensionBee FBO Jordan Rivera"
+    assert enrichment.customer_display_name == "Jordan Rivera"
     # Step 1 is login — step 2 should surface withdrawal menu hints
     engine.advance_step(ctx, "done")
     screen = engine.render(ctx)

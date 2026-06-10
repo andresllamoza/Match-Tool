@@ -37,6 +37,21 @@ inject_brand_css()
 warm_lookup_cache()
 
 try:
+    _expected = st.secrets.get("app_password", "")
+except Exception:
+    _expected = ""
+if _expected:
+    if not st.session_state.get("_authed"):
+        st.markdown("### 🐝 PensionBee · Rollover Companion")
+        pw = st.text_input("Password", type="password")
+        if st.button("Sign in", type="primary"):
+            if pw == _expected:
+                st.session_state["_authed"] = True
+                st.rerun()
+            st.error("That's not it — try again.")
+        st.stop()
+
+try:
     run_journey_app()
 except Exception:
     st.markdown(

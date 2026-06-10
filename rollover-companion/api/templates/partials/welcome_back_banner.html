@@ -1,0 +1,12 @@
+{% if welcome_back %}
+<div class="animate-welcome-slide mb-6 overflow-hidden rounded-2xl border border-[#EAE5DC] bg-white p-5 shadow-sm sm:p-6" role="status" aria-live="polite">
+  <p class="text-xs font-bold uppercase tracking-wider text-[#9A6200]">Welcome back</p>
+  <p class="mt-2 text-base leading-relaxed text-[#1E242B] sm:text-lg">
+    We saved your progress moving your
+    <span class="font-semibold text-charcoal">{{ provider_name }}</span> 401(k).
+    {% if decision == 'channel_step' %}
+      You're on step {{ step_number }}.
+    {% endif %}
+  </p>
+</div>
+{% endif %}

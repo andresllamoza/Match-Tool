@@ -330,25 +330,159 @@ def inject_brand_css() -> None:
         border: 2px solid #F59E0B; background: #FFFBEB; border-radius: 12px;
         padding: 0.75rem 1rem; font-size: 0.88rem; margin-bottom: 1rem;
     }}
-    .pb-say {{
-        border: 2px solid rgba(255, 199, 44, 0.45); border-radius: 12px;
-        padding: 1rem 1.1rem; background: #fff; margin: 0.75rem 0;
+    .pb-channel-header {{ margin: 0 0 2rem 0; }}
+    .pb-channel-step-id {{
+        font-size: 1.25rem; font-weight: 500; letter-spacing: -0.025em;
+        color: #6B7280; margin: 0 0 0.75rem 0;
     }}
-    .pb-step-kicker {{
-        font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em;
-        text-transform: uppercase; color: {MUTED}; margin: 0 0 0.75rem 0;
+    .pb-channel-track {{
+        height: 0.5rem; border-radius: 999px; background: {CANVAS_DEEP};
+        overflow: hidden;
+    }}
+    .pb-channel-track-fill {{
+        height: 100%; border-radius: 999px; background: {YELLOW};
+        transition: width 0.3s ease;
+    }}
+    .pb-call-script {{
+        border: 1px solid {BORDER}; border-left: 4px solid {YELLOW};
+        border-radius: 1rem; background: {CARD}; padding: 2rem 2.25rem;
+        margin: 1.25rem 0 1.5rem; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.05);
+    }}
+    .pb-call-intro {{
+        font-size: 0.9rem; line-height: 1.5; color: {SUBCOPY}; margin: 0 0 0.65rem 0;
     }}
     .pb-channel-kicker {{
         font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
         text-transform: uppercase; color: {MUTED}; margin: 0 0 0.35rem 0;
     }}
     .pb-channel-action {{
-        font-size: 1.1rem; font-weight: 600; line-height: 1.5;
+        font-size: 1.125rem; font-weight: 600; line-height: 1.55;
         color: {CHARCOAL}; margin: 0;
     }}
-    .pb-channel-hint {{
-        font-size: 0.88rem; color: {SUBCOPY}; line-height: 1.5; margin: 0.5rem 0;
+    .pb-phone-cta {{
+        display: flex; align-items: center; justify-content: space-between;
+        background: {CHARCOAL}; color: #fff; border-radius: 1rem;
+        padding: 1.25rem 1.5rem; text-decoration: none; margin: 0.75rem 0 1.25rem;
+        box-shadow: 0 2px 8px rgba(17, 17, 17, 0.15);
+        transition: all 0.2s ease-out;
     }}
+    .pb-phone-cta:hover {{ background: {INK}; color: #fff; }}
+    .pb-phone-cta:active {{ transform: scale(0.98); }}
+    .pb-phone-kicker {{
+        display: block; font-size: 0.72rem; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85;
+    }}
+    .pb-phone-num {{ display: block; font-size: 1.25rem; font-weight: 700; margin-top: 0.15rem; }}
+    .pb-routing-panel {{
+        border-top: 1px solid {BORDER}; margin-top: 1.5rem; padding-top: 2rem;
+        display: grid; gap: 1.25rem;
+    }}
+    .pb-routing-kicker {{
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: {MUTED}; margin: 0 0 0.35rem;
+    }}
+    .pb-routing-body {{
+        font-size: 0.9rem; line-height: 1.55; color: {INK}; margin: 0;
+    }}
+    .pb-routing-security {{ margin: 0; }}
+    .pb-welcome {{
+        background: {CARD}; border: 1px solid {BORDER}; border-radius: {RADIUS};
+        padding: 1.25rem 1.5rem; margin: 0 0 1rem;
+        animation: pbSlideIn 0.45s ease-out;
+    }}
+    @keyframes pbSlideIn {{
+        from {{ opacity: 0; transform: translateY(8px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .pb-welcome-kicker {{
+        font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;
+        text-transform: uppercase; color: #9A6200; margin: 0;
+    }}
+    .pb-welcome-body {{
+        font-size: 1.0625rem; line-height: 1.55; color: {INK}; margin: 0.5rem 0 0;
+    }}
+    .pb-fbo-header {{
+        display: flex; align-items: flex-start; gap: 0.75rem;
+        margin-bottom: 1rem;
+    }}
+    .pb-fbo-header--card + .pb-security-compound--fbo {{
+        border: 2px solid {CHARCOAL} !important;
+        border-radius: {RADIUS} !important;
+        box-shadow: none !important;
+    }}
+    .pb-fbo-lock {{
+        width: 2.5rem; height: 2.5rem; border-radius: 999px;
+        background: {CHARCOAL}; color: #fff; display: flex;
+        align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;
+    }}
+    .pb-fbo-kicker {{
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: #9A6200; margin: 0;
+    }}
+    .pb-fbo-sub {{ font-size: 0.85rem; color: {SUBCOPY}; margin: 0.25rem 0 0; line-height: 1.5; }}
+    .pb-security-compound {{
+        background: #FDFDFD; border: 1px solid {BORDER}; border-radius: 0.85rem;
+        overflow: hidden; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.04);
+    }}
+    .pb-security-compound .pb-security-row + .pb-security-row {{
+        border-top: 1px solid #F0E6D2;
+    }}
+    .pb-security-row, .pb-financial-standalone {{
+        display: flex; align-items: flex-start; justify-content: space-between;
+        gap: 1rem; padding: 1.25rem 1.5rem;
+    }}
+    .pb-financial-standalone {{
+        background: #FDFDFD; border: 1px solid {BORDER}; border-radius: 0.85rem;
+        margin-top: 0.75rem; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.04);
+    }}
+    .pb-security-row-body {{ min-width: 0; flex: 1; }}
+    .pb-security-label {{
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: {MUTED}; margin: 0;
+    }}
+    .pb-security-value {{
+        font-size: 1rem; font-weight: 600; line-height: 1.45;
+        color: {INK}; margin: 0.5rem 0 0; word-break: break-word;
+    }}
+    .pb-security-value--prominent {{
+        font-size: clamp(1.2rem, 4vw, 1.5rem); font-weight: 700;
+        letter-spacing: -0.02em; color: {CHARCOAL};
+    }}
+    .pb-copy-micro {{
+        flex-shrink: 0; border: none; background: transparent;
+        font-size: 0.75rem; font-weight: 600; color: {MUTED};
+        padding: 0.35rem 0.65rem; border-radius: 0.5rem; cursor: pointer;
+        transition: color 0.2s ease-out, background 0.2s ease-out, transform 0.2s ease-out;
+    }}
+    .pb-copy-micro:hover {{ color: {INK}; background: {CANVAS}; }}
+    .pb-copy-micro:active {{ transform: scale(0.98); }}
+    .pb-copy-micro.pb-copy-success {{ color: #059669; }}
+    .pb-channel-hint-card {{
+        border: 1px solid {BORDER}; border-radius: 0.85rem;
+        background: {CANVAS_DEEP}; padding: 0.85rem 1rem; margin: 0.5rem 0;
+    }}
+    .pb-channel-hint-kicker {{
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: {MUTED}; margin: 0 0 0.25rem;
+    }}
+    .pb-channel-hint {{
+        font-size: 0.9rem; color: {INK}; line-height: 1.5; margin: 0;
+    }}
+    .pb-forward-note {{
+        font-size: 0.88rem; line-height: 1.5; color: #92400E;
+        background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 0.85rem;
+        padding: 0.85rem 1rem; margin: 0.5rem 0;
+    }}
+    .pb-agent-note {{
+        border: 1px dashed rgba(107, 101, 96, 0.45); border-radius: 0.85rem;
+        background: {CANVAS}; padding: 0.85rem 1rem; margin: 0.5rem 0;
+        font-size: 0.88rem; line-height: 1.5; color: {SUBCOPY};
+    }}
+    .pb-agent-note-kicker {{
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: {MUTED}; margin: 0 0 0.35rem;
+    }}
+    .pb-agent-note-body {{ margin: 0; color: {INK}; }}
     .pb-edge-tip {{
         background: {YELLOW_SOFT}; border: 1px solid rgba(255, 199, 44, 0.35);
         border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.88rem;
@@ -416,6 +550,11 @@ def inject_brand_css() -> None:
         opacity: 0.65 !important;
         cursor: wait !important;
     }}
+    [data-testid="stFormSubmitButton"] > button:hover:not(:disabled),
+    .stButton > button[kind="primary"]:hover:not(:disabled) {{
+        background: {INK} !important;
+        transition: background 0.15s ease !important;
+    }}
 
     /* Selection blocks — secondary only (explicit kind) */
     .stButton > button[kind="secondary"],
@@ -465,6 +604,46 @@ def inject_brand_css() -> None:
 
     div[data-testid="stProgressBar"] > div > div {{
         background-color: {YELLOW} !important;
+    }}
+
+    /* FBO st.code copy block — matches security card */
+    div[data-testid="stCode"] pre,
+    div[data-testid="stCodeBlock"] pre {{
+        background: {CARD} !important;
+        border: 2px solid {CHARCOAL} !important;
+        border-radius: 14px !important;
+        font-size: 1.1rem !important;
+        color: {CHARCOAL} !important;
+        font-family: ui-monospace, Menlo, monospace !important;
+        padding: 14px 16px !important;
+        word-break: break-word !important;
+    }}
+    div[data-testid="stCode"] button {{ opacity: 0.55; }}
+    div[data-testid="stCode"]:hover button {{ opacity: 1; }}
+
+    /* BeeKeeper ops panel */
+    .pb-agent-panel {{
+        background: {CHARCOAL}; color: #f4f1ea; border-radius: {RADIUS};
+        padding: 1.25rem 1.35rem; font-size: 0.92rem; line-height: 1.55; margin-top: 1rem;
+    }}
+    .pb-agent-panel h4 {{
+        color: {YELLOW}; font-size: 0.72rem; font-weight: 800;
+        letter-spacing: 0.1em; text-transform: uppercase; margin: 1rem 0 0.35rem;
+    }}
+    .pb-agent-panel h4:first-child {{ margin-top: 0; }}
+    .pb-agent-say {{ font-size: 1.05rem; line-height: 1.5; }}
+    .pb-agent-debug {{
+        max-height: 8rem; overflow: auto; font-family: monospace;
+        font-size: 0.75rem; background: rgba(255,255,255,0.06);
+        padding: 0.5rem; border-radius: 0.5rem; margin-top: 0.35rem;
+    }}
+
+    @media (max-width: 390px) {{
+        .block-container {{ padding-left: 0.85rem; padding-right: 0.85rem; }}
+        .pb-phase-bar .pb-phase {{ font-size: 0.62rem; }}
+        .pb-step-label {{ font-size: 0.62rem; }}
+        .pb-security-value--prominent {{ font-size: 1.1rem !important; }}
+        .pb-header-bar {{ flex-wrap: wrap; }}
     }}
 
     @media (max-width: 480px) {{

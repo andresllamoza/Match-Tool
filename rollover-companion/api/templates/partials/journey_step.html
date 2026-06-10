@@ -1,0 +1,281 @@
+{% macro action_btn(label, action_type, extra={}, primary=true, disabled=false) %}
+<button type="submit" name="type" value="{{ action_type }}"
+  {% for k, v in extra.items() %}
+    {% if k != 'type' %}
+  name="{{ k }}" value="{{ v }}"
+    {% endif %}
+  {% endfor %}
+  class="pb-interactive w-full rounded-xl px-6 py-4 text-center text-base font-semibold transition {% if primary %}bg-charcoal text-white hover:bg-black{% else %}border border-[#EAE5DC] bg-white text-[#6B6560] hover:text-[#1E242B]{% endif %} {% if disabled %}opacity-50 pointer-events-none{% endif %}"
+  {% if disabled %}disabled{% endif %}
+  hx-post="/htmx/journey/action"
+  hx-target="#journey-step-{{ mode }}"
+  hx-swap="outerHTML transition:true"
+  hx-include="[name='journey_id'],[name='surface'],[name='embed_theme'],[name='show_provider_picker']">
+  {{ label }}
+</button>
+{% endmacro %}
+
+<div id="journey-step-{{ mode }}" class="animate-step-enter">
+  <input type="hidden" name="journey_id" value="{{ journey_id }}" form="journey-form" />
+  <input type="hidden" name="surface" value="{{ mode }}" form="journey-form" />
+  <input type="hidden" name="embed_theme" value="{{ embed_theme }}" form="journey-form" />
+  <input type="hidden" name="show_provider_picker" value="{{ 'true' if show_provider_picker else 'false' }}" form="journey-form" />
+
+  {% if error %}
+  <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-[#7C4A00] animate-shake">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  {% if decision == 'employer' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.headline }}</h1>
+  <p class="mt-3 text-base leading-relaxed text-[#555555]">{{ screen.body }}</p>
+  {% if not read_only %}
+  <form id="journey-form" class="mt-8 space-y-4" hx-post="/htmx/journey/action" hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true">
+    <input type="hidden" name="journey_id" value="{{ journey_id }}" />
+    <input type="hidden" name="surface" value="{{ mode }}" />
+    <input type="hidden" name="embed_theme" value="{{ embed_theme }}" />
+    <input type="hidden" name="show_provider_picker" value="{{ 'true' if show_provider_picker else 'false' }}" />
+    <label class="block">
+      <span class="text-sm font-semibold text-[#6B6560]">Employer name</span>
+      <input type="text" name="employer" required minlength="2" placeholder="e.g. Target, FedEx"
+        class="mt-2 w-full rounded-xl border border-[#EAE5DC] bg-white px-4 py-3 text-base outline-none ring-bee-yellow focus:ring-2" />
+    </label>
+    <button type="submit" name="type" value="lookup"
+      class="pb-interactive w-full rounded-xl bg-charcoal px-6 py-4 text-base font-semibold text-white hover:bg-black">
+      Find my provider
+    </button>
+    <button type="button"
+      class="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
+      hx-post="/htmx/journey/toggle-picker"
+      hx-vals='{"show_provider_picker": "{{ 'false' if show_provider_picker else 'true' }}", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true">
+      {% if show_provider_picker %}Search by employer instead{% else %}I already know my provider{% endif %}
+    </button>
+  </form>
+  {% endif %}
+
+  {% elif decision == 'provider_pick' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">Pick your recordkeeper</h1>
+  <p class="mt-3 text-base text-[#555555]">Select the company that holds your old 401(k).</p>
+  {% if not read_only %}
+  <div class="mt-8 grid gap-3 sm:grid-cols-2">
+    {% for p in providers %}
+    <button type="button"
+      hx-post="/htmx/journey/action" hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      hx-vals='{"type": "provider_direct", "provider": "{{ p }}", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      class="pb-interactive rounded-xl border border-[#EAE5DC] bg-white px-4 py-4 text-left text-sm font-semibold hover:border-bee-yellow hover:shadow-sm">
+      {{ p }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% elif decision == 'disambiguation' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.disambiguation_question }}</h1>
+  {% if not read_only %}
+  <div class="mt-8 space-y-3">
+    {% for opt in screen.disambiguation_options %}
+    <button type="submit" name="type" value="disambiguate"
+      hx-post="/htmx/journey/action"
+      hx-vals='{"type": "disambiguate", "answer": "{{ opt }}", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl border border-[#EAE5DC] bg-white px-5 py-4 text-left font-semibold hover:border-bee-yellow">
+      {{ opt }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% elif decision == 'access' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.headline }}</h1>
+  <p class="mt-3 text-base leading-relaxed text-[#555555]">{{ screen.body }}</p>
+  {% if enrichment.lookup %}
+  <div class="mt-4 rounded-xl border border-[#EAE5DC] bg-white px-4 py-3 text-sm">
+    <span class="font-semibold">{{ enrichment.lookup.matched_provider }}</span>
+    <span class="text-[#6B6560]"> · {{ enrichment.lookup.employer_query }}</span>
+  </div>
+  {% endif %}
+  {% if not read_only %}
+  <div class="mt-8 grid gap-3 sm:grid-cols-2">
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "access", "can_login": "true", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive rounded-xl bg-charcoal px-6 py-4 font-semibold text-white">Yes, I can log in</button>
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "access", "can_login": "false", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive rounded-xl border border-[#EAE5DC] bg-white px-6 py-4 font-semibold">No, I'm locked out</button>
+  </div>
+  {% endif %}
+
+  {% elif decision == 'tax' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">What type of funds are you rolling over?</h1>
+  <p class="mt-3 text-base text-[#555555]">This helps us route your rollover correctly.</p>
+  {% if not read_only %}
+  <div class="mt-8 space-y-3">
+    {% for opt in enrichment.tax_options %}
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "tax_type", "tax_type": "{{ opt.id }}", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl border border-[#EAE5DC] bg-white px-5 py-4 text-left hover:border-bee-yellow">
+      <span class="block font-semibold">{{ opt.label }}</span>
+      <span class="mt-1 block text-sm text-[#6B6560]">{{ opt.hint }}</span>
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% elif decision == 'channel' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.headline }}</h1>
+  <p class="mt-3 text-base leading-relaxed text-[#555555]">{{ screen.body }}</p>
+  {% if not read_only %}
+  <div class="mt-8 grid gap-3">
+  {% for ch, label in [('online', 'Online portal'), ('phone', 'By phone'), ('forms', 'Paper forms')] %}
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "channel", "channel": "{{ ch }}", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive rounded-xl border border-[#EAE5DC] bg-white px-5 py-4 text-left font-semibold hover:border-bee-yellow">
+      {{ label }}
+    </button>
+  {% endfor %}
+  </div>
+  {% endif %}
+
+  {% elif decision == 'channel_step' %}
+  <div class="mb-2 flex items-center justify-between gap-4">
+    <p class="text-xs font-bold uppercase tracking-wider text-[#9A6200]">
+      {{ enrichment.channel_context.step_label or ('Step ' ~ (data.step_index + 1)) }}
+      {% if data.total_steps %} of {{ data.total_steps }}{% endif %}
+    </p>
+    {% if data.total_steps %}
+    <div class="h-1.5 flex-1 max-w-[8rem] rounded-full bg-[#EAE5DC]">
+      <div class="h-full rounded-full bg-bee-yellow" style="width: {{ ((data.step_index + 1) / data.total_steps * 100)|int }}%"></div>
+    </div>
+    {% endif %}
+  </div>
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.headline }}</h1>
+  <p class="mt-4 text-base leading-relaxed text-[#1E242B]">{{ enrichment.channel_context.say_this or screen.body }}</p>
+
+  {% if enrichment.channel_context.channel == 'phone' and enrichment.channel_context.phone %}
+  <a href="tel:{{ enrichment.channel_context.phone|replace(' ', '')|replace('(', '')|replace(')', '')|replace('-', '') }}"
+    class="mt-6 inline-flex items-center gap-2 rounded-xl bg-bee-yellow px-5 py-3 text-sm font-bold text-charcoal">
+    📞 Call {{ enrichment.channel_context.phone }}
+  </a>
+  {% if enrichment.channel_context.intro %}
+  <div class="mt-4 rounded-xl border-l-4 border-bee-yellow bg-[#FFFBF0] px-5 py-4 text-sm leading-relaxed">
+    <p class="text-xs font-bold uppercase tracking-wider text-[#9A6200]">Say this</p>
+    <p class="mt-2">{{ enrichment.channel_context.intro }}</p>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% include "partials/routing_security_card.html" %}
+
+  {% if not read_only %}
+  <div class="mt-8 space-y-3">
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "step", "outcome": "done", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl bg-charcoal px-6 py-4 font-semibold text-white">
+      {{ screen.primary_action or 'Done' }}
+    </button>
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "step", "outcome": "stuck", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl border border-[#EAE5DC] bg-white px-6 py-4 font-semibold text-[#6B6560]">
+      I'm stuck
+    </button>
+  </div>
+  {% endif %}
+
+  {% elif decision == 'stuck' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.headline }}</h1>
+  <p class="mt-3 text-base leading-relaxed text-[#555555]">{{ screen.body }}</p>
+  {% if not read_only %}
+  <div class="mt-8 space-y-3">
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "resume", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl bg-charcoal px-6 py-4 font-semibold text-white">Try again</button>
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "escalate", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl border border-[#EAE5DC] bg-white px-6 py-4 font-semibold">Talk to a BeeKeeper</button>
+  </div>
+  {% endif %}
+
+  {% elif decision == 'track' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.headline }}</h1>
+  <p class="mt-3 text-base leading-relaxed text-[#555555]">{{ screen.body }}</p>
+  {% if enrichment.track %}
+  <div class="mt-6 rounded-2xl border border-[#EAE5DC] bg-white p-6">
+    <p class="text-sm text-[#6B6560]">Typical timeline</p>
+    <p class="mt-1 font-semibold">{{ enrichment.track.typical_timeline }}</p>
+    <p class="mt-4 text-sm text-[#6B6560]">If nothing arrives</p>
+    <p class="mt-1 text-sm">{{ enrichment.track.nothing_arrived_message }}</p>
+  </div>
+  {% endif %}
+  {% if not read_only %}
+  <div class="mt-8 space-y-3">
+    {% if screen.state.value == 'initiated' %}
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "confirm_in_flight", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl bg-charcoal px-6 py-4 font-semibold text-white">{{ screen.primary_action }}</button>
+    {% elif screen.state.value == 'in_flight' %}
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "mark_complete", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl bg-charcoal px-6 py-4 font-semibold text-white">{{ screen.primary_action }}</button>
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "escalate", "reason": "delay", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl border border-[#EAE5DC] bg-white px-6 py-4 font-semibold">It's taking longer than expected</button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% elif decision == 'confirm' %}
+  <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.headline }}</h1>
+  <p class="mt-3 text-base leading-relaxed text-[#555555]">{{ screen.body }}</p>
+  {% if screen.guidance %}
+  <ul class="mt-6 space-y-3">
+    {% for g in screen.guidance %}
+    <li class="rounded-xl border border-[#EAE5DC] bg-white px-4 py-3 text-sm">{{ g.text }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if not read_only and screen.state.value == 'access_blocked' %}
+  <div class="mt-8 space-y-3">
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "access_recovered", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl bg-charcoal px-6 py-4 font-semibold text-white">I've regained access</button>
+    <button hx-post="/htmx/journey/action"
+      hx-vals='{"type": "escalate", "journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive w-full rounded-xl border border-[#EAE5DC] bg-white px-6 py-4 font-semibold">Get BeeKeeper help</button>
+  </div>
+  {% endif %}
+
+  {% elif decision == 'done' %}
+  <div class="text-center">
+    <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-bee-yellow text-2xl">✓</div>
+    <h1 class="text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{{ screen.headline }}</h1>
+    <p class="mt-4 text-base leading-relaxed text-[#555555]">{{ screen.body }}</p>
+    {% if not read_only %}
+    <button hx-post="/htmx/journey/restart"
+      hx-vals='{"journey_id": "{{ journey_id }}", "surface": "{{ mode }}"}'
+      hx-target="#journey-step-{{ mode }}" hx-swap="outerHTML transition:true"
+      class="pb-interactive mt-8 rounded-xl border border-[#EAE5DC] bg-white px-6 py-3 text-sm font-semibold">
+      Start a new rollover
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if screen.sla_note and decision not in ['done', 'employer'] %}
+  <p class="mt-8 text-xs text-[#9A928A]">{{ screen.sla_note }}</p>
+  {% endif %}
+</div>

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}3-Surface Sandbox{% endblock %}
+{% block body %}
+<header class="border-b border-[#EAE5DC] bg-white">
+  <div class="mx-auto flex max-w-[90rem] items-center justify-between px-4 py-4 sm:px-6">
+    <div>
+      <p class="text-lg font-bold text-charcoal">Production workspace</p>
+      <p class="text-sm text-[#6B6560]">Shared journey · FastAPI + HTMX · no Node.js</p>
+    </div>
+    <a href="/customer?fresh=1" class="text-sm font-semibold text-[#6B6560] hover:text-charcoal">Fresh session</a>
+  </div>
+</header>
+<main class="mx-auto grid max-w-[90rem] gap-6 px-4 py-8 lg:grid-cols-3 sm:px-6">
+  <section>
+    <h2 class="mb-4 text-xs font-bold uppercase tracking-wider text-[#6B6560]">Customer flow</h2>
+    {% with welcome_back=customer.welcome_back, show_provider_picker=customer.show_provider_picker, journey_id=customer.journey_id, mode=customer.mode, screen=customer.screen, data=customer.data, enrichment=customer.enrichment, decision=customer.decision, read_only=false, embed_theme=customer.embed_theme, error=customer.error, provider_name=customer.provider_name, step_number=customer.step_number %}
+    <div id="sandbox-customer">
+      {% include "partials/journey_workspace.html" %}
+    </div>
+    {% endwith %}
+  </section>
+  <section>
+    <h2 class="mb-4 text-xs font-bold uppercase tracking-wider text-[#6B6560]">Agent mirror</h2>
+    <div id="sandbox-agent-panel" class="rounded-2xl border border-[#EAE5DC] bg-white p-4 sm:p-6">
+      {% with welcome_back=false, show_provider_picker=agent.show_provider_picker, journey_id=agent.journey_id, mode=agent.mode, screen=agent.screen, data=agent.data, enrichment=agent.enrichment, decision=agent.decision, read_only=true, embed_theme=agent.embed_theme, error=agent.error, provider_name=agent.provider_name, step_number=agent.step_number %}
+      {% include "partials/journey_step.html" %}
+      {% endwith %}
+      <div class="mt-6 border-t border-[#EAE5DC] pt-6">
+        {% with data=agent.data %}
+        {% include "partials/agent_intel.html" %}
+        {% endwith %}
+      </div>
+    </div>
+  </section>
+  <section>
+    <h2 class="mb-4 text-xs font-bold uppercase tracking-wider text-[#6B6560]">Embed mode</h2>
+    <div id="sandbox-embed-panel" class="rounded-2xl border border-[#EAE5DC] bg-[#FAFAFA] p-4 sm:p-6">
+      {% with welcome_back=false, show_provider_picker=embed.show_provider_picker, journey_id=embed.journey_id, mode=embed.mode, screen=embed.screen, data=embed.data, enrichment=embed.enrichment, decision=embed.decision, read_only=true, embed_theme='minimal', error=embed.error, provider_name=embed.provider_name, step_number=embed.step_number %}
+      {% include "partials/journey_step.html" %}
+      {% endwith %}
+    </div>
+  </section>
+</main>
+{% endblock %}

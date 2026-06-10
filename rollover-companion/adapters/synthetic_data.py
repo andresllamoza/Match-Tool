@@ -31,7 +31,12 @@ SYNTHETIC_EMPLOYERS: list[dict] = [
         "matcher_confidence": 1.0,
         "matcher_label": "High",
     },
-    {"employer": "Costco Wholesale Corporation", "matcher": "Fidelity", "advizorpro": "Fidelity"},
+    {
+        "employer": "Costco Wholesale Corporation",
+        "matcher": "Fidelity",
+        "advizorpro": "Fidelity",
+        "aliases": ["costco", "costco wholesale"],
+    },
     {"employer": "Home Depot USA Inc", "matcher": "Fidelity", "advizorpro": "Fidelity"},
     {"employer": "FedEx Corporation", "matcher": "Vanguard", "advizorpro": "Vanguard"},
     {"employer": "UPS Inc", "matcher": "Empower", "advizorpro": "Empower"},

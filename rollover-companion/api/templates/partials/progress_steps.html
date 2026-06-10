@@ -1,0 +1,19 @@
+{% set phases = [
+  ('find', 'Find'),
+  ('access', 'Access'),
+  ('rollover', 'Roll over'),
+  ('track', 'Track'),
+] %}
+{% set current = screen.phase.value %}
+<div class="mb-8">
+  <div class="flex items-center justify-between gap-2">
+    {% for key, label in phases %}
+      {% set active = current == key %}
+      {% set done = (key == 'find' and current != 'find') or (key == 'access' and current in ['rollover', 'track']) or (key == 'rollover' and current == 'track') %}
+      <div class="flex flex-1 flex-col items-center gap-2">
+        <div class="h-1.5 w-full rounded-full {% if active %}bg-bee-yellow{% elif done %}bg-charcoal/70{% else %}bg-[#EAE5DC]{% endif %}"></div>
+        <span class="text-[10px] font-semibold uppercase tracking-wide sm:text-xs {% if active %}text-charcoal{% else %}text-[#9A928A]{% endif %}">{{ label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>

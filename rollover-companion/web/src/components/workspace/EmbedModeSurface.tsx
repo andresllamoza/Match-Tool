@@ -30,20 +30,23 @@ export function EmbedModeSurface() {
 }`;
 
   return (
-    <section className="flex flex-col gap-3 text-left">
-      <div>
+    <section className="flex flex-col gap-6 text-left">
+      <div className="space-y-1">
         <p className="text-xs font-bold uppercase tracking-wider text-[#6B6560]">Surface 3</p>
-        <h2 className="text-lg font-bold text-[#111111]">The Embed Mode</h2>
+        <h2 className="text-xl font-bold text-[#1E242B]">The Embed Mode</h2>
+        <p className="text-sm leading-relaxed text-[#555555]">
+          Narrow-viewport frame with identical step engine data and partner theming.
+        </p>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-2xl border border-[#EAE5DC] bg-white p-6 shadow-sm">
-        <div className="space-y-3 rounded-xl border border-[#EAE5DC] bg-[#FAF8F5] p-4">
+      <div className="flex flex-col gap-8 pb-surface-card">
+        <div className="space-y-6 rounded-2xl border border-[#EAE5DC] bg-[#FAF8F5] p-6 sm:p-8">
           <label className="block text-xs font-bold uppercase tracking-wide text-[#6B6560]">
             Theme variant
             <select
               value={embedTheme}
               onChange={(e) => setEmbedTheme(e.target.value as EmbedTheme)}
-              className="mt-1.5 w-full rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5 text-sm font-medium text-[#111111] outline-none focus:border-2 focus:border-[#111111]"
+              className="pb-interactive mt-2 w-full rounded-xl border border-[#EAE5DC] bg-white px-4 py-3 text-sm font-medium text-[#1E242B] outline-none transition-all focus:border-2 focus:border-[#111111]"
             >
               <option value="light">LIGHT (PensionBee)</option>
               <option value="dark">DARK (Custom Partner)</option>
@@ -55,18 +58,23 @@ export function EmbedModeSurface() {
             <input
               value={apiEndpoint}
               onChange={(e) => setApiEndpoint(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5 text-sm text-[#111111] outline-none focus:border-2 focus:border-[#111111]"
+              className="mt-2 w-full rounded-xl border border-[#EAE5DC] bg-white px-4 py-3 text-sm text-[#1E242B] outline-none transition-all focus:border-2 focus:border-[#111111]"
               placeholder="/api/journey"
             />
           </label>
         </div>
 
-        <div className="rounded-2xl bg-[#1E242B] p-6">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wider text-white/50">
+        <div className="rounded-2xl bg-[#1E242B] p-6 sm:p-8">
+          <p className="mb-4 text-xs font-bold uppercase tracking-wider text-white/50">
             Simulated device frame
           </p>
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1E242B]">
+          <div
+            className={`overflow-hidden rounded-xl border ${
+              embedTheme === "dark" ? "border-white/10" : "border-[#EAE5DC]"
+            }`}
+          >
             <JourneyFlow
+              key={embedTheme}
               mode="embed"
               theme={embedTheme === "dark" ? "dark" : "minimal"}
               surface="sandbox"
@@ -77,26 +85,26 @@ export function EmbedModeSurface() {
           </div>
         </div>
 
-        <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#6B6560]">
+        <div className="space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#6B6560]">
             Frame embed code
           </p>
-          <pre className="overflow-x-auto rounded-xl border border-[#EAE5DC] bg-[#111111] p-4 text-xs leading-relaxed text-[#FAF8F5]">
+          <pre className="overflow-x-auto rounded-2xl border border-[#EAE5DC] bg-[#111111] p-6 text-xs leading-relaxed text-[#FAF8F5]">
             {mountCode}
           </pre>
         </div>
 
-        <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#6B6560]">
+        <div className="space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#6B6560]">
             API action example
           </p>
-          <pre className="overflow-x-auto rounded-xl border border-[#EAE5DC] bg-[#111111] p-4 text-xs leading-relaxed text-[#FAF8F5]">
+          <pre className="overflow-x-auto rounded-2xl border border-[#EAE5DC] bg-[#111111] p-6 text-xs leading-relaxed text-[#FAF8F5]">
             {apiSnippet}
           </pre>
-          <p className="mt-2 text-xs text-[#6B6560]">
-            Theme: <span className="font-semibold text-[#111111]">{mountTheme}</span>
+          <p className="text-xs text-[#6B6560]">
+            Theme: <span className="font-semibold text-[#1E242B]">{mountTheme}</span>
             {" · "}
-            Journey: <span className="font-mono text-[#111111]">{journeyId}</span>
+            Journey: <span className="font-mono text-[#1E242B]">{journeyId}</span>
           </p>
         </div>
       </div>

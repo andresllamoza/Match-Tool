@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -58,16 +57,23 @@ class Local5500Adapter:
         return True, None
 
     @classmethod
+    def from_employer_index(cls) -> Local5500Adapter | None:
+        """Bundled ~89k-employer index — real lookups with no DOL download."""
+        from .employer_index import EmployerIndexAdapter
+
+        csv_path = Path(__file__).resolve().parents[1] / "data" / "employer_rk_index.csv"
+        index = EmployerIndexAdapter.from_csv(csv_path)
+        return cls(index.lookup) if index else None
+
+    @classmethod
     def from_matcher(cls, repo_root: Path | None = None) -> Local5500Adapter:
-        ok, missing = cls.matcher_deps_available()
+        ok, _missing = cls.matcher_deps_available()
         if not ok:
             return cls.from_synthetic()
 
         root = repo_root or Path(__file__).resolve().parents[2]
         if not master_cache_available(root):
-            raise FileNotFoundError(
-                "recordkeeper_master.csv not present — use EmployerIndexAdapter on Streamlit Cloud"
-            )
+            return cls.from_employer_index() or cls.from_synthetic()
         if str(root) not in sys.path:
             sys.path.insert(0, str(root))
 

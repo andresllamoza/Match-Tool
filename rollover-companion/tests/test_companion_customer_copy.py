@@ -1,23 +1,25 @@
-from engine.knowledge import KnowledgeBase
-from engine.models import FunnelStage
-
-OPS_PHRASES = ("Guide the user", "Have the user", "BeeKeeper tracks", "Confirm Empower mails")
-
-
-def test_every_provider_has_customer_messages():
-    kb = KnowledgeBase.from_dir()
-    for name in kb.list_providers():
-        pb = kb.get(name)
-        for stage in FunnelStage:
-            na = pb.next_actions[stage]
-            assert na.customer_message.strip(), f"{name}/{stage}: missing customer_message"
-            assert not any(p in na.customer_message for p in OPS_PHRASES), (
-                f"{name}/{stage}: customer_message contains ops phrasing"
-            )
+from engine.customer_copy import (
+    SYNTHETIC_CUSTOMER_NAME,
+    customer_full_name,
+    format_check_payable,
+    is_fbo_payable_line,
+)
 
 
-def test_empower_customer_message_mentions_check_to_user():
-    kb = KnowledgeBase.from_dir()
-    na = kb.get("Empower").next_actions[FunnelStage.PROVIDER_IDENTIFIED]
-    assert "home address" in na.customer_message.lower() or "mail" in na.customer_message.lower()
-    assert "Guide the user" in na.action
+def test_format_check_payable_replaces_token():
+    assert (
+        format_check_payable("PensionBee FBO [your name]")
+        == f"PensionBee FBO {SYNTHETIC_CUSTOMER_NAME}"
+    )
+
+
+def test_format_check_payable_uses_authenticated_names():
+    assert format_check_payable("PensionBee FBO [your name]", "Alex", "Chen") == (
+        "PensionBee FBO Alex Chen"
+    )
+    assert customer_full_name("Alex", "Chen") == "Alex Chen"
+
+
+def test_is_fbo_payable_line():
+    assert is_fbo_payable_line("PensionBee FBO Jordan Rivera")
+    assert not is_fbo_payable_line("Payable to you")

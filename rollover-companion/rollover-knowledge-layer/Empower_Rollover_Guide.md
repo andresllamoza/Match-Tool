@@ -63,6 +63,7 @@ steps:
 edge_cases:
   - "Notary requirement on some plans (escalate; virtual notary support available)."
   - "Check mails to the user, not PensionBee — a common source of user confusion. Set expectation explicitly."
+  - "If the check arrives payable to YOU personally (not 'PensionBee FBO …'), stop — that's a withdrawal/cashout, not a rollover, and taxes/penalties may apply. Don't cash it; contact your BeeKeeper."
 
 escalation_triggers:
   - id: notary_required
@@ -124,7 +125,7 @@ call_script:
       answer: "Pre-tax → Traditional IRA. Roth → Roth IRA."
       source_status: verified
     - question: "Who should the check be payable to?"
-      answer: "Payable to you (participant); you forward to PensionBee at PO Box 72, New York, NY 10272."
+      answer: "Payable to PensionBee FBO [your name] — that keeps it a direct rollover. Mail it to my address on file; I'll forward it to PensionBee."
       source_status: verified
   check_payable: "PensionBee FBO [your name]"
   mailing_address: "Your address on file (then forward to PensionBee)"
