@@ -15,7 +15,7 @@ Done:
 
 Skipped + why:
 - `cursor/premium-channel-step-9f5f` merge — **skipped**; demo branch already contained channel-step polish; separate merge not needed after `discovery-front-door-demo-9f5f` landed
-- `DEMO_SCRIPT_COMPANION.md` end-to-end on live URL — **not run** (no live Streamlit Cloud access from agent); local boot + Walmart→Merrill Lynch phone FBO assertion passed
+- `DEMO_SCRIPT_COMPANION.md` end-to-end on live URL — **not run** (no live Streamlit Cloud access from agent); local boot + Citigroup (employer "Citi")→Alight phone FBO assertion passed
 - 390px visual QA matrix — **not run** in browser tonight; CSS tokens and FBO card components present; recommend Andres spot-check on phone before room
 
 Rubric score: **8/8 PASS**
@@ -30,7 +30,7 @@ Rubric score: **8/8 PASS**
 
 Demo notes:
 - **Reboot Streamlit Cloud** after pull — entry path `discovery-front-door/app.py`; optional env `USE_SYNTHETIC=1`
-- **Walkthrough (phone FBO card):** **Walmart** → Merrill Lynch → can log in → pre-tax → **phone** → confirm **Make the check payable to — exactly** shows `PensionBee FBO <name>`. Other QA paths: **Target**→online (Alight), **Costco**→disambiguation.
+- **Walkthrough:** Employer **Citigroup** (type `Citi`) → recordkeeper **Alight Solutions** → online RolloverCentral path, or **phone** for FBO card (`PensionBee FBO <name>`). Also: **Target**→Alight online · **Walmart**→Merrill Lynch (check-to-participant) · **Costco**→disambiguation. "Citi" is the employer name, not a provider.
 - Fidelity/Merrill phone numbers were **wrong in the branch**; corrected on main tonight — pull before demo
 - Fallback surface if Cloud misbehaves: `rollover-companion/sandbox/app.py` (same engine + knowledge)
 - Briefs now in repo: `rollover-companion/CURSOR_OVERNIGHT.md`, `rollover-companion/CURSOR_PHASE2.md`
