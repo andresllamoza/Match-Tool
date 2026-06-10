@@ -1,15 +1,8 @@
 {
   "name": "match-tool",
   "private": true,
-  "description": "Monorepo root. Vercel Root Directory: web (recommended) or leave empty with vercel-build below.",
-  "workspaces": [
-    "web"
-  ],
+  "description": "Vercel: set Root Directory to web (see web/package.json for Next.js app)",
   "dependencies": {
     "next": "14.2.35"
-  },
-  "scripts": {
-    "build": "npm run build --workspace=web",
-    "vercel-build": "npm ci --prefix web && npm run build --prefix web"
   }
 }
