@@ -40,4 +40,4 @@ def test_empower_phone_payable_is_fbo(engine):
 def test_resolve_check_payable_default_name(engine):
     ctx = engine.start()
     payable = resolve_check_payable(engine.knowledge, ctx)
-    assert payable == "PensionBee FBO your name"
+    assert payable == "PensionBee FBO Jordan Rivera"
