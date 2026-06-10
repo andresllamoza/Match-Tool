@@ -100,12 +100,14 @@ access_recovery:
       owner: user
       source_status: verified
   lockout_fallback:
+    # phone verified 2026-06-10 — https://www.principal.com/service-and-support (401k participants: 800-547-7754)
     phone: "800-547-7754"
     what_to_say: "I need help accessing my Principal 401(k) to request a rollover."
     owner: user
     source_status: verified
 
 call_script:
+  # phone verified 2026-06-10 — https://www.principal.com/service-and-support (401k participants: 800-547-7754)
   phone: "800-547-7754"
   intro: "Call Principal and request a direct rollover to PensionBee mailed to the financial institution. Use general PensionBee payable and mailing when asked."
   steps:

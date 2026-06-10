@@ -96,12 +96,14 @@ access_recovery:
       owner: user
       source_status: reconstructed
   lockout_fallback:
+    # phone verified 2026-06-10 — https://www.voya.com/contact-us (Retirement Readiness Service Center: 800-584-6001)
     phone: "800-584-6001"
     what_to_say: "I need help accessing my former employer 401(k) and may need phone verification for a rollover."
     owner: user
     source_status: verified
 
 call_script:
+  # phone verified 2026-06-10 — https://www.voya.com/contact-us (Retirement Readiness Service Center: 800-584-6001)
   phone: "800-584-6001"
   intro: "Call Voya to request a direct rollover — some plans require phone verification before the check releases."
   steps:

@@ -97,12 +97,14 @@ access_recovery:
       owner: user
       source_status: reconstructed
   lockout_fallback:
+    # phone verified 2026-06-10 — https://corporate.vanguard.com/content/corporatesite/us/en/corp/contact-us.html (retirement plan participants: 800-523-1188)
     phone: "800-523-1188"
     what_to_say: "I need help accessing my former employer 401(k) to request a rollover."
     owner: user
     source_status: verified
 
 call_script:
+  # phone verified 2026-06-10 — https://corporate.vanguard.com/content/corporatesite/us/en/corp/contact-us.html (retirement plan participants: 800-523-1188)
   phone: "800-523-1188"
   intro: "Call Vanguard and request a direct rollover from your old 401(k) to an external IRA."
   steps:

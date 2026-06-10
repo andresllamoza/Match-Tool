@@ -106,13 +106,15 @@ access_recovery:
       owner: user
       source_status: reconstructed
   lockout_fallback:
-    phone: "800-835-5099"
+    # phone verified 2026-06-10 — https://www.fidelity.com/customer-service/phone-numbers/overview (NetBenefits: 800-835-5095)
+    phone: "800-835-5095"
     what_to_say: "I need help accessing my former employer 401(k) in NetBenefits to start a rollover."
     owner: user
     source_status: verified
 
 call_script:
-  phone: "800-835-5099"
+  # phone verified 2026-06-10 — https://www.fidelity.com/customer-service/phone-numbers/overview (NetBenefits: 800-835-5095)
+  phone: "800-835-5095"
   intro: "Call Fidelity NetBenefits and say you want to roll over your old 401(k) to an IRA."
   steps:
     - text: "Confirm your identity (name, SSN, employer/plan)."

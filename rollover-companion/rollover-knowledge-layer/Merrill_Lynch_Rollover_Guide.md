@@ -110,13 +110,15 @@ access_recovery:
       owner: user
       source_status: verified
   lockout_fallback:
-    phone: "800-228-6457"
+    # phone verified 2026-06-10 — https://www.benefits.ml.com/ (Retirement & Benefits Contact Center: 800-228-4015)
+    phone: "800-228-4015"
     what_to_say: "I need help accessing my Merrill 401(k) to request a rollover."
     owner: user
     source_status: verified
 
 call_script:
-  phone: "800-228-6457"
+  # phone verified 2026-06-10 — https://www.benefits.ml.com/ (Retirement & Benefits Contact Center: 800-228-4015)
+  phone: "800-228-4015"
   intro: "Call Merrill and request a direct rollover to PensionBee. If portal steps fail, use general PensionBee payable and mailing instructions."
   steps:
     - text: "Confirm identity and request a direct rollover to an external IRA at PensionBee."

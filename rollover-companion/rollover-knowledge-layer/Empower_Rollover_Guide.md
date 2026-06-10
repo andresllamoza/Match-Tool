@@ -102,12 +102,14 @@ access_recovery:
       owner: user
       source_status: reconstructed
   lockout_fallback:
+    # phone verified 2026-06-10 — https://plan.empower-retirement.com/static/PlanApple/html/preLoginContactUs.html (Corporate 401k: 800-338-4015)
     phone: "800-338-4015"
     what_to_say: "I need help accessing my former employer 401(k) to request a rollover."
     owner: user
     source_status: verified
 
 call_script:
+  # phone verified 2026-06-10 — https://plan.empower-retirement.com/static/PlanApple/html/preLoginContactUs.html (Corporate 401k: 800-338-4015)
   phone: "800-338-4015"
   intro: "Call Empower and say you want a direct rollover from your old 401(k) to an external IRA."
   steps:
