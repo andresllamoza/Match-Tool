@@ -12,5 +12,5 @@ headless = true
 gatherUsageStats = false
 
 [client]
-toolbarMode = "hidden"
+toolbarMode = "minimal"
 showSidebarNavigation = true
