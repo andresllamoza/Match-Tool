@@ -71,6 +71,7 @@ def test_lookup_employer_batch_no_crash(engine, employer: str):
         "Target",
         "Citi",
         "FedEx Corporation",
+        "google",
         "Uncovered Demo Corp",
         "Northwind Traders",
     ],

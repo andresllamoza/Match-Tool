@@ -357,8 +357,8 @@ class JourneyEngine:
         if ctx.state == JourneyState.PROVIDER_UNKNOWN:
             promo = self.knowledge.general_guide.promo
             headline = "Let's find your old 401(k)"
-            body = f"{promo.find_message}\n\n{self.knowledge.general_guide.employer_vs_provider_note}"
-            primary = "Search by employer or provider"
+            body = promo.find_message
+            primary = "Search by employer"
             secondary = ["I know my 401(k) provider"]
             return JourneyScreen(
                 journey_id=ctx.journey_id,

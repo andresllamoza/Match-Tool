@@ -8,7 +8,7 @@ Pages (sidebar):
   • Home (app.py) — full guided rollover journey
   • Find & value reveal — optional pre-signup employer lookup + 1% match teaser
 
-Streamlit Cloud: set USE_SYNTHETIC=1 in secrets, then reboot after deploys.
+No secrets or env vars required — deploy and run as-is on Streamlit Cloud.
 """
 
 from __future__ import annotations

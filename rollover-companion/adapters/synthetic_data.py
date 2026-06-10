@@ -1,4 +1,12 @@
 SYNTHETIC_EMPLOYERS: list[dict] = [
+    {
+        "employer": "Google LLC",
+        "matcher": "Vanguard",
+        "advizorpro": "Vanguard",
+        "aliases": ["google", "alphabet", "alphabet inc"],
+        "matcher_confidence": 1.0,
+        "matcher_label": "High",
+    },
     {"employer": "Amazon.com Services LLC", "matcher": "Fidelity", "advizorpro": "Fidelity"},
     {"employer": "Walmart Inc", "matcher": "Merrill Lynch", "advizorpro": "Merrill Lynch", "aliases": ["walmart"]},
     {"employer": "Amazon", "matcher": "Fidelity", "advizorpro": "Fidelity", "aliases": ["amazon"]},

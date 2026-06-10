@@ -376,8 +376,10 @@ def inject_brand_css() -> None:
 
     /* Primary CTA — charcoal (form submit + type=primary) */
     [data-testid="stFormSubmitButton"] > button,
+    [data-testid="stFormSubmitButton"] button,
     .stButton > button[kind="primary"],
-    .stButton > button[data-testid="stBaseButton-primary"] {{
+    .stButton > button[data-testid="stBaseButton-primary"],
+    form button[data-testid="baseButton-primary"] {{
         width: 100% !important;
         min-height: 3.5rem !important;
         border-radius: 0.75rem !important;
@@ -387,6 +389,11 @@ def inject_brand_css() -> None:
         font-size: 1rem !important;
         border: none !important;
         box-shadow: 0 2px 8px rgba(17, 17, 17, 0.15) !important;
+    }}
+    [data-testid="stFormSubmitButton"] > button:disabled,
+    [data-testid="stFormSubmitButton"] button:disabled {{
+        opacity: 0.65 !important;
+        cursor: wait !important;
     }}
 
     /* Selection blocks — secondary only (explicit kind) */

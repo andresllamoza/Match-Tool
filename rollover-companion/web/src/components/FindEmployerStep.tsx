@@ -35,12 +35,12 @@ export function FindEmployerStep({
           Find your old 401(k)
         </h1>
         <p className="mb-6 text-base leading-relaxed text-bee-muted">
-          Tell us your former employer or plan provider. We&apos;ll handle the lookup to locate
-          the exact distribution details required by your old custodian.
+          Tell us your former employer. We&apos;ll match you to the 401(k) provider and guide you
+          through login, rollover, or a phone call.
         </p>
 
         <label htmlFor="employer-find" className="mb-2 block text-sm font-semibold text-bee-charcoal">
-          Former employer or plan provider
+          Former employer
         </label>
         <input
           id="employer-find"
@@ -52,7 +52,7 @@ export function FindEmployerStep({
               onSearch();
             }
           }}
-          placeholder="e.g. Target, FedEx, Walmart"
+          placeholder="e.g. Google, Target, FedEx"
           disabled={loading}
           className="mb-4 h-14 w-full rounded-xl border border-bee-border bg-white px-4 text-lg text-bee-charcoal shadow-none outline-none transition-all placeholder:text-bee-muted/70 hover:border-bee-charcoal focus:border-2 focus:border-bee-charcoal focus:ring-0 disabled:opacity-50"
         />

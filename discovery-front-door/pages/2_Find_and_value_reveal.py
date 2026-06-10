@@ -50,15 +50,17 @@ US_STATES = [
 
 @st.cache_resource
 def _build_flow() -> DiscoveryFlow:
-    use_synthetic = os.environ.get("USE_SYNTHETIC") == "1"
     matcher_ready, _ = Local5500Adapter.matcher_deps_available()
-    if use_synthetic or not matcher_ready:
-        adv, matcher = build_adapters()
-    else:
-        from discovery.adapters.advizorpro import AdvizorProAdapter
+    if matcher_ready:
+        try:
+            from discovery.adapters.advizorpro import AdvizorProAdapter
 
-        adv = AdvizorProAdapter()
-        matcher = Local5500Adapter.from_matcher(ROOT.parent)
+            adv = AdvizorProAdapter()
+            matcher = Local5500Adapter.from_matcher(ROOT.parent)
+            return DiscoveryFlow(adv, matcher, KnowledgeBridge.from_dir(ROOT))
+        except Exception:
+            pass
+    adv, matcher = build_adapters()
     return DiscoveryFlow(adv, matcher, KnowledgeBridge.from_dir(ROOT))
 
 
