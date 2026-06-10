@@ -17,7 +17,15 @@ export function AgentViewSurface() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-8 pb-surface-card">
+      <div
+        className={`flex flex-col gap-8 pb-surface-card transition-all duration-300 ${
+          controller.escalationActive
+            ? "animate-pulse-border rounded-2xl border-2 border-amber-400/80"
+            : ""
+        }`}
+        onClick={controller.escalationActive ? () => controller.clearEscalationAlert() : undefined}
+        role={controller.escalationActive ? "alert" : undefined}
+      >
         <header className="border-b border-[#EAE5DC] pb-6">
           <p className="text-xs font-bold uppercase tracking-wider text-[#6B6560]">
             BeeKeeper administration
@@ -25,10 +33,20 @@ export function AgentViewSurface() {
           <p className="mt-2 text-sm leading-relaxed text-[#555555]">
             Live engine mirror — actions in Surface 1 update this panel instantly.
           </p>
+          {controller.escalationActive && (
+            <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
+              New handoff — customer requested a BeeKeeper on step{" "}
+              {(controller.stalledStep ?? controller.data?.step_index ?? 0) + 1}.
+            </p>
+          )}
         </header>
 
         {controller.data ? (
-          <AgentSandboxPanel data={controller.data} />
+          <AgentSandboxPanel
+            data={controller.data}
+            pathHistory={controller.pathHistory}
+            stalledStep={controller.stalledStep}
+          />
         ) : (
           <div className="rounded-2xl border border-[#EAE5DC] bg-[#FAF8F5] px-6 py-8 text-sm text-[#6B6560]">
             Starting shared journey…

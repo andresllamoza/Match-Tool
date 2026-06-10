@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from .customer_copy import SYNTHETIC_CUSTOMER_NAME, format_check_payable
+from .customer_copy import (
+    DEFAULT_FIRST_NAME,
+    DEFAULT_LAST_NAME,
+    customer_full_name,
+    format_check_payable,
+)
 from .knowledge import KnowledgeBase
 from .models import (
     ChannelContext,
@@ -21,10 +26,14 @@ def build_enrichment(
     screen: JourneyScreen,
 ) -> ScreenEnrichment:
     general = knowledge.general_guide
+    first_name = ctx.customer_first_name or DEFAULT_FIRST_NAME
+    last_name = ctx.customer_last_name or DEFAULT_LAST_NAME
     enrichment = ScreenEnrichment(
         mailing_address=general.mailing_address,
         destination_name=general.destination_name,
-        customer_display_name=SYNTHETIC_CUSTOMER_NAME,
+        customer_display_name=customer_full_name(first_name, last_name),
+        customer_first_name=first_name,
+        customer_last_name=last_name,
         general_path=knowledge.is_general_path(ctx),
         requires_tax_selection=_needs_tax_selection(ctx),
         tax_options=_tax_options(knowledge) if _needs_tax_selection(ctx) else [],
@@ -107,8 +116,9 @@ def _channel_context(
     is_general_path: bool,
 ) -> ChannelContext:
     mailing_address = general.mailing_address
-    customer_name = SYNTHETIC_CUSTOMER_NAME
-    payable = general_payable(playbook, mailing_address, customer_name)
+    first_name = ctx.customer_first_name or DEFAULT_FIRST_NAME
+    last_name = ctx.customer_last_name or DEFAULT_LAST_NAME
+    payable = general_payable(playbook, mailing_address, first_name, last_name)
     cs = playbook.call_script
     if ctx.channel == JourneyChannel.PHONE:
         step_text = cs.steps[ctx.step_index].text if ctx.step_index < len(cs.steps) else ""
@@ -120,7 +130,7 @@ def _channel_context(
             say_this=step_text,
             phone=cs.phone,
             intro=cs.intro if ctx.step_index == 0 else None,
-            check_payable=_resolved_payable(cs.check_payable, customer_name),
+            check_payable=_resolved_payable(cs.check_payable, first_name, last_name),
             mailing_address=cs.mailing_address,
             rep_questions=[
                 RepQuestionView(question=q.question, answer=q.answer) for q in cs.rep_questions
@@ -159,14 +169,19 @@ def _channel_context(
 def general_payable(
     playbook,
     mailing_address: str,
-    customer_name: str = SYNTHETIC_CUSTOMER_NAME,
+    first_name: str | None = None,
+    last_name: str | None = None,
 ) -> str:
     if playbook.call_script.check_payable:
-        return format_check_payable(playbook.call_script.check_payable, customer_name)
+        return format_check_payable(playbook.call_script.check_payable, first_name, last_name)
     return f"Payable to PensionBee — mail to {mailing_address}"
 
 
-def _resolved_payable(raw: str | None, customer_name: str) -> str | None:
+def _resolved_payable(
+    raw: str | None,
+    first_name: str | None,
+    last_name: str | None,
+) -> str | None:
     if not raw:
         return None
-    return format_check_payable(raw, customer_name)
+    return format_check_payable(raw, first_name, last_name)

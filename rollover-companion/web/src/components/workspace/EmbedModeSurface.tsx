@@ -70,6 +70,7 @@ export function EmbedModeSurface() {
           </p>
           <div className="overflow-hidden rounded-xl border border-white/10">
             <JourneyFlow
+              key={embedTheme}
               mode="embed"
               theme={embedTheme === "dark" ? "dark" : "minimal"}
               surface="sandbox"

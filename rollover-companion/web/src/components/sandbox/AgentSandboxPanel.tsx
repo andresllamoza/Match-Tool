@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import type { PathHistoryEntry } from "@/lib/pathHistory";
 import type { JourneyResponse } from "@/lib/types";
+import { AgentPathHistoryPanel } from "@/components/AgentPathHistoryPanel";
 
 interface KnowledgeRule {
   title: string;
@@ -10,9 +12,15 @@ interface KnowledgeRule {
 
 interface AgentSandboxPanelProps {
   data: JourneyResponse;
+  pathHistory?: PathHistoryEntry[];
+  stalledStep?: number | null;
 }
 
-export function AgentSandboxPanel({ data }: AgentSandboxPanelProps) {
+export function AgentSandboxPanel({
+  data,
+  pathHistory = [],
+  stalledStep = null,
+}: AgentSandboxPanelProps) {
   const { screen, provider_intel: intel } = data;
   const [openRule, setOpenRule] = useState<number | null>(0);
   const [smsSent, setSmsSent] = useState(false);
@@ -41,6 +49,12 @@ export function AgentSandboxPanel({ data }: AgentSandboxPanelProps) {
 
   return (
     <div className="space-y-4">
+      <AgentPathHistoryPanel
+        data={data}
+        pathHistory={pathHistory}
+        stalledStep={stalledStep}
+      />
+
       <div className="rounded-xl border border-[#F0E6D2] bg-[#FFF9EE] p-4 text-[#111111]">
         <p className="text-xs font-bold uppercase tracking-wider text-[#6B6560]">
           BeeKeeper live context

@@ -3,10 +3,11 @@ export const PAYABLE_NAME_TOKEN = "[your name]";
 
 export function formatCheckPayable(
   template: string,
-  customerName: string = SYNTHETIC_CUSTOMER_NAME
+  firstName: string = "Jordan",
+  lastName: string = "Rivera"
 ): string {
   if (!template) return template;
-  return template.replace(PAYABLE_NAME_TOKEN, customerName);
+  return template.replace(PAYABLE_NAME_TOKEN, `${firstName} ${lastName}`.trim());
 }
 
 export function isFboPayableLine(text: string): boolean {

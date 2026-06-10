@@ -18,6 +18,9 @@ import { Button } from "./ui/Button";
 import { SelectionBlock } from "./ui/SelectionBlock";
 import { SourceStatusBadge } from "./ui/SourceStatusBadge";
 import { StepTransition } from "./ui/StepTransition";
+import { EscalationConnecting } from "./EscalationConnecting";
+import { WelcomeBackToast } from "./WelcomeBackToast";
+import { employerSearchError } from "@/lib/validationCopy";
 
 interface JourneyFlowProps {
   mode?: "customer" | "agent" | "embed";
@@ -95,6 +98,7 @@ export function JourneyFlow({
     onPhaseChange,
     autoStart: !externalController,
   });
+  const controller = externalController ?? internalController;
   const {
     data,
     loading,
@@ -108,9 +112,31 @@ export function JourneyFlow({
     setAssistantOpen,
     act,
     setError,
-  } = externalController ?? internalController;
+    resumeOffer,
+    resumeSession,
+    restart,
+    escalationConnecting,
+    validationShake,
+    triggerValidationShake,
+    escalateWithHandshake,
+  } = controller;
 
   const disabled = loading || readOnly;
+
+  if (resumeOffer && !data) {
+    return (
+      <>
+        <div className="min-h-[28rem]" aria-hidden />
+        <WelcomeBackToast
+          providerName={resumeOffer.providerName}
+          stepNumber={resumeOffer.stepNumber}
+          loading={loading}
+          onResume={resumeSession}
+          onStartOver={restart}
+        />
+      </>
+    );
+  }
 
   if (loading && !data) {
     return (
@@ -154,7 +180,8 @@ export function JourneyFlow({
     if (s === "provider_unknown") {
       const name = employerInput.trim();
       if (!name) {
-        setError("Enter your former employer to continue.");
+        setError(employerSearchError(null, true));
+        triggerValidationShake();
         return;
       }
       await act({ type: "lookup", employer: name });
@@ -177,7 +204,7 @@ export function JourneyFlow({
       return;
     }
     if (s === "stuck" && primary.includes("beekeeper")) {
-      await act({ type: "escalate", reason: "stuck_on_step" });
+      await escalateWithHandshake("stuck_on_step");
       return;
     }
     if (s === "access_recovered" && primary.includes("online")) {
@@ -207,7 +234,7 @@ export function JourneyFlow({
   }
 
   async function handleEscalate(reason: string) {
-    await act({ type: "escalate", reason });
+    await escalateWithHandshake(reason);
   }
 
   async function handleHandoff() {
@@ -438,16 +465,17 @@ export function JourneyFlow({
   }
 
   const isFindStep = decision === "employer";
+  const friendlyError = employerSearchError(error, false);
 
   const findStepView = isFindStep ? (
-    <div className="w-full text-left">
-      {error && (
+    <div className={`w-full text-left ${validationShake ? "animate-shake" : ""}`}>
+      {friendlyError && (
         <div
-          className={`mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 ${
+          className={`mb-4 rounded-xl border border-[#EAE5DC] bg-[#FFF9E6] px-5 py-4 text-sm leading-relaxed text-[#1E242B] ${
             isSandbox ? "" : "mx-auto max-w-lg"
           }`}
         >
-          {error}
+          {friendlyError}
         </div>
       )}
       <FindEmployerStep
@@ -474,12 +502,13 @@ export function JourneyFlow({
 
   const journeyCard = (
     <div
-      className={
+      className={`relative ${
         isSandbox
           ? "text-left"
           : `pb-card p-8 sm:p-10 ${theme === "minimal" ? "shadow-none" : "lg:shadow-card-lg"}`
-      }
+      } ${validationShake && !isFindStep ? "animate-shake" : ""}`}
     >
+      {escalationConnecting && <EscalationConnecting />}
       <StepTransition stepKey={stepTransitionKey}>
       {showProgress && !isFindStep && <ProgressSteps current={screen.phase} />}
 
@@ -580,9 +609,9 @@ export function JourneyFlow({
         <TrackPanel enrichment={enrichment} />
       )}
 
-      {error && (
-        <div className="mb-4 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 lg:text-base">
-          {error}
+      {!isFindStep && friendlyError && (
+        <div className="mb-4 rounded-card border border-[#EAE5DC] bg-[#FFF9E6] px-5 py-4 text-sm leading-relaxed text-[#1E242B] lg:text-base">
+          {friendlyError}
         </div>
       )}
 
@@ -639,8 +668,7 @@ export function JourneyFlow({
           open={assistantOpen}
           onClose={() => setAssistantOpen(false)}
           onEscalate={() => {
-            setAssistantOpen(false);
-            act({ type: "escalate", reason: "assistant_handoff" });
+            escalateWithHandshake("assistant_handoff");
           }}
         />
       )}
