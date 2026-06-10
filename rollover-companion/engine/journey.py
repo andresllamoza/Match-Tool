@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Callable, Optional
 
+from .customer_copy import DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME
 from .events import EventLogger
 from .guardrails import collect_triggered_actions, resolve_next_action
 from .knowledge import KnowledgeBase
@@ -118,8 +119,19 @@ class JourneyEngine:
             )
         self.lookup_service = lookup_service
 
-    def start(self) -> JourneyContext:
-        return JourneyContext(journey_id=str(uuid.uuid4()))
+    def start(
+        self,
+        *,
+        customer_first_name: str | None = None,
+        customer_last_name: str | None = None,
+    ) -> JourneyContext:
+        # TODO(production): seed customer_first_name / customer_last_name from the
+        # authenticated PensionBee account session (legal name on file post-signup).
+        return JourneyContext(
+            journey_id=str(uuid.uuid4()),
+            customer_first_name=customer_first_name or DEFAULT_FIRST_NAME,
+            customer_last_name=customer_last_name or DEFAULT_LAST_NAME,
+        )
 
     def _transition(
         self,
