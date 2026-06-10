@@ -96,6 +96,14 @@ def test_handoff_and_access_blocked_buttons():
     assert r3.json()["screen"]["state"] == "access_recovered"
 
 
+def test_go_back_button():
+    jid = _start()
+    _act(jid, {"type": "lookup", "employer": "Target"})
+    r = _act(jid, {"type": "go_back"})
+    assert r.status_code == 200
+    assert r.json()["screen"]["state"] == "provider_unknown"
+
+
 def test_agent_intel_on_lookup():
     jid = _start(agent=True)
     r = _act(jid, {"type": "lookup", "employer": "Walmart"}, agent=True)

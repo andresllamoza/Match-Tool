@@ -41,6 +41,7 @@ class ActionRequest(BaseModel):
         "mark_complete",
         "escalate",
         "resume",
+        "go_back",
         "ask",
         "tax_type",
         "handoff",
