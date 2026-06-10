@@ -1,5 +1,5 @@
-import { CustomerPageClient } from "@/components/CustomerPageClient";
+import { redirect } from "next/navigation";
 
 export default function CustomerPage() {
-  return <CustomerPageClient />;
+  redirect("/app");
 }

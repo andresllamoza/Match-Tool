@@ -38,6 +38,8 @@ interface JourneyFlowProps {
   readOnly?: boolean;
   hideAssistant?: boolean;
   channelSurface?: ChannelSurface;
+  /** When true, sticky shell footer owns primary/secondary actions. */
+  externalShell?: boolean;
 }
 
 function resolveDecisionMode(
@@ -82,6 +84,7 @@ export function JourneyFlow({
   readOnly = false,
   hideAssistant = false,
   channelSurface: channelSurfaceOverride,
+  externalShell = false,
 }: JourneyFlowProps) {
   const isSandbox = surface === "sandbox";
   const isAgent = mode === "agent";
@@ -606,7 +609,7 @@ export function JourneyFlow({
         </div>
       )}
 
-      {decision !== "done" && !isFindStep && !readOnly && (
+      {decision !== "done" && !isFindStep && !readOnly && !externalShell && (
         <div className="mt-8 space-y-4">
           {renderDecision()}
           {!hideAssistant && (

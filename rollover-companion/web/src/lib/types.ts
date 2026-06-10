@@ -94,6 +94,15 @@ export interface JourneyScreen {
   sla_note: string | null;
 }
 
+export interface HistorySnapshot {
+  state: JourneyState;
+  provider: string | null;
+  channel: string | null;
+  step_index: number;
+  flags: Record<string, boolean>;
+  tax_fund_type?: string | null;
+}
+
 export interface JourneyContext {
   journey_id: string;
   state: JourneyState;
@@ -109,6 +118,7 @@ export interface JourneyContext {
   uncovered_provider?: string | null;
   customer_first_name?: string | null;
   customer_last_name?: string | null;
+  history_stack?: HistorySnapshot[];
 }
 
 export interface JourneyResponse {

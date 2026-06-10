@@ -68,6 +68,8 @@ def dispatch_action(ctx: JourneyContext, body: dict[str, Any]) -> JourneyScreen 
             screen = engine.take_handoff(ctx, body.get("reason") or "provider_not_covered")
         elif action_type == "resume":
             screen = engine.resume_from_stuck(ctx)
+        elif action_type == "go_back":
+            screen = engine.go_back(ctx)
         elif action_type == "ask":
             question = body.get("question")
             if not question:
