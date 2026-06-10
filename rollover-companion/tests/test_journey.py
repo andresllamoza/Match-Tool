@@ -124,6 +124,39 @@ def test_journey_events_logged(engine, tmp_logs):
     assert record["provider"] == "Fidelity"
 
 
+def test_go_back_restores_prior_snapshots(engine, tmp_logs):
+    ctx = engine.start()
+    engine.set_provider_direct(ctx, "Fidelity")
+    engine.submit_access(ctx, can_login=True)
+    engine.submit_tax_type(ctx, "pre_tax")
+    engine.choose_channel(ctx, JourneyChannel.ONLINE)
+    expected = engine._snapshot(ctx)
+    engine.advance_step(ctx, "done")
+    engine.advance_step(ctx, "done")
+    assert ctx.step_index == 2
+
+    engine.go_back(ctx)
+    engine.go_back(ctx)
+    assert ctx.state == expected.state
+    assert ctx.provider == expected.provider
+    assert ctx.channel == expected.channel
+    assert ctx.step_index == expected.step_index
+    assert ctx.flags == expected.flags
+    assert ctx.tax_fund_type == expected.tax_fund_type
+
+    lines = [json.loads(ln) for ln in tmp_logs.journey_path.read_text().strip().splitlines()]
+    back_events = [r for r in lines if r.get("action") == "back"]
+    assert len(back_events) == 2
+
+
+def test_go_back_noop_when_empty(engine):
+    ctx = engine.start()
+    screen = engine.go_back(ctx)
+    assert ctx.state == JourneyState.PROVIDER_UNKNOWN
+    assert screen.state == JourneyState.PROVIDER_UNKNOWN
+    assert ctx.history_stack == []
+
+
 def test_lookup_logs_comparison(engine, tmp_logs):
     ctx = engine.start()
     engine.lookup_employer(ctx, "Amazon.com Services LLC")

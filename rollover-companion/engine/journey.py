@@ -12,6 +12,7 @@ from .models import (
     ConfidenceTier,
     FunnelStage,
     GuidanceItem,
+    HistorySnapshot,
     JourneyChannel,
     JourneyContext,
     JourneyPhase,
@@ -119,6 +120,54 @@ class JourneyEngine:
             )
         self.lookup_service = lookup_service
 
+    def _snapshot(self, ctx: JourneyContext) -> HistorySnapshot:
+        return HistorySnapshot(
+            state=ctx.state,
+            provider=ctx.provider,
+            channel=ctx.channel,
+            step_index=ctx.step_index,
+            flags=dict(ctx.flags),
+            tax_fund_type=ctx.tax_fund_type,
+            employer_query=ctx.employer_query,
+            disambiguation_question=ctx.disambiguation_question,
+            disambiguation_options=list(ctx.disambiguation_options),
+            uncovered_provider=ctx.uncovered_provider,
+            stuck_count=ctx.stuck_count,
+        )
+
+    def _push_history(self, ctx: JourneyContext) -> None:
+        ctx.history_stack.append(self._snapshot(ctx))
+        if len(ctx.history_stack) > 50:
+            ctx.history_stack = ctx.history_stack[-50:]
+
+    def _restore_snapshot(self, ctx: JourneyContext, snap: HistorySnapshot) -> None:
+        ctx.state = snap.state
+        ctx.provider = snap.provider
+        ctx.channel = snap.channel
+        ctx.step_index = snap.step_index
+        ctx.flags = dict(snap.flags)
+        ctx.tax_fund_type = snap.tax_fund_type
+        ctx.employer_query = snap.employer_query
+        ctx.disambiguation_question = snap.disambiguation_question
+        ctx.disambiguation_options = list(snap.disambiguation_options)
+        ctx.uncovered_provider = snap.uncovered_provider
+        ctx.stuck_count = snap.stuck_count
+
+    def go_back(self, ctx: JourneyContext) -> JourneyScreen:
+        if not ctx.history_stack:
+            return self.render(ctx)
+        snap = ctx.history_stack.pop()
+        self._restore_snapshot(ctx, snap)
+        self.event_logger.log_journey(
+            state=ctx.state,
+            provider=ctx.provider,
+            channel=ctx.channel,
+            action="back",
+            outcome=ctx.state.value,
+            journey_id=ctx.journey_id,
+        )
+        return self.render(ctx)
+
     def start(
         self,
         *,
@@ -157,6 +206,7 @@ class JourneyEngine:
         return ctx
 
     def lookup_employer(self, ctx: JourneyContext, employer_name: str) -> JourneyScreen:
+        self._push_history(ctx)
         outcome = self.lookup_service.lookup(employer_name)
         ctx.employer_query = employer_name
         ctx.disambiguation_question = outcome.disambiguation_question
@@ -186,6 +236,7 @@ class JourneyEngine:
         return self.render(ctx)
 
     def set_provider_direct(self, ctx: JourneyContext, provider_name: str) -> JourneyScreen:
+        self._push_history(ctx)
         ctx.provider = self.lookup_service.resolve_provider_direct(provider_name)
         ctx.disambiguation_question = None
         ctx.disambiguation_options = []
@@ -193,6 +244,7 @@ class JourneyEngine:
         return self.render(ctx)
 
     def disambiguate(self, ctx: JourneyContext, answer: str) -> JourneyScreen:
+        self._push_history(ctx)
         answer_lower = answer.strip().lower()
         if answer_lower in {"former employer", "employer"}:
             ctx.disambiguation_question = "What was your former employer's name?"
@@ -217,6 +269,7 @@ class JourneyEngine:
         return self.render(ctx)
 
     def submit_access(self, ctx: JourneyContext, can_login: bool) -> JourneyScreen:
+        self._push_history(ctx)
         action = "can_access_yes" if can_login else "can_access_no"
         self._transition(ctx, action, "access_check")
         return self.render(ctx)
@@ -224,15 +277,17 @@ class JourneyEngine:
     def submit_access_recovered(self, ctx: JourneyContext) -> JourneyScreen:
         if ctx.state != JourneyState.ACCESS_BLOCKED:
             raise InvalidTransitionError("access_recovered only valid from access_blocked")
+        self._push_history(ctx)
         self._transition(ctx, "access_recovered", "credentials_restored")
         return self.render(ctx)
 
     def submit_tax_type(self, ctx: JourneyContext, tax_type: str) -> JourneyScreen:
         if ctx.state != JourneyState.ACCESS_RECOVERED:
             raise InvalidTransitionError("tax_type only valid from access_recovered")
+        self._push_history(ctx)
         if tax_type == "pre_tax_to_roth":
             ctx.flags["pre_tax_to_roth"] = True
-            return self.escalate(ctx, "taxable_conversion_block")
+            return self.escalate(ctx, "taxable_conversion_block", record_history=False)
         ctx.tax_fund_type = tax_type
         self.event_logger.log_journey(
             state=ctx.state,
@@ -247,6 +302,7 @@ class JourneyEngine:
     def choose_channel(self, ctx: JourneyContext, channel: JourneyChannel) -> JourneyScreen:
         if not ctx.tax_fund_type:
             raise InvalidTransitionError("Select fund type before choosing a channel")
+        self._push_history(ctx)
         ctx.channel = channel
         ctx.step_index = 0
         action_map = {
@@ -278,10 +334,11 @@ class JourneyEngine:
         )
 
     def advance_step(self, ctx: JourneyContext, outcome: str) -> JourneyScreen:
+        self._push_history(ctx)
         if outcome == "stuck":
             ctx.stuck_count += 1
             if ctx.stuck_count >= 2:
-                return self.escalate(ctx, "stuck_twice")
+                return self.escalate(ctx, "stuck_twice", record_history=False)
             prev_channel = ctx.channel
             self._transition(ctx, "step_stuck", "user_stuck")
             ctx.channel = prev_channel
@@ -304,14 +361,18 @@ class JourneyEngine:
         return self.render(ctx)
 
     def confirm_in_flight(self, ctx: JourneyContext) -> JourneyScreen:
+        self._push_history(ctx)
         self._transition(ctx, "confirm_in_flight", "tracking_started")
         return self.render(ctx)
 
     def mark_complete(self, ctx: JourneyContext) -> JourneyScreen:
+        self._push_history(ctx)
         self._transition(ctx, "mark_complete", "funds_received")
         return self.render(ctx)
 
-    def escalate(self, ctx: JourneyContext, reason: str) -> JourneyScreen:
+    def escalate(self, ctx: JourneyContext, reason: str, *, record_history: bool = True) -> JourneyScreen:
+        if record_history:
+            self._push_history(ctx)
         ctx.flags["escalated"] = True
         self.log_handoff_taken(ctx, reason)
         self._transition(ctx, "escalate", reason)
@@ -320,20 +381,23 @@ class JourneyEngine:
     def take_handoff(self, ctx: JourneyContext, reason: str = "provider_not_covered") -> JourneyScreen:
         if ctx.state != JourneyState.PROVIDER_NOT_COVERED:
             raise InvalidTransitionError("handoff only valid from provider_not_covered")
+        self._push_history(ctx)
         self.log_handoff_offered(ctx, reason)
         self.log_handoff_taken(ctx, reason)
         self._transition(ctx, "handoff", reason)
         return self.render(ctx)
 
     def set_flag(self, ctx: JourneyContext, flag: str, value: bool = True) -> JourneyScreen:
+        self._push_history(ctx)
         ctx.flags[flag] = value
         if flag == "pre_tax_to_roth" and value:
-            return self.escalate(ctx, "taxable_conversion_block")
+            return self.escalate(ctx, "taxable_conversion_block", record_history=False)
         return self.render(ctx)
 
     def resume_from_stuck(self, ctx: JourneyContext) -> JourneyScreen:
         if ctx.state != JourneyState.STUCK:
             raise InvalidTransitionError("resume only valid from stuck")
+        self._push_history(ctx)
         channel = ctx.channel or JourneyChannel.ONLINE
         action_map = {
             JourneyChannel.ONLINE: "resume_online",

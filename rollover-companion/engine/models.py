@@ -286,6 +286,22 @@ class JourneyEvent(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class HistorySnapshot(BaseModel):
+    """Prior navigation point for go_back — fields that change on forward transitions."""
+
+    state: JourneyState
+    provider: Optional[str] = None
+    channel: Optional[JourneyChannel] = None
+    step_index: int = 0
+    flags: dict[str, bool] = Field(default_factory=dict)
+    tax_fund_type: Optional[str] = None
+    employer_query: Optional[str] = None
+    disambiguation_question: Optional[str] = None
+    disambiguation_options: list[str] = Field(default_factory=list)
+    uncovered_provider: Optional[str] = None
+    stuck_count: int = 0
+
+
 class JourneyContext(BaseModel):
     journey_id: str
     state: JourneyState = JourneyState.PROVIDER_UNKNOWN
@@ -303,6 +319,7 @@ class JourneyContext(BaseModel):
     participant_name: Optional[str] = None
     customer_first_name: Optional[str] = None
     customer_last_name: Optional[str] = None
+    history_stack: list[HistorySnapshot] = Field(default_factory=list)
 
 
 class GuidanceItem(BaseModel):
