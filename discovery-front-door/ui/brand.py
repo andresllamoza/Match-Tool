@@ -331,7 +331,27 @@ def inject_brand_css() -> None:
     }}
     .pb-say {{
         border: 2px solid rgba(255, 199, 44, 0.45); border-radius: 12px;
-        padding: 1rem; background: #fff; margin: 0.75rem 0;
+        padding: 1rem 1.1rem; background: #fff; margin: 0.75rem 0;
+    }}
+    .pb-step-kicker {{
+        font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em;
+        text-transform: uppercase; color: {MUTED}; margin: 0 0 0.75rem 0;
+    }}
+    .pb-channel-kicker {{
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: {MUTED}; margin: 0 0 0.35rem 0;
+    }}
+    .pb-channel-action {{
+        font-size: 1.1rem; font-weight: 600; line-height: 1.5;
+        color: {CHARCOAL}; margin: 0;
+    }}
+    .pb-channel-hint {{
+        font-size: 0.88rem; color: {SUBCOPY}; line-height: 1.5; margin: 0.5rem 0;
+    }}
+    .pb-edge-tip {{
+        background: {YELLOW_SOFT}; border: 1px solid rgba(255, 199, 44, 0.35);
+        border-radius: 0.75rem; padding: 0.75rem 1rem; font-size: 0.88rem;
+        color: {INK}; margin-bottom: 0.75rem; line-height: 1.5;
     }}
     .pb-helper {{
         font-size: 0.88rem; color: {MUTED}; line-height: 1.5; margin: 0.35rem 0 1rem;

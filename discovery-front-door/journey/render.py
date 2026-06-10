@@ -172,6 +172,23 @@ def _selection_button(label: str, key: str, description: str | None = None) -> b
     return secondary_button(text, key=key)
 
 
+def _channel_action_label(channel: str) -> str:
+    if channel == "phone":
+        return "Say this"
+    if channel == "forms":
+        return "Fill in this field"
+    return "Do this now"
+
+
+def _show_mailing_details(say_this: str, step_index: int, total_steps: int) -> bool:
+    lower = say_this.lower()
+    if any(w in lower for w in ("check", "payable", "mail", "pensionbee", "destination", "ira")):
+        return True
+    if total_steps <= 0:
+        return False
+    return step_index >= total_steps - 3
+
+
 def _render_channel_context(view: JourneyView) -> None:
     ctx_data = view.enrichment.channel_context
     if not ctx_data:
@@ -179,17 +196,34 @@ def _render_channel_context(view: JourneyView) -> None:
     ch = ctx_data.channel
     if ch == "phone" and ctx_data.phone:
         st.markdown(f"**Call:** [{ctx_data.phone}](tel:{ctx_data.phone})")
+    label = _channel_action_label(ch)
     st.markdown(
-        f'<div class="pb-say"><strong>Say / do this</strong><p style="margin:0.5rem 0 0;font-size:1.05rem;font-weight:600;">'
-        f"{ctx_data.say_this}</p></div>",
+        f'<div class="pb-say">'
+        f'<p class="pb-channel-kicker">{label}</p>'
+        f'<p class="pb-channel-action">{ctx_data.say_this}</p>'
+        f"</div>",
         unsafe_allow_html=True,
     )
-    if ctx_data.check_payable:
-        st.code(f"Check payable to: {ctx_data.check_payable}", language=None)
-    if ctx_data.mailing_address:
-        st.code(f"Mail to: {ctx_data.mailing_address}", language=None)
-    elif view.enrichment.mailing_address:
-        st.code(f"Mail to: {view.enrichment.mailing_address}", language=None)
+    if ctx_data.portal_menu_hints:
+        st.markdown(
+            '<p class="pb-channel-hint"><strong>Look for:</strong> '
+            + " · ".join(ctx_data.portal_menu_hints)
+            + "</p>",
+            unsafe_allow_html=True,
+        )
+    if ctx_data.destination_hints:
+        st.markdown(
+            '<p class="pb-channel-hint"><strong>Destination options:</strong> '
+            + " · ".join(ctx_data.destination_hints)
+            + "</p>",
+            unsafe_allow_html=True,
+        )
+    if _show_mailing_details(ctx_data.say_this, view.step_index, view.total_steps):
+        if ctx_data.check_payable:
+            st.code(f"Check payable to: {ctx_data.check_payable}", language=None)
+        mail = ctx_data.mailing_address or view.enrichment.mailing_address
+        if mail:
+            st.code(f"Mail to: {mail}", language=None)
     if ctx_data.rep_questions:
         with st.expander("If the rep asks…"):
             for q in ctx_data.rep_questions:
@@ -265,7 +299,6 @@ def _render_decisions(view: JourneyView) -> None:
     if state in IN_CHANNEL:
         if view.total_steps > 0:
             st.progress((view.step_index + 1) / view.total_steps)
-            st.caption(f"Step {view.step_index + 1} of {view.total_steps}")
         if primary_button(screen.primary_action, key="channel_done"):
             _go({"type": "step", "outcome": "done"})
         if secondary_button("I'm stuck on this step", key="channel_stuck"):
@@ -405,12 +438,28 @@ def run_journey_app() -> None:
             unsafe_allow_html=True,
         )
 
-    if not is_find_step:
+    if screen.state in IN_CHANNEL and view.enrichment.channel_context:
+        ctx = view.enrichment.channel_context
+        provider = screen.provider or "your provider"
+        channel_label = {"online": "online", "phone": "by phone", "forms": "paper forms"}.get(
+            ctx.channel, ""
+        )
+        st.markdown(
+            f'<p class="pb-step-kicker">Step {view.step_index + 1} of {view.total_steps}'
+            f" · {provider} {channel_label}</p>",
+            unsafe_allow_html=True,
+        )
+        if screen.edge_cases and view.step_index == 0:
+            st.markdown(
+                f'<div class="pb-edge-tip">{screen.edge_cases[0]}</div>',
+                unsafe_allow_html=True,
+            )
+    elif not is_find_step:
         st.markdown(f'<h1 class="pb-headline">{screen.headline}</h1>', unsafe_allow_html=True)
-        if screen.body and screen.state not in IN_CHANNEL:
+        if screen.body:
             st.markdown(f'<p class="pb-body">{screen.body}</p>', unsafe_allow_html=True)
 
-    if screen.edge_cases:
+    if screen.edge_cases and screen.state not in IN_CHANNEL:
         for ec in screen.edge_cases:
             st.warning(ec)
 
