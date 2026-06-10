@@ -214,7 +214,7 @@ def inject_brand_css() -> None:
         text-transform: uppercase;
         color: #9CA3AF;
     }}
-    .pb-step-label.active, .pb-step-label.done {{
+    .pb-step-label.active {{
         color: {CHARCOAL};
     }}
     .pb-step-pill {{

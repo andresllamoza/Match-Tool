@@ -37,9 +37,8 @@ def _render_progress(phase: str, *, variant: str = "default") -> None:
     if variant == "minimal":
         parts = ['<nav class="pb-step-nav" aria-label="Rollover progress">']
         for i, (_, label) in enumerate(PHASES):
-            done = i < idx
             active = i == idx
-            cls = "active" if active else ("done" if done else "")
+            cls = "active" if active else ""
             parts.append(f'<div class="pb-step-item">')
             parts.append(f'<span class="pb-step-label {cls}">{label}</span>')
             if active:
@@ -76,8 +75,8 @@ def _render_find_perk(body: str) -> None:
 
 def _render_find_step(view: JourneyView) -> None:
     screen = view.screen
-    _render_progress(screen.phase.value, variant="minimal")
     st.markdown('<div class="pb-find-shell"><div class="pb-find-card">', unsafe_allow_html=True)
+    _render_progress(screen.phase.value, variant="minimal")
     st.markdown(
         '<h1 class="pb-find-h1">Find your old 401(k)</h1>'
         "<p class=\"pb-find-sub\">Tell us your former employer or plan provider. We'll handle "
