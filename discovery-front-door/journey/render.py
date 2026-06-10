@@ -6,13 +6,6 @@ import html
 
 import streamlit as st
 
-from ui.shell import (  # noqa: E402
-    render_footer,
-    render_top_bar,
-    resolve_footer,
-    show_back_button,
-)
-
 from .engine_bridge import (
     JourneyView,
     apply_action,
@@ -21,6 +14,12 @@ from .engine_bridge import (
     get_session_store,
     list_providers,
     save_context,
+)
+from ui.shell import (  # noqa: E402
+    render_footer,
+    render_top_bar,
+    resolve_footer,
+    show_back_button,
 )
 from ui.channel_step import (  # noqa: E402
     call_card,

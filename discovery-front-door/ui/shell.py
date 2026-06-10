@@ -6,9 +6,26 @@ from dataclasses import dataclass, field
 
 import streamlit as st
 
-from engine.models import JourneyState
-
 from journey.widgets import primary_button, secondary_button, text_link_button
+
+# State values only — no engine import (sys.path is set in engine_bridge).
+_COMPLETE = "complete"
+_ESCALATED = "escalated"
+_PROVIDER_UNKNOWN = "provider_unknown"
+_PROVIDER_IDENTIFIED = "provider_identified"
+_PROVIDER_NOT_COVERED = "provider_not_covered"
+_ACCESS_RECOVERED = "access_recovered"
+_ACCESS_BLOCKED = "access_blocked"
+_ONLINE = "online_in_progress"
+_PHONE = "phone_in_progress"
+_FORMS = "forms_in_progress"
+_STUCK = "stuck"
+_INITIATED = "initiated"
+_IN_FLIGHT = "in_flight"
+
+
+def _state_value(state) -> str:
+    return state.value if hasattr(state, "value") else str(state)
 
 
 @dataclass
@@ -30,11 +47,11 @@ class FooterSpec:
 def show_back_button(view) -> bool:
     ctx = view.ctx
     screen = view.screen
-    if screen.state == JourneyState.COMPLETE:
+    if _state_value(screen.state) == _COMPLETE:
         return False
     if not ctx.history_stack:
         return False
-    if screen.state == JourneyState.PROVIDER_UNKNOWN:
+    if _state_value(screen.state) == _PROVIDER_UNKNOWN:
         if not ctx.employer_query and not ctx.disambiguation_question:
             if not st.session_state.get("employer_draft", "").strip():
                 if not st.session_state.get("show_provider_picker"):
@@ -84,22 +101,20 @@ def render_footer(spec: FooterSpec | None, *, on_action, on_beekeeper) -> None:
 
 def resolve_footer(view, *, find_surface: str | None = None) -> FooterSpec | None:
     """Return sticky-footer actions; None means choice cards in body only."""
-    from journey.engine_bridge import JourneyView  # noqa: F401 — type context
-
     screen = view.screen
     en = view.enrichment
-    state = screen.state
+    state = _state_value(screen.state)
 
-    if state == JourneyState.COMPLETE:
+    if state == _COMPLETE:
         return FooterSpec(
             primary=FooterAction("Start another rollover", {"type": "restart"}, "shell_primary"),
             show_beekeeper=False,
         )
 
-    if state == JourneyState.ESCALATED:
+    if state == _ESCALATED:
         return FooterSpec(show_beekeeper=True)
 
-    if state == JourneyState.PROVIDER_UNKNOWN:
+    if state == _PROVIDER_UNKNOWN:
         return FooterSpec()
 
     if en.requires_tax_selection:
@@ -111,9 +126,9 @@ def resolve_footer(view, *, find_surface: str | None = None) -> FooterSpec | Non
     if screen.disambiguation_question and screen.disambiguation_options:
         return FooterSpec()
 
-    if state in (JourneyState.PROVIDER_IDENTIFIED, JourneyState.PROVIDER_NOT_COVERED):
+    if state in (_PROVIDER_IDENTIFIED, _PROVIDER_NOT_COVERED):
         secondaries: list[FooterAction] = []
-        if state == JourneyState.PROVIDER_NOT_COVERED:
+        if state == _PROVIDER_NOT_COVERED:
             secondaries.append(
                 FooterAction(
                     "Talk to a BeeKeeper about this provider",
@@ -124,16 +139,12 @@ def resolve_footer(view, *, find_surface: str | None = None) -> FooterSpec | Non
             )
         return FooterSpec(secondaries=secondaries)
 
-    if state == JourneyState.ACCESS_RECOVERED and any(
+    if state == _ACCESS_RECOVERED and any(
         "phone" in a.lower() or "form" in a.lower() for a in screen.secondary_actions
     ):
         return FooterSpec()
 
-    if state in {
-        JourneyState.ONLINE_IN_PROGRESS,
-        JourneyState.PHONE_IN_PROGRESS,
-        JourneyState.FORMS_IN_PROGRESS,
-    }:
+    if state in {_ONLINE, _PHONE, _FORMS}:
         label = screen.primary_action or "Done — next step"
         return FooterSpec(
             primary=FooterAction(label, {"type": "step", "outcome": "done"}, "shell_primary"),
@@ -147,7 +158,7 @@ def resolve_footer(view, *, find_surface: str | None = None) -> FooterSpec | Non
             ],
         )
 
-    if state == JourneyState.STUCK:
+    if state == _STUCK:
         return FooterSpec(
             primary=FooterAction(
                 screen.primary_action or "Talk to your BeeKeeper",
@@ -164,7 +175,7 @@ def resolve_footer(view, *, find_surface: str | None = None) -> FooterSpec | Non
             ],
         )
 
-    if state == JourneyState.INITIATED:
+    if state == _INITIATED:
         secondaries = [
             FooterAction(
                 action,
@@ -184,7 +195,7 @@ def resolve_footer(view, *, find_surface: str | None = None) -> FooterSpec | Non
             secondaries=secondaries,
         )
 
-    if state == JourneyState.IN_FLIGHT:
+    if state == _IN_FLIGHT:
         secondaries = [
             FooterAction(
                 action,
@@ -204,7 +215,7 @@ def resolve_footer(view, *, find_surface: str | None = None) -> FooterSpec | Non
             secondaries=secondaries,
         )
 
-    if state == JourneyState.ACCESS_BLOCKED:
+    if state == _ACCESS_BLOCKED:
         secondaries = [
             FooterAction(
                 action,
@@ -224,7 +235,7 @@ def resolve_footer(view, *, find_surface: str | None = None) -> FooterSpec | Non
             secondaries=secondaries,
         )
 
-    if state == JourneyState.ACCESS_RECOVERED:
+    if state == _ACCESS_RECOVERED:
         return FooterSpec(
             primary=FooterAction(
                 screen.primary_action or "Continue",
