@@ -52,6 +52,19 @@ def channel_step_header(
     )
 
 
+def call_card(phone: str) -> str:
+    tel = "".join(ch for ch in phone if ch.isdigit() or ch == "+")
+    return (
+        f'<a class="call-card" href="tel:{_esc(tel)}">'
+        f'<span class="call-card-body">'
+        f'<span class="call-card-kicker">TAP TO CALL</span>'
+        f'<span class="call-card-num">{_esc(phone)}</span>'
+        f"</span>"
+        f'<span class="call-card-glyph" aria-hidden="true">&#9742;</span>'
+        f"</a>"
+    )
+
+
 def call_script_card(channel: str, script: str, *, field_label: str | None = None) -> str:
     intro = _CHANNEL_INTROS.get(channel, "")
     label = field_label if channel == "forms" and field_label else _CHANNEL_LABELS.get(channel, "")

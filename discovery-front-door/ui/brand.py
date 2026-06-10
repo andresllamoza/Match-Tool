@@ -423,20 +423,33 @@ def inject_brand_css() -> None:
         font-size: 1.125rem; font-weight: 600; line-height: 1.55;
         color: {CHARCOAL}; margin: 0;
     }}
-    .pb-phone-cta {{
+    a.call-card, a.call-card:visited, .call-card a, .call-card a:visited {{
+        color: #fff !important;
+        text-decoration: none !important;
+    }}
+    .call-card {{
         display: flex; align-items: center; justify-content: space-between;
         background: {CHARCOAL}; color: #fff; border-radius: 1rem;
-        padding: 1.25rem 1.5rem; text-decoration: none; margin: 0.75rem 0 1.25rem;
+        padding: 1.25rem 1.5rem; margin: 0.75rem 0 1.25rem;
         box-shadow: 0 2px 8px rgba(17, 17, 17, 0.15);
-        transition: all 0.2s ease-out;
+        transition: background 0.2s ease-out;
     }}
-    .pb-phone-cta:hover {{ background: {INK}; color: #fff; }}
-    .pb-phone-cta:active {{ transform: scale(0.98); }}
-    .pb-phone-kicker {{
+    .call-card:hover {{ background: {INK}; }}
+    .call-card:active {{ transform: scale(0.98); }}
+    .call-card-body {{ display: flex; flex-direction: column; }}
+    .call-card-kicker {{
         display: block; font-size: 0.72rem; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: #9CA3AF; margin: 0 0 0.2rem;
     }}
-    .pb-phone-num {{ display: block; font-size: 1.25rem; font-weight: 700; margin-top: 0.15rem; }}
+    .call-card-num {{
+        display: block; font-size: 1.6rem; font-weight: 700;
+        color: #fff; line-height: 1.2;
+    }}
+    .call-card-glyph {{
+        font-size: 1.35rem; color: #fff; line-height: 1; flex-shrink: 0;
+        margin-left: 1rem;
+    }}
     .pb-routing-panel {{
         border-top: 1px solid {BORDER}; margin-top: 1.5rem; padding-top: 2rem;
         display: grid; gap: 1.25rem;

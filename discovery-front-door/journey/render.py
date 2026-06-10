@@ -18,6 +18,7 @@ from .engine_bridge import (
     save_context,
 )
 from ui.channel_step import (  # noqa: E402
+    call_card,
     call_script_card,
     channel_step_header,
     financial_copy_field,
@@ -251,13 +252,7 @@ def _render_channel_context(view: JourneyView) -> None:
     en = view.enrichment
 
     if ch == "phone" and ctx_data.phone:
-        st.markdown(
-            f'<a class="pb-phone-cta" href="tel:{ctx_data.phone}">'
-            f'<span><span class="pb-phone-kicker">Tap to call</span>'
-            f'<span class="pb-phone-num">{ctx_data.phone}</span></span>'
-            f'<span aria-hidden="true">📞</span></a>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(call_card(ctx_data.phone), unsafe_allow_html=True)
 
     st.markdown(
         call_script_card(
