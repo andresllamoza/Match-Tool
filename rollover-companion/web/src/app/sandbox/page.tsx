@@ -1,5 +1,5 @@
-import { SandboxDashboard } from "@/components/sandbox/SandboxDashboard";
+import { ProductionWorkspace } from "@/components/workspace/ProductionWorkspace";
 
 export default function SandboxPage() {
-  return <SandboxDashboard />;
+  return <ProductionWorkspace />;
 }

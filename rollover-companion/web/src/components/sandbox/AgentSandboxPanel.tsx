@@ -15,14 +15,15 @@ interface AgentSandboxPanelProps {
 export function AgentSandboxPanel({ data }: AgentSandboxPanelProps) {
   const { screen, provider_intel: intel } = data;
   const [openRule, setOpenRule] = useState<number | null>(0);
+  const [smsSent, setSmsSent] = useState(false);
 
   const providerStatus = screen.has_reconstructed_content
-    ? "RECONSTRUCTED (Double-check with customer)"
+    ? "RECONSTRUCTED"
     : intel.provider_status
-      ? String(intel.provider_status)
-      : screen.provider || screen.state === "provider_unknown"
-        ? "PENDING LOOKUP"
-        : "VERIFIED";
+      ? String(intel.provider_status).toUpperCase()
+      : screen.provider
+        ? "VERIFIED"
+        : "PENDING LOOKUP";
 
   const escalationTriggers = [
     ...(Array.isArray(intel.escalation_triggers) ? intel.escalation_triggers : []),
@@ -40,43 +41,57 @@ export function AgentSandboxPanel({ data }: AgentSandboxPanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-[#F0E6D2] bg-[#FFF9EE] p-4">
+      <div className="rounded-xl border border-[#F0E6D2] bg-[#FFF9EE] p-4 text-[#111111]">
         <p className="text-xs font-bold uppercase tracking-wider text-[#6B6560]">
           BeeKeeper live context
         </p>
-        <dl className="mt-3 space-y-2 text-sm">
+        <dl className="mt-3 space-y-3 text-sm">
           <div>
             <dt className="font-semibold text-[#111111]">Provider Status</dt>
-            <dd className="text-[#1E242B]">{providerStatus}</dd>
+            <dd className="mt-0.5 font-medium text-[#1E242B]">{providerStatus}</dd>
+            {screen.has_reconstructed_content && (
+              <dd className="mt-1 text-xs text-[#6B6560]">
+                Double-check phone menus with the customer before proceeding.
+              </dd>
+            )}
           </div>
           <div>
             <dt className="font-semibold text-[#111111]">Escalation Triggers</dt>
-            <dd className="text-[#1E242B]">
+            <dd className="mt-0.5 text-[#1E242B]">
               {escalationTriggers.length > 0
-                ? escalationTriggers.map((t) => `[${t}]`).join(" | ")
+                ? escalationTriggers.map((t) => `[${t}]`).join(" · ")
                 : "[None active]"}
             </dd>
           </div>
           <div>
             <dt className="font-semibold text-[#111111]">Agent Action Call Script</dt>
-            <dd className="font-medium text-[#111111]">&ldquo;{agentScript}&rdquo;</dd>
+            <dd className="mt-0.5 font-medium leading-relaxed text-[#111111]">
+              &ldquo;{agentScript}&rdquo;
+            </dd>
           </div>
         </dl>
+        <button
+          type="button"
+          onClick={() => setSmsSent(true)}
+          className="mt-4 h-12 w-full rounded-xl bg-[#111111] text-sm font-semibold text-white transition active:scale-[0.99] hover:bg-[#1E242B]"
+        >
+          {smsSent ? "✓ Access recovery SMS queued" : "Send Access Recovery Instructions (SMS)"}
+        </button>
       </div>
 
-      <div className="rounded-xl border border-[#EAE5DC] bg-white">
+      <div className="overflow-hidden rounded-xl border border-[#EAE5DC] bg-white">
         <div className="border-b border-[#EAE5DC] px-4 py-3">
           <h3 className="text-sm font-bold uppercase tracking-wide text-[#111111]">
-            Agent Knowledge Layer
+            Knowledge Layer scripts
           </h3>
           <p className="mt-0.5 text-xs text-[#6B6560]">
-            Active provider rules pulled from the engine playbook
+            Provider playbook rules from the rollover knowledge layer
           </p>
         </div>
         <div className="divide-y divide-[#EAE5DC]">
           {knowledgeRules.length === 0 ? (
             <p className="px-4 py-4 text-sm text-[#6B6560]">
-              Run an employer lookup to load provider-specific scripts and escalation paths.
+              Run an employer lookup in Surface 1 to load provider-specific scripts.
             </p>
           ) : (
             knowledgeRules.map((rule, i) => {
@@ -86,10 +101,13 @@ export function AgentSandboxPanel({ data }: AgentSandboxPanelProps) {
                   <button
                     type="button"
                     onClick={() => setOpenRule(expanded ? null : i)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-[#111111] hover:bg-[#FAF8F5]"
+                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-[#111111] transition hover:bg-[#FAF8F5]"
+                    aria-expanded={expanded}
                   >
                     <span>{rule.title}</span>
-                    <span className="text-[#6B6560]">{expanded ? "−" : "+"}</span>
+                    <span className="text-[#6B6560]" aria-hidden>
+                      {expanded ? "−" : "+"}
+                    </span>
                   </button>
                   {expanded && (
                     <p className="px-4 pb-4 text-sm leading-relaxed text-[#555555]">{rule.body}</p>

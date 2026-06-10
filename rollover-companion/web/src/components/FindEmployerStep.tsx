@@ -13,6 +13,8 @@ interface FindEmployerStepProps {
   loading?: boolean;
   showKnowProvider?: boolean;
   showPerk?: boolean;
+  /** Inside sandbox/parent card — no nested white shell */
+  embedded?: boolean;
 }
 
 export function FindEmployerStep({
@@ -25,18 +27,22 @@ export function FindEmployerStep({
   loading,
   showKnowProvider,
   showPerk,
+  embedded = false,
 }: FindEmployerStepProps) {
-  return (
-    <div className="mx-auto mt-8 w-full max-w-lg text-left">
-      <div className="rounded-2xl border border-bee-border bg-white p-8 shadow-sm">
+  const content = (
+    <>
         <ProgressSteps current="find" variant="minimal" />
 
-        <h1 className="mb-2 text-3xl font-bold tracking-tight text-bee-charcoal sm:text-4xl">
+        <h1
+          className={`mb-2 font-bold tracking-tight text-bee-charcoal ${
+            embedded ? "text-3xl" : "text-3xl sm:text-4xl"
+          }`}
+        >
           Find your old 401(k)
         </h1>
-        <p className="mb-6 text-base leading-relaxed text-bee-muted">
-          Tell us your former employer. We&apos;ll match you to the 401(k) provider and guide you
-          through login, rollover, or a phone call.
+        <p className="mb-6 text-base leading-relaxed text-[#555555]">
+          Tell us your former employer or plan provider. We&apos;ll handle the lookup to locate
+          your exact routing details.
         </p>
 
         <label htmlFor="employer-find" className="mb-2 block text-sm font-semibold text-bee-charcoal">
@@ -85,8 +91,30 @@ export function FindEmployerStep({
             Ask a question about this step →
           </button>
         </div>
-      </div>
+    </>
+  );
 
+  if (embedded) {
+    return (
+      <div className="w-full text-left">
+        {content}
+        {showPerk && (
+          <div className="mt-6 rounded-xl border border-[#EAE5DC] bg-[#FFF9E6] p-5">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#6B6560]">
+              PensionBee perk
+            </p>
+            <p className="mt-1 text-sm font-semibold leading-relaxed text-[#111111]">
+              Roll your old 401(k) to PensionBee and get a 1% match on eligible transfers.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto mt-8 w-full max-w-lg text-left">
+      <div className="rounded-2xl border border-bee-border bg-white p-8 shadow-sm">{content}</div>
       {showPerk && (
         <div className="mt-4 rounded-xl border border-bee-border bg-[#FFF9E6] p-5">
           <p className="text-xs font-bold uppercase tracking-wider text-bee-muted">PensionBee perk</p>
