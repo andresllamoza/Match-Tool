@@ -118,9 +118,8 @@ def warm_message(title: str, body: str) -> None:
 def error_card() -> None:
     st.markdown(
         """
-<div class="pb-error">
-  <strong>Something went wrong on our side.</strong><br/>
-  A BeeKeeper can help you find your old 401(k) — we're real humans, not a dead end.
+<div class="pb-snag">
+  <strong>We hit a snag loading this</strong> — a BeeKeeper can finish it with you.
 </div>
         """,
         unsafe_allow_html=True,

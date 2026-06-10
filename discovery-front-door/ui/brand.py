@@ -230,12 +230,37 @@ def inject_brand_css() -> None:
         padding: 1rem;
         line-height: 1.55;
     }}
-    .pb-error {{
-        background: #FFF5F5;
-        border: 1px solid #F5D0D0;
+    .pb-snag {{
+        background: #FFF8F0;
+        border: 1px solid #E8D4B8;
         border-radius: var(--radius);
         padding: 1rem;
+        color: {CHARCOAL};
+        font-size: 0.92rem;
+        line-height: 1.55;
+        margin: 0 0 1rem;
     }}
+    .pb-notice {{
+        background: {CANVAS};
+        border: 1px solid {BORDER};
+        border-radius: var(--radius);
+        padding: 0.85rem 1rem;
+        color: {INK};
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin: 0 0 1rem;
+    }}
+    .pb-bk-handoff {{
+        border: 1px solid {BORDER};
+        border-radius: 1rem;
+        background: {CANVAS};
+        padding: 0.85rem 1rem;
+        margin: 1.25rem 0 0.5rem;
+        color: {CHARCOAL};
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }}
+    .pb-bk-handoff p {{ margin: 0; }}
 
     /* ── Minimal step tracker (find screen) ── */
     .pb-step-nav {{

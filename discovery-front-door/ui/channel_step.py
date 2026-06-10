@@ -22,8 +22,12 @@ _CHANNEL_LABELS = {
 _COPY_FEEDBACK_JS = (
     "(function(b,t){navigator.clipboard.writeText(t);"
     "b.textContent='\\u2713';b.classList.add('pb-copy-success');"
-    "setTimeout(function(){b.textContent='Copy';b.classList.remove('pb-copy-success');},2000);})(this,{payload})"
+    "setTimeout(function(){b.textContent='Copy';b.classList.remove('pb-copy-success');},2000);})(this,__PAYLOAD__)"
 )
+
+
+def _copy_onclick(value: str) -> str:
+    return _COPY_FEEDBACK_JS.replace("__PAYLOAD__", json.dumps(value))
 
 
 def _esc(text: str) -> str:
@@ -63,8 +67,7 @@ def call_script_card(channel: str, script: str, *, field_label: str | None = Non
 
 
 def _security_row(label: str, value: str, *, prominent: bool = False) -> str:
-    payload = json.dumps(value)
-    onclick = _COPY_FEEDBACK_JS.format(payload=payload)
+    onclick = _copy_onclick(value)
     value_cls = "pb-security-value pb-security-value--prominent" if prominent else "pb-security-value"
     return (
         f'<div class="pb-security-row">'
@@ -122,8 +125,7 @@ def phone_routing_intro() -> str:
 
 
 def financial_copy_field(label: str, value: str, field_id: str) -> str:
-    payload = json.dumps(value)
-    onclick = _COPY_FEEDBACK_JS.format(payload=payload)
+    onclick = _copy_onclick(value)
     return (
         f'<div class="pb-financial-standalone" id="{field_id}">'
         f'<div class="pb-security-row-body">'

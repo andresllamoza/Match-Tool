@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html
+
 import streamlit as st
 
 from ui.components import brand_header_bar  # noqa: E402
@@ -447,11 +449,27 @@ def _render_decisions(view: JourneyView) -> None:
             _go({"type": "channel", "channel": "online"})
 
 
+_FATAL_PREFIX = "__FATAL__:"
+
+
+def _set_ui_message(message: str, *, fatal: bool = False) -> None:
+    st.session_state.ui_error = message
+    st.session_state.ui_error_fatal = fatal
+
+
+def _clear_ui_message() -> None:
+    st.session_state.pop("ui_error", None)
+    st.session_state.pop("ui_error_fatal", None)
+
+
 def _go(action: dict) -> None:
     st.session_state.journey_restored = False
     result = apply_action(action)
     if isinstance(result, str):
-        st.session_state.ui_error = result
+        if result.startswith(_FATAL_PREFIX):
+            _set_ui_message(result[len(_FATAL_PREFIX) :], fatal=True)
+        else:
+            _set_ui_message(result, fatal=False)
     else:
         if (
             action.get("type") == "lookup"
@@ -462,12 +480,13 @@ def _go(action: dict) -> None:
                 result.screen.disambiguation_question and result.screen.disambiguation_options
             )
         ):
-            st.session_state.ui_error = (
+            _set_ui_message(
                 "We couldn't find a 401(k) plan for that employer. "
-                "Try the full company name (e.g. Google LLC), or pick your provider below."
+                "Try the full company name (e.g. Google LLC), or pick your provider below.",
+                fatal=False,
             )
         else:
-            st.session_state.pop("ui_error", None)
+            _clear_ui_message()
         if action.get("type") == "restart":
             st.session_state.show_provider_picker = False
             st.session_state.show_find_assistant = False
@@ -582,7 +601,11 @@ def run_journey_app() -> None:
         st.stop()
 
     if st.session_state.get("ui_error"):
-        st.error(st.session_state.ui_error)
+        msg = html.escape(st.session_state.ui_error)
+        if st.session_state.get("ui_error_fatal"):
+            st.markdown(f'<div class="pb-snag">{msg}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="pb-notice">{msg}</div>', unsafe_allow_html=True)
 
     view = current_view()
     screen = view.screen
@@ -697,7 +720,13 @@ def run_journey_app() -> None:
             JourneyState.ESCALATED,
             JourneyState.PROVIDER_NOT_COVERED,
         ):
-            if st.button("🐝 Talk to your BeeKeeper", type="tertiary", key="voluntary_bk"):
+            st.markdown(
+                '<div class="pb-bk-handoff">'
+                "<p>Prefer a person? Your BeeKeeper can take it from here.</p>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            if st.button("Talk to your BeeKeeper", type="tertiary", key="voluntary_bk"):
                 get_engine().log_handoff_taken(view.ctx, f"voluntary:{screen.state.value}")
                 save_context(view.ctx)
                 st.toast("Your BeeKeeper has the full context of this journey.")

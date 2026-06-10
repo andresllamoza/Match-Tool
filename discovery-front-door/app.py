@@ -55,7 +55,7 @@ try:
     run_journey_app()
 except Exception:
     st.markdown(
-        '<div class="pb-error"><strong>Something went wrong on our side.</strong><br/>'
-        "A BeeKeeper can help you finish your rollover — real humans, not a dead end.</div>",
+        '<div class="pb-snag"><strong>We hit a snag loading this</strong> — '
+        "a BeeKeeper can finish it with you.</div>",
         unsafe_allow_html=True,
     )

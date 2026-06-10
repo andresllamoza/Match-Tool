@@ -196,7 +196,7 @@ def apply_action(action: dict[str, Any]) -> JourneyView | str:
     except InvalidTransitionError as exc:
         return str(exc)
     except Exception as exc:
-        return f"Something went wrong. A BeeKeeper can help. ({exc})"
+        return f"__FATAL__:We hit a snag loading this — a BeeKeeper can finish it with you. ({exc})"
 
     save_context(ctx)
     enrichment = build_enrichment(engine.knowledge, ctx, screen)
