@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .knowledge import KnowledgeBase
+from .payee import resolve_check_payable
 from .models import (
     ChannelContext,
     JourneyChannel,
@@ -50,7 +51,7 @@ def build_enrichment(
             JourneyState.FORMS_IN_PROGRESS,
         }:
             enrichment.channel_context = _channel_context(
-                ctx, pb, general, knowledge.is_general_path(ctx)
+                knowledge, ctx, pb, general, knowledge.is_general_path(ctx)
             )
 
         if screen.phase.value == "track" or screen.state in {
@@ -99,13 +100,14 @@ def _general_hints(general, step_text: str) -> tuple[list[str], list[str]]:
 
 
 def _channel_context(
+    knowledge: KnowledgeBase,
     ctx: JourneyContext,
     playbook,
     general,
     is_general_path: bool,
 ) -> ChannelContext:
     mailing_address = general.mailing_address
-    payable = general_payable(playbook, mailing_address)
+    payable = resolve_check_payable(knowledge, ctx)
     cs = playbook.call_script
     if ctx.channel == JourneyChannel.PHONE:
         step_text = cs.steps[ctx.step_index].text if ctx.step_index < len(cs.steps) else ""
@@ -117,7 +119,7 @@ def _channel_context(
             say_this=step_text,
             phone=cs.phone,
             intro=cs.intro if ctx.step_index == 0 else None,
-            check_payable=cs.check_payable,
+            check_payable=payable,
             mailing_address=cs.mailing_address,
             rep_questions=[
                 RepQuestionView(question=q.question, answer=q.answer) for q in cs.rep_questions
@@ -153,7 +155,5 @@ def _channel_context(
     )
 
 
-def general_payable(playbook, mailing_address: str) -> str:
-    if playbook.call_script.check_payable:
-        return playbook.call_script.check_payable
-    return f"Payable to PensionBee — mail to {mailing_address}"
+def general_payable(knowledge: KnowledgeBase, ctx: JourneyContext) -> str:
+    return resolve_check_payable(knowledge, ctx)

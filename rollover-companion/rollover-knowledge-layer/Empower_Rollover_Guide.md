@@ -126,7 +126,7 @@ call_script:
     - question: "Who should the check be payable to?"
       answer: "Payable to you (participant); you forward to PensionBee at PO Box 72, New York, NY 10272."
       source_status: verified
-  check_payable: "Participant name"
+  check_payable: "PensionBee FBO [your name]"
   mailing_address: "Your address on file (then forward to PensionBee)"
 
 form_guidance:

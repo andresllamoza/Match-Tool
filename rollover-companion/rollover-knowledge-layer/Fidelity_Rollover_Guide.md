@@ -130,7 +130,7 @@ call_script:
     - question: "Who should the check be payable to?"
       answer: "For phone/check path: payable to you; you forward to PensionBee. Prefer online Express rollover to avoid a check."
       source_status: verified
-  check_payable: "Participant name (phone/check fallback only)"
+  check_payable: "PensionBee FBO [your name]"
   mailing_address: "PO Box 72, New York, NY 10272"
 
 form_guidance:

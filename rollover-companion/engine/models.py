@@ -300,6 +300,7 @@ class JourneyContext(BaseModel):
     lookup_confidence_tier: Optional[ConfidenceTier] = None
     uncovered_provider: Optional[str] = None
     stuck_count: int = 0
+    participant_name: Optional[str] = None
 
 
 class GuidanceItem(BaseModel):
