@@ -1,10 +1,8 @@
+# Python / Streamlit apps — not deployed to Vercel (customer UI is Next.js in web/)
 app.py
 requirements.txt
+**/*.py
 discovery-front-door
 rollover-playbook-engine
-rollover-companion/api
-rollover-companion/sandbox
-rollover-companion/spa
-rollover-companion/tests
-rollover-companion/engine
+rollover-companion
 artifacts
