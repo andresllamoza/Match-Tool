@@ -132,7 +132,43 @@ elif state == UiState.RESULT:
         st.session_state.find_outcome = None
         st.rerun()
 
-else:
+elif state == UiState.LOW_CONFIDENCE:
+    outcome = st.session_state.find_outcome
+    disc = outcome.discovery
+    brand_header("Find & value (optional)")
+    headline(
+        "Almost there — one more detail",
+        "We couldn't pin this down yet, but a BeeKeeper can still help.",
+    )
+    question = disc.disambiguation_question or (
+        "Which US state did you work in when you participated in this 401(k)?"
+    )
+    warm_message("Quick question", question)
+    retry_state = st.selectbox("State you worked in", options=US_STATES[1:], index=None, placeholder="Select a state")
+    if st.button("Try again", type="primary", use_container_width=True) and retry_state:
+        with st.spinner("Trying again…"):
+            new_outcome, err = run_discovery_safe(
+                flow,
+                disc.employer_query,
+                BalanceRange(st.session_state.find_last_balance),
+                state=retry_state,
+            )
+        if err or new_outcome is None:
+            st.session_state.find_ui_state = UiState.ERROR.value
+        else:
+            st.session_state.find_outcome = new_outcome
+            st.session_state.find_ui_state = classify_ui_state(new_outcome).value
+        st.rerun()
+    warm_message(
+        "No dead ends",
+        "A BeeKeeper can help locate your old 401(k) — real humans, Monday–Friday 9:30am–5pm ET.",
+    )
+    if st.button("Start over"):
+        st.session_state.find_ui_state = UiState.INPUT.value
+        st.session_state.find_outcome = None
+        st.rerun()
+
+elif state == UiState.ERROR:
     brand_header("Find & value (optional)")
     headline("Something went wrong")
     error_card()
