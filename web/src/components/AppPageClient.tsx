@@ -121,9 +121,9 @@ function AppContent() {
         onBack={handleBack}
         onSaveExit={handleSaveExit}
         onOpenChat={() => setAssistantOpen(true)}
-        showChatBubble={data?.screen.state !== "complete"}
-        footer={footer}
-        hideRail={data?.screen.state === "complete"}
+        showChatBubble={data != null && data.screen.state !== "complete"}
+        footer={data ? footer : undefined}
+        hideRail={data == null || data.screen.state === "complete"}
       >
         <JourneyFlow
           mode="customer"

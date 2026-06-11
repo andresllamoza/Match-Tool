@@ -26,6 +26,15 @@ body {
   min-height: 100dvh;
 }
 
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
 @layer utilities {
   .desktop-shell,
   .pb-fluid-canvas {
