@@ -16,6 +16,38 @@ test.describe("Customer journey smoke", () => {
     await expect(page.getByLabel(/former employer/i)).toBeVisible();
   });
 
+  test("/app demo journey completes end-to-end", async ({ page }) => {
+    await page.goto("/app");
+    await page.getByLabel(/former employer/i).fill("Target");
+    await page.getByRole("button", { name: /search for my employer/i }).click();
+
+    await expect(page.getByRole("button", { name: /yes, i can log in/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByRole("button", { name: /yes, i can log in/i }).click();
+
+    await expect(
+      page.getByRole("button", { name: /pre-tax \(traditional ira\)/i })
+    ).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /pre-tax \(traditional ira\)/i }).click();
+
+    await expect(page.getByRole("button", { name: /online/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByRole("button", { name: /online/i }).first().click();
+
+    for (let i = 0; i < 3; i += 1) {
+      const done = page.getByRole("button", { name: /done|completed this rollover/i });
+      await expect(done).toBeVisible({ timeout: 15_000 });
+      await done.click();
+    }
+
+    await page.getByRole("button", { name: /confirm transfer started|track my transfer/i }).click();
+    await page.getByRole("button", { name: /mark complete/i }).click();
+
+    await expect(page.getByText(/1% match activated/i)).toBeVisible({ timeout: 15_000 });
+  });
+
   test("/agent loads BeeKeeper surface", async ({ page }) => {
     await page.goto("/agent");
     await expect(page.getByText(/Internal · BeeKeeper/i)).toBeVisible();

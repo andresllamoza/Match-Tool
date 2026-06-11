@@ -24,7 +24,7 @@ import { WelcomeBackToast } from "./WelcomeBackToast";
 import { ApiBootstrapError } from "./ApiBootstrapError";
 import { employerSearchError } from "@/lib/validationCopy";
 import type { DecisionMode } from "@/lib/decisionMode";
-import { decisionTitle } from "@/lib/decisionMode";
+import { decisionTitle, usesInlineDecisionCards } from "@/lib/decisionMode";
 import { stepHelperCopy } from "@/lib/stepHelpers";
 import { StepDecisionFrame } from "./ui/StepDecisionFrame";
 import { TrustHelperBanner } from "./ui/TrustHelperBanner";
@@ -622,7 +622,10 @@ export function JourneyFlow({
         </div>
       )}
 
-      {decision !== "done" && !isFindStep && !readOnly && !externalShell && (
+      {decision !== "done" &&
+        !isFindStep &&
+        !readOnly &&
+        (!externalShell || usesInlineDecisionCards(decision)) && (
         <div className="mt-8 space-y-4">
           {renderDecision()}
             {!hideAssistant && (
