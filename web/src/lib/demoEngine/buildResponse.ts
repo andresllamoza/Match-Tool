@@ -64,13 +64,40 @@ function screenFor(state: DemoState): JourneyScreen {
         primary_action: "Yes, I can log in",
         secondary_actions: ["No, I'm locked out"],
       };
-    case "access_recovered":
+    case "access_blocked":
       return {
         ...base,
-        headline: "How would you like to roll over?",
-        body: "Pick one path to start. You can switch later if needed.",
-        primary_action: "Choose a channel",
-        secondary_actions: [],
+        headline: "Let's get you back into your account",
+        body: `Use ${provider}'s password reset, then come back when you can log in.`,
+        primary_action: "I'm in now",
+        secondary_actions: ["Still locked out — get a BeeKeeper"],
+        guidance: [
+          {
+            text: `Visit ${provider}'s website and choose "Forgot password".`,
+            owner: "customer",
+            source_status: "verified",
+            reconstructed: false,
+          },
+        ],
+      };
+    case "access_recovered":
+      if (!state.taxType) {
+        return {
+          ...base,
+          phase: "rollover",
+          headline: "What type of funds are you rolling over?",
+          body: "Most 401(k) balances are pre-tax. Roth accounts are after-tax.",
+          primary_action: "Pre-tax (Traditional IRA)",
+          secondary_actions: ["Roth (Roth IRA)", "Both pre-tax and Roth"],
+        };
+      }
+      return {
+        ...base,
+        phase: "rollover",
+        headline: "How would you like to do your rollover?",
+        body: DESTINATION,
+        primary_action: "Online portal",
+        secondary_actions: ["Phone", "Paper forms"],
       };
     case "online_in_progress":
       return {
@@ -153,8 +180,8 @@ export function buildDemoResponse(state: DemoState): JourneyResponse {
     destination_name: DESTINATION,
     forward_step_required: false,
     general_path: false,
-    requires_tax_selection: state.state === "provider_identified" && !state.taxType,
-    tax_options: state.state === "provider_identified" && !state.taxType
+    requires_tax_selection: state.state === "access_recovered" && !state.taxType,
+    tax_options: state.state === "access_recovered" && !state.taxType
       ? [
           { id: "pre_tax", label: "Pre-tax (Traditional IRA)", hint: "Most common 401(k) balance" },
           { id: "roth", label: "Roth (Roth IRA)", hint: "After-tax contributions and earnings" },

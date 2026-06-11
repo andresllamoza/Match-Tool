@@ -71,6 +71,7 @@ export function demoAction(journeyId: string, body: Record<string, unknown>): Jo
   }
 
   if (type === "tax_type" && typeof body.tax_type === "string") {
+    pushHistory(state);
     state.taxType = body.tax_type;
     state.state = "access_recovered";
     return commit(state);
@@ -78,12 +79,7 @@ export function demoAction(journeyId: string, body: Record<string, unknown>): Jo
 
   if (type === "access" && typeof body.can_login === "boolean") {
     pushHistory(state);
-    if (body.can_login) {
-      state.state = "provider_identified";
-      state.taxType = null;
-    } else {
-      state.state = "escalated";
-    }
+    state.state = body.can_login ? "access_recovered" : "access_blocked";
     return commit(state);
   }
 

@@ -11,6 +11,17 @@ export type DecisionMode =
   | "confirm"
   | "done";
 
+/** Card-style choices that stay in the main column when AppShell owns button footers. */
+export function usesInlineDecisionCards(decision: DecisionMode): boolean {
+  return (
+    decision === "tax" ||
+    decision === "provider_pick" ||
+    decision === "disambiguation" ||
+    decision === "access" ||
+    decision === "channel"
+  );
+}
+
 export function decisionTitle(decision: DecisionMode, screenQuestion?: string | null): string {
   switch (decision) {
     case "tax":
