@@ -32,7 +32,7 @@ export function AppShell({
             <button
               type="button"
               onClick={onBack}
-              className="pb-interactive text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+              className="pb-interactive min-h-[44px] px-2 text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
             >
               ← Back
             </button>
@@ -40,14 +40,14 @@ export function AppShell({
             <span className="inline-block w-12" aria-hidden />
           )}
         </div>
-        <p className="text-center text-base font-bold tracking-tight text-bee-charcoal">
-          🐝 PensionBee
+        <p className="text-center text-base font-extrabold tracking-tight text-bee-charcoal">
+          PensionBee
         </p>
         <div className="justify-self-end">
           <button
             type="button"
             onClick={onSaveExit}
-            className="pb-interactive text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
+            className="pb-interactive min-h-[44px] px-2 text-sm font-semibold text-bee-muted hover:text-bee-charcoal"
           >
             Save &amp; exit
           </button>

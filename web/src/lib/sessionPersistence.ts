@@ -63,6 +63,6 @@ export function resumeProviderLabel(data: JourneyResponse): string {
     data.screen.provider ||
     data.context.uncovered_provider ||
     data.context.employer_query ||
-    "your"
+    "old 401(k)"
   );
 }

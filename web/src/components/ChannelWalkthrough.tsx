@@ -120,8 +120,13 @@ function PhoneWalkthrough({
             </p>
             <p className="mt-1 text-xl font-bold sm:text-2xl">{ctx.phone}</p>
           </div>
-          <span className="text-2xl sm:text-3xl" aria-hidden>
-            📞
+          <span
+            className="flex h-12 w-12 shrink-0 animate-pulse-border items-center justify-center rounded-full bg-bee-yellow sm:h-14 sm:w-14"
+            aria-hidden
+          >
+            <svg className="h-6 w-6 text-bee-charcoal" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.2 2.2z" />
+            </svg>
           </span>
         </a>
       )}
@@ -161,7 +166,7 @@ function PhoneWalkthrough({
       )}
 
       {enrichment.forward_step_required && (
-        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5 text-sm leading-relaxed text-amber-900 sm:px-8">
+        <p className="rounded-2xl border border-bee-border bg-bee-yellow-tint px-6 py-5 text-sm leading-relaxed text-bee-ink sm:px-8">
           This provider mails the check to you first — PensionBee will send a prepaid
           envelope to forward it.
         </p>
@@ -226,7 +231,7 @@ function OnlineWalkthrough({
       />
 
       {enrichment.forward_step_required && (
-        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5 text-sm leading-relaxed text-amber-900 sm:px-8">
+        <p className="rounded-2xl border border-bee-border bg-bee-yellow-tint px-6 py-5 text-sm leading-relaxed text-bee-ink sm:px-8">
           Expect the check at your home address — not PensionBee directly.
         </p>
       )}

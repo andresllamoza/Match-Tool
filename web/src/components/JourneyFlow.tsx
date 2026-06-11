@@ -117,7 +117,7 @@ export function JourneyFlow({
     escalateWithHandshake,
   } = controller;
 
-  const disabled = loading || readOnly;
+  const disabled = loading || readOnly || escalationConnecting;
 
   if (resumeOffer && !data) {
     return (
@@ -287,13 +287,13 @@ export function JourneyFlow({
               disabled={disabled}
             />
           ))}
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => setShowProviderPicker(false)}
-            className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
           >
             ← Search by employer instead
-          </button>
+          </Button>
         </>
       );
     }
@@ -329,14 +329,9 @@ export function JourneyFlow({
             disabled={disabled}
           />
           {screen.state === "provider_not_covered" && (
-            <button
-              type="button"
-              onClick={handleHandoff}
-              disabled={disabled}
-              className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
-            >
-              Talk to a BeeKeeper about this provider →
-            </button>
+            <Button type="button" variant="secondary" onClick={handleHandoff} disabled={disabled}>
+              Talk to a BeeKeeper about this provider
+            </Button>
           )}
         </>
       );
@@ -346,12 +341,18 @@ export function JourneyFlow({
       return frame(
         decisionTitle(decision),
         <>
-          <SelectionBlock
-            label="Online"
-            description="Fastest when you can log in to your provider's website."
-            onClick={() => handleChannel("online")}
-            disabled={disabled}
-          />
+          <div className="relative">
+            <span className="absolute -top-3 left-4 z-10 rounded-pill bg-bee-charcoal px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
+              Recommended
+            </span>
+            <SelectionBlock
+              label="Online"
+              description="Fastest when you can log in to your provider's website."
+              onClick={() => handleChannel("online")}
+              disabled={disabled}
+              recommended
+            />
+          </div>
           <SelectionBlock
             label="By phone"
             description="We'll give you the number and exactly what to say."
@@ -375,14 +376,14 @@ export function JourneyFlow({
           <Button onClick={handlePrimary} disabled={disabled}>
             {screen.primary_action}
           </Button>
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => act({ type: "step", outcome: "stuck" })}
             disabled={disabled}
-            className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
           >
             I&apos;m stuck on this step
-          </button>
+          </Button>
         </>
       );
     }
@@ -394,14 +395,14 @@ export function JourneyFlow({
           <Button onClick={handlePrimary} disabled={disabled}>
             {screen.primary_action}
           </Button>
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => act({ type: "resume" })}
             disabled={disabled}
-            className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
           >
-            Try this step again →
-          </button>
+            Try this step again
+          </Button>
         </>
       );
     }
@@ -417,15 +418,15 @@ export function JourneyFlow({
             const lower = action.toLowerCase();
             if (lower.includes("nothing arrived") || lower.includes("get help")) {
               return (
-                <button
+                <Button
                   key={action}
                   type="button"
+                  variant="secondary"
                   onClick={() => handleEscalate("tracking_delay")}
                   disabled={disabled}
-                  className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
                 >
-                  {action} →
-                </button>
+                  {action}
+                </Button>
               );
             }
             return null;
@@ -445,15 +446,15 @@ export function JourneyFlow({
             const lower = action.toLowerCase();
             if (lower.includes("locked out") || lower.includes("beekeeper")) {
               return (
-                <button
+                <Button
                   key={action}
                   type="button"
+                  variant="secondary"
                   onClick={() => handleEscalate("access_lockout")}
                   disabled={disabled}
-                  className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B]"
                 >
-                  {action} →
-                </button>
+                  {action}
+                </Button>
               );
             }
             return null;
@@ -520,7 +521,6 @@ export function JourneyFlow({
           <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-bee-muted lg:text-base">
             {screen.provider || context.uncovered_provider}
             {screen.channel && ` · ${screen.channel}`}
-            {!screen.provider && context.uncovered_provider && " · general guide"}
           </p>
         )}
 
@@ -530,6 +530,7 @@ export function JourneyFlow({
           totalSteps={total_steps}
           provider={screen.provider || context.uncovered_provider || ""}
           channelLabel={channelLabel}
+          instruction={screen.headline}
         />
       )}
 
@@ -579,7 +580,7 @@ export function JourneyFlow({
               key={i}
               className={`flex gap-3 rounded-card px-4 py-3 text-sm lg:text-base ${
                 g.reconstructed
-                  ? "border-2 border-amber-400/80 bg-amber-50/80"
+                  ? "border-2 border-bee-yellow/80 bg-bee-yellow-tint/80"
                   : "border border-bee-border bg-cream-dark/40"
               }`}
             >
@@ -589,7 +590,7 @@ export function JourneyFlow({
               <span>
                 {g.text}
                 {g.reconstructed && (
-                  <span className="mt-1 block text-xs font-semibold text-amber-800">
+                  <span className="mt-1 block text-xs font-semibold text-bee-gold">
                     Double-check — phone menus can vary.
                   </span>
                 )}
@@ -612,11 +613,11 @@ export function JourneyFlow({
       {decision !== "done" && !isFindStep && !readOnly && !externalShell && (
         <div className="mt-8 space-y-4">
           {renderDecision()}
-          {!hideAssistant && (
+            {!hideAssistant && (
             <button
               type="button"
               onClick={() => setAssistantOpen(true)}
-              className="pb-interactive w-full py-4 text-center text-sm font-semibold text-bee-muted hover:text-[#1E242B] lg:text-base"
+              className="pb-text-link"
             >
               Ask a question about this step
             </button>
@@ -625,21 +626,55 @@ export function JourneyFlow({
       )}
 
       {screen.state === "complete" && (
-        <div className="mt-4 rounded-card border border-bee-yellow/50 bg-bee-yellow-soft p-6 text-center lg:p-8">
-          <p className="text-4xl lg:text-5xl">🎉</p>
-          <p className="mt-2 text-lg font-bold text-bee-charcoal lg:text-xl">You&apos;re all set!</p>
+        <div className="mt-4 rounded-card border border-bee-yellow/50 bg-bee-yellow-tint p-6 text-center lg:p-8">
+          <div
+            className="mx-auto flex h-16 w-16 animate-pulse-border items-center justify-center rounded-full bg-bee-yellow lg:h-20 lg:w-20"
+            aria-hidden
+          >
+            <svg className="h-8 w-8 text-bee-charcoal lg:h-10 lg:w-10" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M5 13l4 4L19 7"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <p className="mt-4 text-lg font-extrabold text-bee-charcoal lg:text-xl">You&apos;re all set!</p>
           {screen.body.includes("1%") && (
-            <p className="mt-2 text-sm text-bee-muted lg:text-base">
-              You earned your 1% match — welcome to PensionBee.
-            </p>
+            <span className="mt-3 inline-block rounded-pill bg-bee-charcoal px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-white">
+              1% match activated
+            </span>
           )}
         </div>
       )}
 
       {screen.state === "escalated" && (
-        <div className="mt-4 rounded-card border border-bee-yellow bg-bee-yellow-soft p-6 text-center lg:p-8">
-          <p className="text-lg font-bold text-bee-charcoal">A BeeKeeper will take it from here</p>
-          <p className="mt-2 text-sm text-bee-muted lg:text-base">{screen.body}</p>
+        <div className="mt-4 rounded-card border border-bee-border bg-white p-6 lg:p-8">
+          <div className="flex items-start gap-4">
+            <div className="relative shrink-0">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bee-charcoal text-lg font-bold text-white">
+                BK
+              </div>
+              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-bee-green" aria-hidden />
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="text-lg font-extrabold text-bee-charcoal">Sam · BeeKeeper</p>
+              <p className="mt-0.5 text-sm text-bee-muted">Typically replies within a few minutes</p>
+            </div>
+          </div>
+          <p className="mt-5 text-base leading-relaxed text-bee-ink">{screen.body}</p>
+          <div className="mt-5 rounded-block border border-bee-border bg-cream-dark/40 p-4 text-left">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-bee-muted">
+              What Sam already knows
+            </p>
+            <ul className="mt-2 space-y-1 text-sm text-bee-ink">
+              {screen.provider && <li>Provider: {screen.provider}</li>}
+              {context.employer_query && <li>Employer: {context.employer_query}</li>}
+              {screen.channel && <li>Channel: {screen.channel}</li>}
+            </ul>
+          </div>
         </div>
       )}
       </StepTransition>

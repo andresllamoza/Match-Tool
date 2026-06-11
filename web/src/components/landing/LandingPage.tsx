@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -42,10 +42,10 @@ function LandingTimeline() {
           const active = i === 0;
           return (
             <div key={step.id} className="flex flex-1 flex-col">
-              <div className="relative h-1 overflow-hidden rounded-full bg-[#EAE5DC]">
+              <div className="relative h-[3px] overflow-hidden rounded-full bg-bee-border">
                 {active && (
                   <motion.div
-                    className="absolute inset-y-0 left-0 rounded-full bg-[#FFC72C]"
+                    className="absolute inset-y-0 left-0 rounded-full bg-bee-yellow"
                     initial={{ width: 0 }}
                     animate={{ width: "100%" }}
                     transition={{ type: "spring", stiffness: 380, damping: 32, delay: 0.15 }}
@@ -53,8 +53,8 @@ function LandingTimeline() {
                 )}
               </div>
               <span
-                className={`mt-2 text-[10px] font-bold uppercase tracking-[0.08em] ${
-                  active ? "text-[#111111]" : "text-[#6B6560]"
+                className={`mt-2 text-[11px] font-bold uppercase tracking-[0.2em] ${
+                  active ? "text-bee-charcoal" : "text-bee-muted"
                 }`}
               >
                 {step.label}
@@ -68,18 +68,24 @@ function LandingTimeline() {
 }
 
 export function LandingPage() {
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="desktop-shell relative min-h-dvh overflow-hidden">
-      <motion.div
-        className="pointer-events-none absolute -left-24 top-20 h-64 w-64 rounded-full bg-bee-yellow/20 blur-3xl"
-        animate={{ scale: [1, 1.08, 1], opacity: [0.5, 0.7, 0.5] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="pointer-events-none absolute -right-16 bottom-32 h-72 w-72 rounded-full bg-bee-yellow/10 blur-3xl"
-        animate={{ scale: [1, 1.12, 1], opacity: [0.35, 0.55, 0.35] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-      />
+      {!reduceMotion && (
+        <>
+          <motion.div
+            className="pointer-events-none absolute -left-24 top-20 h-64 w-64 rounded-full bg-bee-yellow/20 blur-3xl"
+            animate={{ scale: [1, 1.08, 1], opacity: [0.5, 0.7, 0.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="pointer-events-none absolute -right-16 bottom-32 h-72 w-72 rounded-full bg-bee-yellow/10 blur-3xl"
+            animate={{ scale: [1, 1.12, 1], opacity: [0.35, 0.55, 0.35] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
+        </>
+      )}
 
       <main className="relative mx-auto flex min-h-dvh w-full max-w-4xl flex-col justify-center px-6 py-16">
         <motion.div custom={0} variants={fadeUp} initial="hidden" animate="show">
@@ -87,15 +93,15 @@ export function LandingPage() {
         </motion.div>
 
         <motion.div custom={1} variants={fadeUp} initial="hidden" animate="show">
-          <span className="mb-3 block text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">
+          <span className="mb-3 block text-[11px] font-bold uppercase tracking-[0.2em] text-bee-muted">
             Rollover Companion
           </span>
 
-          <h1 className="mb-6 text-4xl font-extrabold leading-[1.1] tracking-[-0.03em] text-[#111111] sm:text-5xl">
+          <h1 className="mb-6 text-4xl font-extrabold leading-[1.1] tracking-[-0.03em] text-bee-charcoal sm:text-5xl">
             Move your old 401(k) to PensionBee — calmly, step by step.
           </h1>
 
-          <p className="mb-8 max-w-xl text-lg leading-relaxed text-gray-600">
+          <p className="mb-8 max-w-xl text-lg leading-relaxed text-bee-muted">
             Find your plan, recover missing access, and move your savings using verified routing
             rules and exact phone scripts. A dedicated BeeKeeper is always one tap away.
           </p>
@@ -111,10 +117,10 @@ export function LandingPage() {
           {TRUST_CARDS.map((card) => (
             <article
               key={card.title}
-              className="rounded-xl border border-[#EAE5DC] bg-white p-5 shadow-card"
+              className="rounded-block border border-bee-border bg-white p-5 shadow-card"
             >
-              <h2 className="text-sm font-bold leading-snug text-[#111111]">{card.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-[#555555]">{card.copy}</p>
+              <h2 className="text-sm font-bold leading-snug text-bee-charcoal">{card.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-bee-faint">{card.copy}</p>
             </article>
           ))}
         </motion.div>
@@ -128,7 +134,7 @@ export function LandingPage() {
         >
           <Link
             href="/app"
-            className="pb-interactive flex min-h-[3.5rem] w-full items-center justify-center rounded-card bg-[#111111] px-6 text-center text-base font-bold text-white shadow-card hover:bg-[#1E242B]"
+            className="pb-cta flex min-h-[3.5rem] w-full items-center justify-center rounded-cta bg-bee-yellow px-6 text-center text-base font-extrabold text-bee-charcoal shadow-sm hover:bg-bee-yellow-hover"
           >
             Start my rollover
           </Link>

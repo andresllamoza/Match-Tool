@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { journeyAction } from "@/lib/api";
 import { getAssistantSuggestions } from "@/lib/assistantSuggestions";
 import type { AssistantResult, JourneyScreen } from "@/lib/types";
@@ -14,6 +14,9 @@ interface AssistantDrawerProps {
   onEscalate: () => void;
 }
 
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function AssistantDrawer({
   journeyId,
   screen,
@@ -24,16 +27,50 @@ export function AssistantDrawer({
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AssistantResult | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const suggestions = getAssistantSuggestions(screen);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+
+    const focusables = () =>
+      Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) || []);
+
+    window.setTimeout(() => focusables()[0]?.focus(), 0);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panel) return;
+
+      const list = focusables();
+      if (list.length === 0) return;
+
+      const first = list[0];
+      const last = list[list.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
+
     return () => {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKey);
+      previousFocusRef.current?.focus();
     };
   }, [open, onClose]);
 
@@ -65,9 +102,11 @@ export function AssistantDrawer({
         className="absolute inset-0 animate-fade-in bg-bee-charcoal/40 backdrop-blur-[2px]"
         onClick={onClose}
         aria-label="Close assistant"
+        tabIndex={-1}
       />
 
       <div
+        ref={panelRef}
         className="pb-sheet absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-[20px] border-t border-bee-border shadow-sheet animate-sheet-up lg:inset-y-0 lg:left-auto lg:right-0 lg:max-h-none lg:w-full lg:max-w-md lg:rounded-none lg:rounded-l-[20px] lg:border-l lg:border-t-0 lg:animate-sheet-right"
       >
         <div className="flex shrink-0 items-center justify-center pt-3 lg:hidden">
@@ -129,7 +168,7 @@ export function AssistantDrawer({
               className={`mt-4 rounded-card p-4 text-sm leading-relaxed lg:text-base ${
                 result.in_scope
                   ? "border border-bee-border bg-white text-bee-ink"
-                  : "border border-red-200 bg-red-50 text-red-800"
+                  : "border border-bee-border bg-cream-dark text-bee-ink"
               }`}
             >
               {result.answer}

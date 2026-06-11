@@ -23,17 +23,14 @@ export function ProgressSteps({ current, variant = "default" }: ProgressStepsPro
           return (
             <div key={step.id} className="inline-flex flex-col items-start">
               <span
-                className={`text-xs font-bold uppercase tracking-wider ${
+                className={`text-[11px] font-bold uppercase tracking-[0.2em] ${
                   active ? "text-bee-charcoal" : "text-bee-muted"
                 }`}
               >
                 {step.label}
               </span>
               {active && (
-                <span
-                  className="mt-1 h-1 w-full rounded-full bg-[#FFC72C]"
-                  aria-hidden
-                />
+                <span className="mt-2 h-[3px] w-full rounded-full bg-bee-yellow" aria-hidden />
               )}
             </div>
           );
@@ -65,7 +62,19 @@ export function ProgressSteps({ current, variant = "default" }: ProgressStepsPro
                         : "border border-bee-border bg-cream-dark text-bee-muted"
                   }`}
                 >
-                  {done ? "✓" : i + 1}
+                  {done ? (
+                    <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden>
+                      <path
+                        d="M3 8.5L6.5 12L13 4"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    i + 1
+                  )}
                 </div>
                 {i < STEPS.length - 1 && (
                   <div
@@ -74,7 +83,7 @@ export function ProgressSteps({ current, variant = "default" }: ProgressStepsPro
                 )}
               </div>
               <span
-                className={`text-xs font-semibold lg:text-sm ${
+                className={`text-[11px] font-bold uppercase tracking-[0.2em] ${
                   active ? "text-bee-charcoal" : "text-bee-muted"
                 }`}
               >

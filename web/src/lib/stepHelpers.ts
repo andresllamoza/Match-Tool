@@ -3,7 +3,7 @@ import type { DecisionMode } from "./decisionMode";
 export function stepHelperCopy(decision: DecisionMode): string | null {
   switch (decision) {
     case "employer":
-      return "We only use your employer name to match you to the correct 401(k) recordkeeper — never to sell your data.";
+      return "We only use your employer name to find which company holds your old 401(k) (like Fidelity or Vanguard) — never to sell your data.";
     case "tax":
       return "Your tax type tells us which IRA bucket receives the rollover. Most 401(k)s are pre-tax.";
     case "access":

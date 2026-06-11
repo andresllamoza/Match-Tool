@@ -15,19 +15,23 @@ export function WelcomeBackToast({
   onResume: () => void;
   onStartOver: () => void;
 }) {
+  const planLabel = providerName.toLowerCase().includes("401")
+    ? providerName
+    : `${providerName} 401(k)`;
+
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-6 sm:px-6"
       role="status"
       aria-live="polite"
     >
-      <div className="animate-toast-up w-full max-w-lg rounded-2xl border border-[#EAE5DC] bg-white p-6 shadow-[0_12px_48px_rgba(17,17,17,0.14)] sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#9A6200]">
+      <div className="animate-toast-up w-full max-w-lg rounded-card border border-bee-border bg-white p-6 shadow-card-lg sm:p-8">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-bee-gold">
           Welcome back
         </p>
-        <p className="mt-2 text-base leading-relaxed text-[#1E242B] sm:text-lg">
-          We saved your progress moving your{" "}
-          <span className="font-semibold text-[#111111]">{providerName}</span> 401(k).
+        <p className="mt-2 text-base leading-relaxed text-bee-ink sm:text-lg">
+          We saved your progress on{" "}
+          <span className="font-semibold text-bee-charcoal">{planLabel}</span>.
         </p>
         <div className="mt-6 space-y-3">
           <Button onClick={onResume} disabled={loading}>
@@ -37,7 +41,7 @@ export function WelcomeBackToast({
             type="button"
             onClick={onStartOver}
             disabled={loading}
-            className="pb-interactive w-full py-3 text-center text-sm font-semibold text-[#6B6560] hover:text-[#1E242B] disabled:opacity-50"
+            className="pb-text-link"
           >
             Start over
           </button>

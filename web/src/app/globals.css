@@ -4,10 +4,16 @@
 
 :root {
   --canvas: #faf8f5;
-  --bee-yellow: #ffc72c;
+  --bee-yellow: #f5be17;
+  --bee-yellow-hover: #e0ab10;
+  --bee-yellow-soft: #fff4d6;
+  --bee-yellow-tint: #fff9e6;
   --bee-charcoal: #111111;
   --bee-ink: #1e242b;
+  --bee-muted: #5a554e;
+  --bee-faint: #8a857b;
   --bee-border: #eae5dc;
+  --bee-gold: #8a5a00;
 }
 
 html {
@@ -20,18 +26,9 @@ body {
   min-height: 100dvh;
 }
 
-@keyframes fluidWandering {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
 @layer utilities {
-  .desktop-shell {
+  .desktop-shell,
+  .pb-fluid-canvas {
     @apply relative min-h-dvh;
     background: linear-gradient(135deg, #faf8f5 0%, #fffdf9 50%, #f5f0e6 100%);
     background-size: 200% 200%;
@@ -42,8 +39,8 @@ body {
     content: "";
     @apply pointer-events-none fixed inset-0 hidden lg:block;
     background:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 199, 44, 0.08), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255, 199, 44, 0.05), transparent);
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(245, 190, 23, 0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(245, 190, 23, 0.05), transparent);
   }
 
   .pb-card {
@@ -52,6 +49,22 @@ body {
 
   .pb-sheet {
     @apply bg-canvas;
+  }
+
+  .pb-cta {
+    @apply transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-cta-glow active:scale-[0.98];
+  }
+
+  .pb-select-card {
+    @apply transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-bee-charcoal active:scale-[0.98];
+  }
+
+  .pb-text-link {
+    @apply pb-interactive flex min-h-[44px] w-full items-center justify-center py-3 text-center text-sm font-semibold text-bee-muted hover:text-bee-charcoal disabled:opacity-50 lg:text-base;
+  }
+
+  .pb-focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bee-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-canvas;
   }
 
   .embed-theme-dark .pb-card,
@@ -81,18 +94,18 @@ body {
   }
 
   .pb-surface-card {
-    @apply rounded-2xl border border-[#EAE5DC] bg-[#FFFFFF] p-8 shadow-sm sm:p-10;
+    @apply rounded-2xl border border-bee-border bg-white p-8 shadow-sm sm:p-10;
   }
 
   .pb-surface-white {
-    @apply rounded-2xl border border-[#EAE5DC] bg-[#FFFFFF] shadow-sm;
+    @apply rounded-2xl border border-bee-border bg-white shadow-sm;
   }
 
   .embed-theme-light {
     --embed-canvas: #faf8f5;
     --embed-card: #ffffff;
     --embed-ink: #1e242b;
-    --embed-muted: #6b6560;
+    --embed-muted: #5a554e;
     --embed-border: #eae5dc;
     background: var(--embed-canvas);
     color: var(--embed-ink);
@@ -116,11 +129,12 @@ body {
   }
 
   .pb-step-enter {
-    animation: pb-step-enter 0.3s ease-out both;
+    animation: pb-step-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .desktop-shell {
+    .desktop-shell,
+    .pb-fluid-canvas {
       animation: none;
       background-position: 0% 50%;
     }
@@ -129,8 +143,10 @@ body {
       animation: none;
     }
 
-    .pb-interactive {
-      @apply active:scale-100;
+    .pb-interactive,
+    .pb-cta,
+    .pb-select-card {
+      @apply active:scale-100 hover:translate-y-0;
     }
   }
 }

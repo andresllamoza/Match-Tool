@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getJourney, journeyAction, startJourney } from "@/lib/api";
+import { getJourney, journeyAction, listProviders, startJourney } from "@/lib/api";
 import { buildPathEntry, type PathHistoryEntry } from "@/lib/pathHistory";
 import {
   clearJourneySession,
@@ -75,6 +75,8 @@ export function useJourneyController({
   const [validationShake, setValidationShake] = useState(false);
   const [stalledStep, setStalledStep] = useState<number | null>(null);
   const bootstrappedRef = useRef(false);
+  const actInFlightRef = useRef(false);
+  const escalationInFlightRef = useRef(false);
 
   const triggerValidationShake = useCallback(() => {
     setValidationShake(true);
@@ -120,7 +122,8 @@ export function useJourneyController({
 
   const act = useCallback(
     async (body: Record<string, unknown>) => {
-      if (!data) return;
+      if (!data || actInFlightRef.current) return;
+      actInFlightRef.current = true;
       setLoading(true);
       setError(null);
       try {
@@ -133,6 +136,7 @@ export function useJourneyController({
         setError(e instanceof Error ? e.message : "Something went wrong. A BeeKeeper can help.");
         triggerValidationShake();
       } finally {
+        actInFlightRef.current = false;
         setLoading(false);
       }
     },
@@ -141,7 +145,8 @@ export function useJourneyController({
 
   const escalateWithHandshake = useCallback(
     async (reason: string) => {
-      if (!data) return;
+      if (!data || escalationInFlightRef.current) return;
+      escalationInFlightRef.current = true;
       setStalledStep(data.step_index);
       setEscalationConnecting(true);
       setAssistantOpen(false);
@@ -158,6 +163,7 @@ export function useJourneyController({
         setError(e instanceof Error ? e.message : "Could not connect to a BeeKeeper. Please try again.");
         triggerValidationShake();
       } finally {
+        escalationInFlightRef.current = false;
         setEscalationConnecting(false);
       }
     },
@@ -261,8 +267,12 @@ export function useJourneyController({
         }
 
         applyResponse(res, "start");
-        const prov = await fetch("/api/providers").then((r) => r.json());
-        if (!cancelled) setProviders(prov.providers || []);
+        try {
+          const prov = await listProviders();
+          if (!cancelled) setProviders(prov.providers || []);
+        } catch {
+          if (!cancelled) setProviders([]);
+        }
       } catch {
         if (!cancelled) {
           setError("Could not connect to the rollover engine. A BeeKeeper can help.");

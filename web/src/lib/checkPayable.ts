@@ -1,15 +1,3 @@
-export const SYNTHETIC_CUSTOMER_NAME = "Jordan Rivera";
-export const PAYABLE_NAME_TOKEN = "[your name]";
-
-export function formatCheckPayable(
-  template: string,
-  firstName: string = "Jordan",
-  lastName: string = "Rivera"
-): string {
-  if (!template) return template;
-  return template.replace(PAYABLE_NAME_TOKEN, `${firstName} ${lastName}`.trim());
-}
-
 export function isFboPayableLine(text: string): boolean {
   const lower = text.toLowerCase();
   return lower.includes("fbo") && lower.includes("pensionbee");
