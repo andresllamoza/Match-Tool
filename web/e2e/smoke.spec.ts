@@ -16,6 +16,14 @@ test.describe("Customer journey smoke", () => {
     await expect(page.getByLabel(/former employer/i)).toBeVisible();
   });
 
+  test("/customer forwards discovery handoff params to /app", async ({ page }) => {
+    await page.goto("/customer?employer=Target&provider=Fidelity");
+    await expect(page).toHaveURL(/\/app\?.*employer=Target/);
+    await expect(page.getByRole("heading", { name: /can you log in|what type of funds|find your old 401/i })).toBeVisible({
+      timeout: 20_000,
+    });
+  });
+
   test("/app demo journey completes end-to-end", async ({ page }) => {
     await page.goto("/app");
     await page.getByLabel(/former employer/i).fill("Target");

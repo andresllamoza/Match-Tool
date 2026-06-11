@@ -44,8 +44,9 @@ export default function FunnelPage() {
         <div className="rounded-card border border-bee-yellow/40 bg-bee-yellow-tint p-8 shadow-card">
           <p className="font-bold text-bee-charcoal">Analytics API unreachable</p>
           <p className="mt-2 text-sm leading-relaxed text-bee-ink">
-            Connect Railway and set <code className="rounded bg-white px-1.5 py-0.5 text-xs">API_URL</code> on
-            Vercel to load funnel data.
+            Funnel analytics need a live API. In demo mode, reload this page without{" "}
+            <code className="rounded bg-white px-1.5 py-0.5 text-xs">API_URL</code> set, or connect Railway
+            and set <code className="rounded bg-white px-1.5 py-0.5 text-xs">API_URL</code> on Vercel.
           </p>
         </div>
       ) : !data ? (

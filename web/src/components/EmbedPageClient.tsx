@@ -7,10 +7,17 @@ import { EmbedWidget } from "./EmbedWidget";
 function EmbedContent() {
   const searchParams = useSearchParams();
   const initialEmployer = searchParams.get("employer") ?? "";
+  const initialProvider = searchParams.get("provider") ?? "";
   const themeParam = (searchParams.get("theme") ?? "light").toLowerCase();
   const theme = themeParam === "dark" ? "dark" : "minimal";
 
-  return <EmbedWidget theme={theme} initialEmployer={initialEmployer} />;
+  return (
+    <EmbedWidget
+      theme={theme}
+      initialEmployer={initialEmployer}
+      initialProvider={initialProvider}
+    />
+  );
 }
 
 export function EmbedPageClient() {

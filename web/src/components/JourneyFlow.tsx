@@ -34,6 +34,7 @@ interface JourneyFlowProps {
   theme?: "default" | "minimal" | "dark";
   surface?: "default" | "sandbox";
   initialEmployer?: string;
+  initialProvider?: string;
   onPhaseChange?: (phase: import("@/lib/types").JourneyPhase) => void;
   controller?: JourneyController;
   readOnly?: boolean;
@@ -80,6 +81,7 @@ export function JourneyFlow({
   theme = "default",
   surface = "default",
   initialEmployer = "",
+  initialProvider = "",
   onPhaseChange,
   controller: externalController,
   readOnly = false,
@@ -92,6 +94,7 @@ export function JourneyFlow({
   const internalController = useJourneyController({
     withAgentIntel: isAgent,
     initialEmployer,
+    initialProvider,
     onPhaseChange,
     autoStart: !externalController,
   });
