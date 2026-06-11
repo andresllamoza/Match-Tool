@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Any, Literal, Optional
@@ -18,11 +19,20 @@ from api.sessions import create_session, get_engine, get_session, save_session  
 from engine.funnel import load_funnel_summary  # noqa: E402
 from engine.models import JourneyContext, JourneyScreen  # noqa: E402
 
+
+def _cors_origins() -> list[str]:
+    raw = os.environ.get("CORS_ORIGINS", "*").strip()
+    if not raw or raw == "*":
+        return ["*"]
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
 app = FastAPI(title="Rollover Companion API", version="1.0.0")
+_cors = _cors_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors,
+    allow_credentials="*" not in _cors,
     allow_methods=["*"],
     allow_headers=["*"],
 )

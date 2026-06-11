@@ -30,7 +30,16 @@ function AppContent() {
     onPhaseChange: setPhase,
   });
 
-  const { data, act, loading, employerInput, restart, escalateWithHandshake } = controller;
+  const {
+    data,
+    act,
+    loading,
+    employerInput,
+    restart,
+    escalateWithHandshake,
+    setAssistantOpen,
+  } = controller;
+  const [savedToast, setSavedToast] = useState(false);
 
   const showBack = useMemo(
     () => canGoBack(data, employerInput),
@@ -45,6 +54,8 @@ function AppContent() {
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("pb_saved_exit", String(Date.now()));
     }
+    setSavedToast(true);
+    window.setTimeout(() => setSavedToast(false), 3200);
   }, []);
 
   const footerSpec = data ? resolveFooterActions(data, controller.showProviderPicker) : null;
@@ -79,7 +90,7 @@ function AppContent() {
           {footerSpec.primary.label}
         </Button>
       )}
-      <p className="pt-1 text-center text-xs text-bee-muted">🐝 Talk to your BeeKeeper</p>
+      <p className="pt-1 text-center text-xs text-bee-muted">Talk to your BeeKeeper</p>
       <button
         type="button"
         onClick={() => void escalateWithHandshake(`voluntary:${data?.screen.state ?? "find"}`)}
@@ -92,23 +103,37 @@ function AppContent() {
   );
 
   return (
-    <AppShell
-      phase={phase}
-      showBack={showBack}
-      onBack={handleBack}
-      onSaveExit={handleSaveExit}
-      footer={footer}
-      hideRail={data?.screen.state === "complete"}
-    >
-      <JourneyFlow
-        mode="customer"
-        theme="minimal"
-        controller={controller}
-        onPhaseChange={setPhase}
-        hideAssistant
-        externalShell
-      />
-    </AppShell>
+    <>
+      {savedToast && (
+        <div
+          className="fixed inset-x-0 top-4 z-[70] flex justify-center px-4"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="animate-toast-up rounded-pill border border-bee-border bg-white px-5 py-3 text-sm font-semibold text-bee-charcoal shadow-card-lg">
+            Progress saved — resume anytime from this device.
+          </div>
+        </div>
+      )}
+      <AppShell
+        phase={phase}
+        showBack={showBack}
+        onBack={handleBack}
+        onSaveExit={handleSaveExit}
+        onOpenChat={() => setAssistantOpen(true)}
+        showChatBubble={data?.screen.state !== "complete"}
+        footer={footer}
+        hideRail={data?.screen.state === "complete"}
+      >
+        <JourneyFlow
+          mode="customer"
+          theme="minimal"
+          controller={controller}
+          onPhaseChange={setPhase}
+          externalShell
+        />
+      </AppShell>
+    </>
   );
 }
 

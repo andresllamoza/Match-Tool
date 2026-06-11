@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { JourneyResponse } from "@/lib/types";
+import { NextStepBadge } from "./ui/NextStepBadge";
 
 const TIER_LABEL: Record<string, string> = {
   high: "High confidence",
@@ -20,11 +21,14 @@ export function LookupBanner({ data }: { data: JourneyResponse }) {
 
   return (
     <div className="mb-5 rounded-card border-2 border-bee-yellow/40 bg-bee-yellow-tint p-5 lg:p-6">
-      {tier && (
-        <span className="mb-3 inline-block rounded-pill bg-bee-charcoal px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
-          {TIER_LABEL[tier] || tier}
-        </span>
-      )}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {tier && (
+          <span className="inline-block rounded-pill bg-bee-charcoal px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
+            {TIER_LABEL[tier] || tier}
+          </span>
+        )}
+        <NextStepBadge>Next: confirm access</NextStepBadge>
+      </div>
 
       <dl className="space-y-3">
         <div>

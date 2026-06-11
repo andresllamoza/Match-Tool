@@ -644,7 +644,7 @@ export function JourneyFlow({
           <p className="mt-4 text-lg font-extrabold text-bee-charcoal lg:text-xl">You&apos;re all set!</p>
           {screen.body.includes("1%") && (
             <span className="mt-3 inline-block rounded-pill bg-bee-charcoal px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-white">
-              1% match activated
+              1% match Activated
             </span>
           )}
         </div>

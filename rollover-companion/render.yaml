@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: rollover-companion-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: PB_COOKIE_SECURE
+        value: "true"
+      - key: PB_SESSION_DB
+        value: /var/data/pb_sessions.db
+      - key: CORS_ORIGINS
+        sync: false
+    disk:
+      name: rollover-data
+      mountPath: /var/data
+      sizeGB: 1
