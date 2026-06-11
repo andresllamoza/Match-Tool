@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { handleDemoRequest, isDemoBackendEnabled } from "@/lib/demoEngine";
 
 const TIMEOUT_MS = 10_000;
 
 function apiBase(): string {
-  return (process.env.API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+  return (process.env.API_URL || "").replace(/\/$/, "");
 }
 
-function apiConfigured(): boolean {
-  return Boolean(process.env.API_URL?.trim());
-}
-
-async function proxy(req: NextRequest, pathSegments: string[]) {
+async function proxyToLiveApi(req: NextRequest, pathSegments: string[]) {
   const path = pathSegments.join("/");
   const target = `${apiBase()}/api/${path}${req.nextUrl.search}`;
 
@@ -43,11 +40,10 @@ async function proxy(req: NextRequest, pathSegments: string[]) {
   } catch {
     return NextResponse.json(
       {
-        detail: apiConfigured()
-          ? "Could not reach the rollover API. Confirm Railway is running and CORS_ORIGINS includes this Vercel URL."
-          : "API_URL is not set on Vercel. Deploy rollover-companion on Railway, add API_URL to Environment Variables, then redeploy.",
+        detail:
+          "Could not reach the rollover API. Confirm your API host is running and CORS_ORIGINS includes this site.",
         code: "API_UNREACHABLE",
-        configured: apiConfigured(),
+        configured: true,
       },
       { status: 503 }
     );
@@ -56,24 +52,35 @@ async function proxy(req: NextRequest, pathSegments: string[]) {
   }
 }
 
+async function handleRequest(req: NextRequest, pathSegments: string[]) {
+  const bodyText =
+    req.method !== "GET" && req.method !== "HEAD" ? await req.text() : "";
+
+  if (isDemoBackendEnabled()) {
+    return handleDemoRequest(req.method, pathSegments, bodyText, req.nextUrl.search);
+  }
+
+  return proxyToLiveApi(req, pathSegments);
+}
+
 type RouteContext = { params: { path: string[] } };
 
 export async function GET(req: NextRequest, ctx: RouteContext) {
-  return proxy(req, ctx.params.path);
+  return handleRequest(req, ctx.params.path);
 }
 
 export async function POST(req: NextRequest, ctx: RouteContext) {
-  return proxy(req, ctx.params.path);
+  return handleRequest(req, ctx.params.path);
 }
 
 export async function PUT(req: NextRequest, ctx: RouteContext) {
-  return proxy(req, ctx.params.path);
+  return handleRequest(req, ctx.params.path);
 }
 
 export async function PATCH(req: NextRequest, ctx: RouteContext) {
-  return proxy(req, ctx.params.path);
+  return handleRequest(req, ctx.params.path);
 }
 
 export async function DELETE(req: NextRequest, ctx: RouteContext) {
-  return proxy(req, ctx.params.path);
+  return handleRequest(req, ctx.params.path);
 }

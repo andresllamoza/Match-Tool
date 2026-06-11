@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
+import { DemoPreviewBanner } from "../DemoPreviewBanner";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -86,6 +87,8 @@ export function LandingPage() {
           />
         </>
       )}
+
+      <DemoPreviewBanner />
 
       <main className="relative mx-auto flex min-h-dvh w-full max-w-4xl flex-col justify-center px-6 py-16">
         <motion.div custom={0} variants={fadeUp} initial="hidden" animate="show">

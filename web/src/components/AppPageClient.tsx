@@ -8,6 +8,7 @@ import { Button } from "./ui/Button";
 import { useJourneyController } from "@/hooks/useJourneyController";
 import type { JourneyPhase, JourneyResponse } from "@/lib/types";
 import { resolveFooterActions } from "@/lib/footerActions";
+import { DemoPreviewBanner } from "./DemoPreviewBanner";
 
 function canGoBack(data: JourneyResponse | null, employerDraft: string): boolean {
   if (!data?.context.history_stack?.length) return false;
@@ -104,6 +105,7 @@ function AppContent() {
 
   return (
     <>
+      <DemoPreviewBanner />
       {savedToast && (
         <div
           className="fixed inset-x-0 top-4 z-[70] flex justify-center px-4"

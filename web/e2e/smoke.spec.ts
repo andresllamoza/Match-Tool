@@ -7,12 +7,13 @@ test.describe("Customer journey smoke", () => {
     await expect(page.getByRole("link", { name: /start my rollover/i })).toBeVisible();
   });
 
-  test("/app loads shell and find step or API setup", async ({ page }) => {
+  test("/app loads find step (demo or live API)", async ({ page }) => {
     await page.goto("/app");
     await expect(page.getByRole("button", { name: /save & exit/i })).toBeVisible();
-    const findHeading = page.getByRole("heading", { name: /find your old 401/i });
-    const apiSetup = page.getByText(/rollover engine not connected|trouble reaching our servers/i);
-    await expect(findHeading.or(apiSetup)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: /find your old 401/i })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByLabel(/former employer/i)).toBeVisible();
   });
 
   test("/agent loads BeeKeeper surface", async ({ page }) => {
