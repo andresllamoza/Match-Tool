@@ -10,12 +10,21 @@ You will see a slim banner: *Interactive preview with guided demo data*.
 
 ## Production (real employer lookups)
 
-When ready, deploy `rollover-companion/` on Railway and add:
+After Railway is connected to the repo and deployed:
 
-| Vercel env | Value |
-|------------|--------|
-| `API_URL` | Your Railway URL (no trailing slash) |
+1. Copy your Railway public URL (Networking → domain)
+2. Vercel → **Settings** → **Environment Variables** → add:
 
-Redeploy Vercel. The banner disappears and lookups use the live 89k employer index.
+| Name | Value |
+|------|--------|
+| `API_URL` | `https://your-service.up.railway.app` (no trailing slash) |
 
-See `rollover-companion/DEPLOY_API.md` for Railway steps.
+3. **Redeploy** Vercel (Deployments → ⋯ → Redeploy)
+
+The demo banner disappears; `/app` uses the live employer index.
+
+```bash
+VERCEL_URL=https://your-app.vercel.app bash scripts/verify-production.sh
+```
+
+See `rollover-companion/DEPLOY_API.md` for Railway details.

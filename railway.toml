@@ -1,0 +1,10 @@
+# Used when Railway is connected to the GitHub repo root (no Root Directory override).
+# Alternative: set Root Directory to rollover-companion and use that folder's railway.toml.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"

@@ -4,10 +4,38 @@ FastAPI backend for the Next.js customer app (`web/`). Ships with the knowledge 
 
 ## Quick path (Railway + Vercel)
 
-1. **Railway** — New project → Deploy from GitHub → set **Root Directory** to `rollover-companion`
-2. Wait for deploy; copy the public URL (e.g. `https://rollover-companion-production.up.railway.app`)
-3. **Vercel** (`web/` root) — Settings → Environment Variables → `API_URL` = Railway URL (no trailing slash)
-4. **Redeploy** Vercel once after setting `API_URL` (the Next.js API proxy reads it at request time)
+### Railway (connected to GitHub)
+
+You can deploy from either layout:
+
+| Setup | Root Directory | Config |
+|-------|----------------|--------|
+| **Repo root** (default after “Connect repo”) | *(leave empty)* | Uses `/Dockerfile` + `/railway.toml` at repo root |
+| **Subfolder** | `rollover-companion` | Uses `rollover-companion/Dockerfile` |
+
+1. Railway → your service → **Settings** → confirm deploy is **Active** and health check passes
+2. **Networking** → **Generate domain** → copy the public URL  
+   Example: `https://rollover-companion-production.up.railway.app`
+3. Smoke test (replace URL):
+
+```bash
+RAILWAY_URL=https://YOUR-RAILWAY-URL.up.railway.app bash scripts/verify-production.sh
+```
+
+### Vercel (wire the live API)
+
+1. Vercel project → **Settings** → **Environment Variables**
+2. Add `API_URL` = your Railway URL (**no trailing slash**)
+3. Apply to **Production** (and Preview if you want previews on live data)
+4. **Deployments** → **Redeploy** (required — proxy reads `API_URL` at runtime)
+
+Verify:
+
+```bash
+VERCEL_URL=https://YOUR-APP.vercel.app bash scripts/verify-production.sh
+```
+
+When `API_URL` is set, the yellow demo banner disappears and `/app` uses the real 89k employer index.
 
 ## Local run
 
