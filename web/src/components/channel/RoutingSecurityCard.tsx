@@ -1,4 +1,5 @@
 import { isFboPayableLine } from "@/lib/checkPayable";
+import { LockIcon } from "../ui/LockIcon";
 import { CopyMicroButton } from "./CopyMicroButton";
 
 function SecurityFieldRow({
@@ -49,10 +50,10 @@ export function RoutingSecurityCard({
       {showFbo && (
         <div className="mb-4 flex items-start gap-3 sm:mb-5">
           <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#111111] text-base text-white"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bee-charcoal text-white"
             aria-hidden
           >
-            🔒
+            <LockIcon className="h-5 w-5" />
           </span>
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-[#9A6200]">

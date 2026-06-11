@@ -1,6 +1,7 @@
 "use client";
 
 import { JourneyFlow } from "@/components/JourneyFlow";
+import { BeeMark } from "@/components/ui/BeeMark";
 import { useWorkspace } from "@/context/JourneyWorkspaceContext";
 
 function SurfaceCardHeader({
@@ -13,8 +14,8 @@ function SurfaceCardHeader({
   return (
     <header className="mb-8 flex items-center justify-between gap-4 border-b border-[#EAE5DC] pb-6">
       <div className="flex items-center gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFC72C] text-lg font-bold text-[#111111]">
-          🐝
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bee-yellow text-bee-charcoal">
+          <BeeMark className="h-5 w-5" />
         </div>
         <div className="text-left">
           <p className="text-base font-bold text-[#111111]">PensionBee</p>

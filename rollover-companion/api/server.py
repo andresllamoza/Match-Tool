@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any, Literal, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from api.journey_dispatch import dispatch_action  # noqa: E402
+from api.rate_limit import check_rate_limit  # noqa: E402
 from api.journey_response import JourneyResponse, wrap_journey  # noqa: E402
 from api.sessions import create_session, get_engine, get_session, save_session  # noqa: E402
 from engine.funnel import load_funnel_summary  # noqa: E402
@@ -86,8 +87,25 @@ def funnel():
     return load_funnel_summary().model_dump()
 
 
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
+def _enforce_rate_limit(request: Request) -> None:
+    try:
+        check_rate_limit(_client_ip(request))
+    except ValueError:
+        raise HTTPException(429, "Too many requests. Please wait a moment and try again.")
+
+
 @app.post("/api/journey/start", response_model=JourneyResponse)
-def start_journey(agent: bool = False):
+def start_journey(request: Request, agent: bool = False):
+    _enforce_rate_limit(request)
     ctx = create_session()
     screen = get_engine().render(ctx)
     return _wrap(ctx, screen, include_intel=agent)
@@ -104,7 +122,9 @@ def get_journey(journey_id: str, agent: bool = False):
 
 
 @app.post("/api/journey/{journey_id}/action")
-def journey_action(journey_id: str, body: ActionRequest, agent: bool = False):
+def journey_action(journey_id: str, body: ActionRequest, request: Request, agent: bool = False):
+    if body.type in ("lookup", "ask"):
+        _enforce_rate_limit(request)
     try:
         ctx = get_session(journey_id)
     except KeyError:

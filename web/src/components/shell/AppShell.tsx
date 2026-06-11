@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { JourneyPhase } from "@/lib/types";
 import { FloatingChatBubble } from "./FloatingChatBubble";
 import { MomentumRail } from "./MomentumRail";
@@ -30,6 +30,8 @@ export function AppShell({
   hideRail = false,
   showChatBubble = false,
 }: AppShellProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="desktop-shell relative mx-auto min-h-dvh max-w-desktop px-4 pb-36 pt-4 sm:px-6 lg:px-8">
       <div className="flex gap-8">
@@ -68,9 +70,9 @@ export function AppShell({
 
           <motion.div
             key={phase}
-            initial={{ opacity: 0, y: 12 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 420, damping: 36 }}
+            transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36 }}
             className="flex-1"
           >
             {children}

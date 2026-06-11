@@ -263,15 +263,27 @@ export function JourneyFlow({
             ];
       return frame(
         decisionTitle(decision),
-        options.map((opt) => (
-          <SelectionBlock
-            key={opt.id}
-            label={opt.label}
-            description={opt.hint}
-            onClick={() => handleTaxPick(opt.id)}
-            disabled={disabled}
-          />
-        ))
+        <>
+          {options.map((opt) => (
+            <SelectionBlock
+              key={opt.id}
+              label={opt.label}
+              description={opt.hint}
+              onClick={() => handleTaxPick(opt.id)}
+              disabled={disabled}
+            />
+          ))}
+          {!hideAssistant && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setAssistantOpen(true)}
+              disabled={disabled}
+            >
+              I&apos;m not sure — help me check
+            </Button>
+          )}
+        </>
       );
     }
 

@@ -79,3 +79,21 @@ pytest -q
 ```
 
 209 tests should pass including API health, employer index, and journey flows.
+
+### Frontend smoke (Playwright)
+
+With the API and Next.js dev server running:
+
+```bash
+cd web
+npm ci
+npx playwright install chromium
+API_URL=http://127.0.0.1:8000 npm run dev &
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:e2e
+```
+
+Against production: `PLAYWRIGHT_BASE_URL=https://your-app.vercel.app npm run test:e2e`
+
+## Rate limiting
+
+Public endpoints are throttled in-memory (default 60 requests / 60s per IP on journey start and employer lookup). Tune with `RATE_LIMIT_MAX` and `RATE_LIMIT_WINDOW_SEC`.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BeeMark } from "./ui/BeeMark";
 
 interface BrandHeaderProps {
   mode?: "customer" | "agent" | "embed";
@@ -12,8 +13,8 @@ export function BrandHeader({ mode = "customer", compact = false, actions }: Bra
       className={`flex items-center justify-between gap-4 ${compact ? "mb-4" : "mb-6 lg:mb-8"}`}
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bee-yellow text-lg font-bold text-bee-charcoal lg:h-12 lg:w-12 lg:text-xl">
-          🐝
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bee-yellow text-bee-charcoal lg:h-12 lg:w-12">
+          <BeeMark className="h-5 w-5 lg:h-6 lg:w-6" />
         </div>
         <div>
           <p className="text-lg font-bold text-bee-charcoal lg:text-xl">PensionBee</p>

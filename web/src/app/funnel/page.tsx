@@ -7,13 +7,24 @@ import { BrandHeader } from "@/components/BrandHeader";
 
 export default function FunnelPage() {
   const [data, setData] = useState<FunnelData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
-    getFunnel().then(setData).catch(() => setData(null));
+    getFunnel()
+      .then((d) => {
+        setData(d);
+        setApiError(false);
+      })
+      .catch(() => {
+        setData(null);
+        setApiError(true);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <main className="mx-auto min-h-dvh max-w-desktop bg-canvas px-4 py-6 lg:px-8 lg:py-10">
+    <main className="desktop-shell mx-auto min-h-dvh max-w-desktop px-4 py-6 lg:px-8 lg:py-10">
       <BrandHeader mode="agent" />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4 lg:mb-8">
         <div>
@@ -25,7 +36,19 @@ export default function FunnelPage() {
         </div>
       </div>
 
-      {!data ? (
+      {loading ? (
+        <div className="flex min-h-[40dvh] items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-bee-yellow/30 border-t-bee-yellow" />
+        </div>
+      ) : apiError ? (
+        <div className="rounded-card border border-bee-yellow/40 bg-bee-yellow-tint p-8 shadow-card">
+          <p className="font-bold text-bee-charcoal">Analytics API unreachable</p>
+          <p className="mt-2 text-sm leading-relaxed text-bee-ink">
+            Connect Railway and set <code className="rounded bg-white px-1.5 py-0.5 text-xs">API_URL</code> on
+            Vercel to load funnel data.
+          </p>
+        </div>
+      ) : !data ? (
         <div className="rounded-card border border-bee-border bg-white p-8 text-center shadow-card">
           <p className="text-bee-muted">No journey data yet. Run a few rollovers first.</p>
         </div>

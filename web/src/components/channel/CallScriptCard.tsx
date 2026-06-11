@@ -28,14 +28,19 @@ export function CallScriptCard({
   const intro = surface === "customer" ? CUSTOMER_INTROS[channel] : null;
 
   return (
-    <div className="rounded-2xl border border-[#EAE5DC] border-l-4 border-l-[#FFC72C] bg-white p-8 shadow-sm sm:p-10">
-      {intro && (
-        <p className="mb-4 text-sm leading-relaxed text-[#555555]">{intro}</p>
+    <div className="rounded-block border-2 border-bee-yellow bg-white p-6 shadow-sm sm:p-8">
+      {channel === "online" && (
+        <span className="mb-3 inline-block rounded-pill bg-bee-charcoal px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
+          Do this
+        </span>
       )}
-      <p className="text-xs font-bold uppercase tracking-wider text-[#6B6560]">
+      {intro && (
+        <p className="mb-4 text-sm leading-relaxed text-bee-faint">{intro}</p>
+      )}
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-bee-muted">
         {channel === "forms" && fieldLabel ? fieldLabel : LABELS[channel]}
       </p>
-      <p className="mt-3 text-lg font-semibold leading-relaxed text-[#1E242B] sm:text-xl">
+      <p className="mt-3 text-lg font-extrabold leading-relaxed text-bee-charcoal sm:text-xl">
         {channel === "phone" ? `\u201C${script}\u201D` : script}
       </p>
     </div>

@@ -3,7 +3,7 @@ import { JourneyFlow } from "@/components/JourneyFlow";
 
 export default function AgentPage() {
   return (
-    <main className="mx-auto min-h-dvh max-w-desktop bg-canvas px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+    <main className="desktop-shell mx-auto min-h-dvh max-w-desktop px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <BrandHeader mode="agent" />
       <div className="mb-6 rounded-xl border border-bee-border bg-white px-4 py-3 lg:mb-8 lg:px-5">
         <p className="text-xs font-bold uppercase tracking-wider text-bee-muted">Internal · BeeKeeper</p>
