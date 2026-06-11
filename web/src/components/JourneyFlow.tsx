@@ -21,7 +21,7 @@ import { SourceStatusBadge } from "./ui/SourceStatusBadge";
 import { StepTransition } from "./ui/StepTransition";
 import { EscalationConnecting } from "./EscalationConnecting";
 import { WelcomeBackToast } from "./WelcomeBackToast";
-import { employerSearchError } from "@/lib/validationCopy";
+import { bootstrapConnectionError, employerSearchError } from "@/lib/validationCopy";
 import type { DecisionMode } from "@/lib/decisionMode";
 import { decisionTitle } from "@/lib/decisionMode";
 import { stepHelperCopy } from "@/lib/stepHelpers";
@@ -144,11 +144,13 @@ export function JourneyFlow({
 
   if (!data) {
     return (
-      <div className="pb-card p-8 sm:p-10">
-        <TrustHelperBanner>
-          {employerSearchError(error, false) ||
-            "We couldn't load your rollover session. Refresh the page or start again — a BeeKeeper can help if this persists."}
-        </TrustHelperBanner>
+      <div className="pb-card space-y-6 p-8 sm:p-10">
+        <TrustHelperBanner>{bootstrapConnectionError(error)}</TrustHelperBanner>
+        {!readOnly && (
+          <Button onClick={() => void restart()} disabled={loading}>
+            {loading ? "Connecting…" : "Try again"}
+          </Button>
+        )}
       </div>
     );
   }

@@ -273,9 +273,11 @@ export function useJourneyController({
         } catch {
           if (!cancelled) setProviders([]);
         }
-      } catch {
+      } catch (e) {
         if (!cancelled) {
-          setError("Could not connect to the rollover engine. A BeeKeeper can help.");
+          const msg =
+            e instanceof Error ? e.message : "Could not connect to the rollover engine.";
+          setError(msg);
           triggerValidationShake();
         }
       } finally {

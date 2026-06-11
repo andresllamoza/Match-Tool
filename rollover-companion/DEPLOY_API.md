@@ -7,7 +7,7 @@ FastAPI backend for the Next.js customer app (`web/`). Ships with the knowledge 
 1. **Railway** — New project → Deploy from GitHub → set **Root Directory** to `rollover-companion`
 2. Wait for deploy; copy the public URL (e.g. `https://rollover-companion-production.up.railway.app`)
 3. **Vercel** (`web/` root) — Settings → Environment Variables → `API_URL` = Railway URL (no trailing slash)
-4. **Redeploy** Vercel so `next.config.mjs` rewrites `/api/*` to the live API
+4. **Redeploy** Vercel once after setting `API_URL` (the Next.js API proxy reads it at request time)
 
 ## Local run
 
