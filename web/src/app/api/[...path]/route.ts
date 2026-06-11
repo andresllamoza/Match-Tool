@@ -7,7 +7,11 @@ function apiBase(): string {
   return (process.env.API_URL || "").replace(/\/$/, "");
 }
 
-async function proxyToLiveApi(req: NextRequest, pathSegments: string[]) {
+async function proxyToLiveApi(
+  req: NextRequest,
+  pathSegments: string[],
+  bodyText: string
+) {
   const path = pathSegments.join("/");
   const target = `${apiBase()}/api/${path}${req.nextUrl.search}`;
 
@@ -24,8 +28,8 @@ async function proxyToLiveApi(req: NextRequest, pathSegments: string[]) {
       headers,
       signal: controller.signal,
     };
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      init.body = await req.text();
+    if (req.method !== "GET" && req.method !== "HEAD" && bodyText) {
+      init.body = bodyText;
     }
 
     const upstream = await fetch(target, init);
@@ -60,7 +64,7 @@ async function handleRequest(req: NextRequest, pathSegments: string[]) {
     return handleDemoRequest(req.method, pathSegments, bodyText, req.nextUrl.search);
   }
 
-  return proxyToLiveApi(req, pathSegments);
+  return proxyToLiveApi(req, pathSegments, bodyText);
 }
 
 type RouteContext = { params: { path: string[] } };
