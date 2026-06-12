@@ -67,6 +67,8 @@ def main() -> None:
             "phone": step_texts(cs.get("steps")),
             "phoneIntro": str(cs.get("intro") or ""),
             "portal": str(data.get("portal") or ""),
+            "preferredPath": str(data.get("preferred_path") or ""),
+            "phone": str(cs.get("phone") or ""),
             "mechanism": str(data.get("mechanism") or ""),
             "checkDestination": str(data.get("check_destination") or ""),
             "repQuestions": [

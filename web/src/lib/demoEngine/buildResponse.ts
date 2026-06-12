@@ -6,7 +6,7 @@ import {
   PHONE_BY_PROVIDER,
   resolveProvider,
 } from "./constants";
-import { channelStepContent } from "./playbook";
+import { channelStepContent, providerGuideInfo } from "./playbook";
 import type { DemoState } from "./state";
 
 function phaseFor(state: DemoState): JourneyResponse["screen"]["phase"] {
@@ -92,13 +92,14 @@ function screenFor(state: DemoState): JourneyScreen {
           secondary_actions: ["Roth (Roth IRA)", "Both pre-tax and Roth"],
         };
       }
+      const guide = providerGuideInfo(state.provider);
       return {
         ...base,
         phase: "rollover",
-        headline: "How would you like to do your rollover?",
-        body: DESTINATION,
+        headline: `How would you like to roll over with ${provider}?`,
+        body: guide.preferredPath || DESTINATION,
         primary_action: "Online portal",
-        secondary_actions: ["Phone", "Paper forms"],
+        secondary_actions: ["Phone"],
       };
     case "online_in_progress": {
       const onlineStep = channelStepContent(state.provider, "online", state.stepIndex);
@@ -184,11 +185,15 @@ export function buildDemoResponse(state: DemoState): JourneyResponse {
       ? channelStepContent(state.provider, state.channel, state.stepIndex)
       : null;
 
+  const guide = providerGuideInfo(state.provider);
   const enrichment: JourneyResponse["enrichment"] = {
     mailing_address: MAILING,
     destination_name: DESTINATION,
-    forward_step_required: stepContent?.forwardStepRequired ?? false,
+    forward_step_required: stepContent?.forwardStepRequired ?? guide.forwardStepRequired,
     general_path: false,
+    preferred_path: guide.preferredPath,
+    provider_portal: guide.portal,
+    provider_phone: guide.phone || PHONE_BY_PROVIDER[provider] || null,
     requires_tax_selection: state.state === "access_recovered" && !state.taxType,
     tax_options: state.state === "access_recovered" && !state.taxType
       ? [
@@ -197,8 +202,8 @@ export function buildDemoResponse(state: DemoState): JourneyResponse {
           { id: "both", label: "Both pre-tax and Roth", hint: "Split across two IRA types" },
         ]
       : [],
-    mechanism: stepContent?.mechanism ?? null,
-    check_destination: stepContent?.checkDestination ?? "PensionBee IRA",
+    mechanism: stepContent?.mechanism ?? guide.mechanism,
+    check_destination: stepContent?.checkDestination ?? guide.checkDestination ?? "PensionBee IRA",
     lookup:
       state.employer && state.provider
         ? { employer_query: state.employer, matched_provider: state.provider }

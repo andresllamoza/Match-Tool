@@ -370,6 +370,9 @@ class ScreenEnrichment(BaseModel):
     customer_last_name: str = "Rivera"
     mechanism: Optional[str] = None
     check_destination: Optional[str] = None
+    preferred_path: Optional[str] = None
+    provider_portal: Optional[str] = None
+    provider_phone: Optional[str] = None
     forward_step_required: bool = False
     general_path: bool = False
     requires_tax_selection: bool = False

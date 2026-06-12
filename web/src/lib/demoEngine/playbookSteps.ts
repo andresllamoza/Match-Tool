@@ -79,13 +79,10 @@ export const PLAYBOOK_DATA = {
         "Complete MFA \u2014 Text Me a Code or Call Me With a Code, select your phone, enter the code.",
         "Capture the confirmation screen and send it to PensionBee via BeeHive chat or info@pensionbee.com (subject: Your Name + Alight + Rollover Confirmation)."
       ],
-      "phone": [
-        "Confirm identity and request a direct rollover distribution to an external IRA.",
-        "Say PensionBee is the receiving provider.",
-        "When asked for check payable-to and mailing address, use your PensionBee rollover instructions (see copy chips or general guide)."
-      ],
+      "phone": "The number on your 401(k) statement or employer benefits site",
       "phoneIntro": "If you cannot complete the online RolloverCentral path, call and request a direct rollover to PensionBee. Use the general PensionBee payable and mailing instructions when asked.",
       "portal": "Employer benefits site (via alight.com/find-your-hr-website)",
+      "preferredPath": "Online via employer HR site \u2192 RolloverCentral \u2192 select PensionBee \u2192 direct electronic rollover.",
       "mechanism": "check_to_provider",
       "checkDestination": "Electronic direct rollover to PensionBee (via UMB); check fallback possible",
       "repQuestions": [
@@ -133,13 +130,10 @@ export const PLAYBOOK_DATA = {
         "Capture the confirmation screen. Confirm the check mails to the user's address; PensionBee sends a prepaid envelope to forward it.",
         "On receipt of the forwarded check, BeeKeeper applies it to the PensionBee IRA."
       ],
-      "phone": [
-        "Verify identity and confirm the plan you are rolling over.",
-        "Request a direct rollover \u2014 check will mail to your address on file.",
-        "Set expectation: you will forward the check to PensionBee using the prepaid envelope."
-      ],
+      "phone": "800-338-4015",
       "phoneIntro": "Call Empower and say you want a direct rollover from your old 401(k) to an external IRA.",
       "portal": "Empower participant portal",
+      "preferredPath": "Online portal where available; phone fallback. Both produce a check to the user.",
       "mechanism": "check_to_participant",
       "checkDestination": "Participant first (forwards to PensionBee via prepaid envelope)",
       "repQuestions": [
@@ -184,13 +178,10 @@ export const PLAYBOOK_DATA = {
         "In PensionBee, open Beehive chat and send your Fidelity Rollover IRA account number.",
         "PensionBee starts the electronic ACAT transfer into your PensionBee IRA \u2014 we'll notify you when it lands."
       ],
-      "phone": [
-        "Confirm your identity (name, SSN, employer/plan).",
-        "Request a direct rollover distribution to an external IRA.",
-        "If Avenue 3 is available, prefer Express rollover to a Fidelity Rollover IRA instead of a check."
-      ],
+      "phone": "800-835-5095",
       "phoneIntro": "Call Fidelity NetBenefits and say you want to roll over your old 401(k) to an IRA.",
       "portal": "NetBenefits",
+      "preferredPath": "401(k) \u2192 Fidelity Rollover IRA \u2192 ACAT to PensionBee (no check)",
       "mechanism": "two_hop_acat",
       "checkDestination": "No check (ACAT)",
       "repQuestions": [
@@ -241,13 +232,10 @@ export const PLAYBOOK_DATA = {
         "Under Delivery Selections, select Standard Mail and Continue.",
         "Review the 402(f) Tax Notice, enter your Benefits OnLine password, Submit, and send the confirmation screenshot to PensionBee (BeeHive or info@pensionbee.com \u2014 subject: Your Name + Merrill + Rollover Confirmation)."
       ],
-      "phone": [
-        "Confirm identity and request a direct rollover to an external IRA at PensionBee.",
-        "Note the check will mail to your address on file \u2014 PensionBee will send a prepaid envelope to forward it.",
-        "When asked for payable and mailing details, use PensionBee rollover instructions."
-      ],
+      "phone": "800-228-4015",
       "phoneIntro": "Call Merrill and request a direct rollover to PensionBee. If portal steps fail, use general PensionBee payable and mailing instructions.",
       "portal": "benefits.ml.com",
+      "preferredPath": "Online at benefits.ml.com \u2014 rollover to external IRA at PensionBee.",
       "mechanism": "check_to_participant",
       "checkDestination": "Check mailed to participant address on file; forward to PensionBee via prepaid envelope",
       "repQuestions": [
@@ -297,13 +285,10 @@ export const PLAYBOOK_DATA = {
         "Enter the phone verification code and click Verify.",
         "Save your request number and send the confirmation screenshot to PensionBee (BeeHive or info@pensionbee.com \u2014 subject: Your Name + Principal + Rollover Confirmation)."
       ],
-      "phone": [
-        "Confirm identity and request direct rollover to external IRA at PensionBee.",
-        "Request check be mailed directly to PensionBee (financial institution).",
-        "When asked for check payable-to and mailing address, use PensionBee rollover instructions."
-      ],
+      "phone": "800-547-7754",
       "phoneIntro": "Call Principal and request a direct rollover to PensionBee mailed to the financial institution. Use general PensionBee payable and mailing when asked.",
       "portal": "accounts.principal.com",
+      "preferredPath": "Online at accounts.principal.com \u2014 rollover IRA mailed to financial institution.",
       "mechanism": "check_to_provider",
       "checkDestination": "Check mailed directly to PensionBee",
       "repQuestions": [
@@ -352,13 +337,10 @@ export const PLAYBOOK_DATA = {
         "Confirm and capture the confirmation screen.",
         "On receipt of the direct check, BeeKeeper applies it to the PensionBee IRA."
       ],
-      "phone": [
-        "Confirm identity and the plan being rolled over.",
-        "Request direct rollover \u2014 check mailed directly to PensionBee where allowed.",
-        "Capture confirmation number and expected timeline."
-      ],
+      "phone": "800-523-1188",
       "phoneIntro": "Call Vanguard and request a direct rollover from your old 401(k) to an external IRA.",
       "portal": "Vanguard participant portal",
+      "preferredPath": "Online portal; phone fallback. Check mailed directly to PensionBee.",
       "mechanism": "check_to_provider",
       "checkDestination": "Directly to the IRA provider (PensionBee)",
       "repQuestions": [
@@ -399,13 +381,10 @@ export const PLAYBOOK_DATA = {
         "Capture the confirmation screen.",
         "On receipt of the direct check, BeeKeeper applies it to the PensionBee IRA."
       ],
-      "phone": [
-        "Confirm identity and rollover intent (phone verification gate on some plans).",
-        "Request direct rollover to PensionBee IRA \u2014 check mailed directly to PensionBee.",
-        "Ask for expected check issuance timeline (Voya can be slower than peers)."
-      ],
+      "phone": "800-584-6001",
       "phoneIntro": "Call Voya to request a direct rollover \u2014 some plans require phone verification before the check releases.",
       "portal": "Voya participant portal",
+      "preferredPath": "Online portal; phone fallback. Check mailed directly to PensionBee.",
       "mechanism": "check_to_provider",
       "checkDestination": "Directly to the IRA provider (PensionBee)",
       "repQuestions": [

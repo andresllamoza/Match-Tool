@@ -392,15 +392,9 @@ def _render_decisions(view: JourneyView) -> None:
         if option_card(
             "By phone",
             key="ch_phone",
-            caption="We'll give you the number and a read-along script.",
+            caption="We'll give you the number and a read-along script. Forms often come up on this call.",
         ):
             _go({"type": "channel", "channel": "phone"})
-        if option_card(
-            "Paper forms",
-            key="ch_forms",
-            caption="Download, fill, and mail.",
-        ):
-            _go({"type": "channel", "channel": "forms"})
         return
 
     if state in IN_CHANNEL and view.total_steps > 0:

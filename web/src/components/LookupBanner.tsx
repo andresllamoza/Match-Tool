@@ -10,10 +10,18 @@ const TIER_LABEL: Record<string, string> = {
   low: "Still narrowing it down",
 };
 
+const GUIDE_VISIBLE_STATES = new Set([
+  "provider_identified",
+  "provider_not_covered",
+  "access_recovered",
+  "access_blocked",
+]);
+
 export function LookupBanner({ data }: { data: JourneyResponse }) {
   const [expanded, setExpanded] = useState(false);
   const { screen, enrichment, context } = data;
-  if (!screen.provider || screen.state !== "provider_identified") return null;
+  const provider = screen.provider || context.uncovered_provider;
+  if (!provider || !GUIDE_VISIBLE_STATES.has(screen.state)) return null;
 
   const tier = screen.confidence_tier || context.lookup_confidence_tier;
   const employer = enrichment.lookup?.employer_query || context.employer_query;
@@ -27,16 +35,24 @@ export function LookupBanner({ data }: { data: JourneyResponse }) {
             {TIER_LABEL[tier] || tier}
           </span>
         )}
-        <NextStepBadge>Next: confirm access</NextStepBadge>
+        {screen.state === "provider_identified" && (
+          <NextStepBadge>Next: confirm access</NextStepBadge>
+        )}
+        {screen.state === "access_recovered" && enrichment.requires_tax_selection && (
+          <NextStepBadge>Next: fund type</NextStepBadge>
+        )}
+        {screen.state === "access_recovered" && !enrichment.requires_tax_selection && (
+          <NextStepBadge>Next: choose channel</NextStepBadge>
+        )}
       </div>
 
       <dl className="space-y-3">
         <div>
           <dt className="text-[11px] font-bold uppercase tracking-[0.2em] text-bee-muted">
-            Matched provider
+            {enrichment.general_path ? "Recordkeeper" : "Matched provider"}
           </dt>
           <dd className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-bee-charcoal">
-            {screen.provider}
+            {provider}
           </dd>
         </div>
         {employer && (
@@ -47,7 +63,23 @@ export function LookupBanner({ data }: { data: JourneyResponse }) {
             <dd className="mt-1 text-sm text-bee-ink">{employer}</dd>
           </div>
         )}
-        {enrichment.check_destination && (
+        {enrichment.provider_portal && (
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.2em] text-bee-muted">
+              Portal
+            </dt>
+            <dd className="mt-1 text-sm font-semibold text-bee-ink">{enrichment.provider_portal}</dd>
+          </div>
+        )}
+        {enrichment.preferred_path && (
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.2em] text-bee-muted">
+              PensionBee path
+            </dt>
+            <dd className="mt-1 text-sm leading-relaxed text-bee-ink">{enrichment.preferred_path}</dd>
+          </div>
+        )}
+        {enrichment.check_destination && !enrichment.preferred_path && (
           <div>
             <dt className="text-[11px] font-bold uppercase tracking-[0.2em] text-bee-muted">
               Check path

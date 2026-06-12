@@ -57,6 +57,18 @@ export function providerCheckDestination(provider: string | null | undefined): s
   return providerPlaybook(provider).checkDestination || null;
 }
 
+export function providerGuideInfo(provider: string | null | undefined) {
+  const pb = providerPlaybook(provider);
+  return {
+    preferredPath: pb.preferredPath || null,
+    portal: pb.portal || null,
+    phone: pb.phone || null,
+    mechanism: pb.mechanism || null,
+    checkDestination: pb.checkDestination || null,
+    forwardStepRequired: pb.forwardStepRequired,
+  };
+}
+
 export function channelStepContent(
   provider: string | null | undefined,
   channel: DemoChannel,

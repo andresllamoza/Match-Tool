@@ -43,6 +43,8 @@ def build_enrichment(
     if ctx.employer_query and recordkeeper and ctx.state in {
         JourneyState.PROVIDER_IDENTIFIED,
         JourneyState.PROVIDER_NOT_COVERED,
+        JourneyState.ACCESS_RECOVERED,
+        JourneyState.ACCESS_BLOCKED,
     }:
         enrichment.lookup = LookupContext(
             employer_query=ctx.employer_query,
@@ -53,6 +55,9 @@ def build_enrichment(
         pb = knowledge.playbook_for(ctx)
         enrichment.mechanism = pb.mechanism.value
         enrichment.check_destination = pb.check_destination
+        enrichment.preferred_path = pb.preferred_path
+        enrichment.provider_portal = pb.portal
+        enrichment.provider_phone = pb.call_script.phone
         enrichment.forward_step_required = pb.forward_step_required
 
         if screen.state in {

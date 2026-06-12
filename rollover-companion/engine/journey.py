@@ -559,10 +559,10 @@ class JourneyEngine:
                     agent_notes=agent_notes,
                     sla_note=sla_note,
                 )
-            headline = "How would you like to do your rollover?"
-            body = playbook.check_destination
+            headline = f"How would you like to roll over with {ctx.provider}?"
+            body = playbook.preferred_path
             primary = "Online portal"
-            secondary = ["Phone", "Paper forms"]
+            secondary = ["Phone"]
             for ec in edge_cases:
                 agent_notes.append(f"Pre-empt: {ec}")
             return JourneyScreen(

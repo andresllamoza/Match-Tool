@@ -29,16 +29,13 @@ test.describe("Customer journey smoke", () => {
     await page.getByLabel(/former employer/i).fill("Target");
     await page.getByRole("button", { name: /search for my employer/i }).click();
 
-    await expect(page.getByRole("button", { name: /yes, i can log in/i })).toBeVisible({
-      timeout: 15_000,
-    });
-    await page.getByRole("button", { name: /yes, i can log in/i }).click();
+    await expect(page.getByText(/pensionbee path/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/netbenefits/i)).toBeVisible({ timeout: 15_000 });
 
-    await expect(
-      page.getByRole("button", { name: /pre-tax \(traditional ira\)/i })
-    ).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /yes, i can log in/i }).click();
     await page.getByRole("button", { name: /pre-tax \(traditional ira\)/i }).click();
 
+    await expect(page.getByRole("button", { name: /paper forms/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /online/i }).first()).toBeVisible({
       timeout: 15_000,
     });

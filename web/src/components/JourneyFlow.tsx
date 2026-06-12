@@ -63,10 +63,7 @@ function resolveDecisionMode(
   if (screen.state === "provider_identified" || screen.state === "provider_not_covered") {
     return "access";
   }
-  if (
-    screen.state === "access_recovered" &&
-    screen.secondary_actions.some((a) => /phone|form/i.test(a))
-  ) {
+  if (screen.state === "access_recovered" && !enrichment.requires_tax_selection) {
     return "channel";
   }
   if (inChannel) return "channel_step";
@@ -222,7 +219,7 @@ export function JourneyFlow({
     await act({ type: "access", can_login: canLogin });
   }
 
-  async function handleChannel(channel: "online" | "phone" | "forms") {
+  async function handleChannel(channel: "online" | "phone") {
     await act({ type: "channel", channel });
   }
 
@@ -353,8 +350,18 @@ export function JourneyFlow({
     }
 
     if (decision === "channel") {
+      const portal = enrichment.provider_portal;
+      const providerPhone = enrichment.provider_phone;
+      const onlineDesc = portal
+        ? `Step-by-step in ${portal} using your provider guide.`
+        : enrichment.preferred_path || "Fastest when you can log in to your provider's website.";
+      const phoneDesc = providerPhone
+        ? `Call ${providerPhone} — we'll coach you through what to say. Forms often come up on this call.`
+        : "We'll give you the verified number and exactly what to say.";
       return frame(
-        decisionTitle(decision),
+        screen.provider
+          ? `How would you like to roll over with ${screen.provider}?`
+          : decisionTitle(decision),
         <>
           <div className="relative">
             <span className="absolute -top-3 left-4 z-10 rounded-pill bg-bee-charcoal px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
@@ -362,7 +369,7 @@ export function JourneyFlow({
             </span>
             <SelectionBlock
               label="Online"
-              description="Fastest when you can log in to your provider's website."
+              description={onlineDesc}
               onClick={() => handleChannel("online")}
               disabled={disabled}
               recommended
@@ -370,14 +377,8 @@ export function JourneyFlow({
           </div>
           <SelectionBlock
             label="By phone"
-            description="We'll give you the number and exactly what to say."
+            description={phoneDesc}
             onClick={() => handleChannel("phone")}
-            disabled={disabled}
-          />
-          <SelectionBlock
-            label="Paper forms"
-            description="Download, fill out, and mail a distribution form."
-            onClick={() => handleChannel("forms")}
             disabled={disabled}
           />
         </>
