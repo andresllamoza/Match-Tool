@@ -101,6 +101,7 @@ export interface JourneyScreen {
 export interface HistorySnapshot {
   state: JourneyState;
   provider: string | null;
+  uncovered_provider?: string | null;
   channel: string | null;
   step_index: number;
   flags: Record<string, boolean>;

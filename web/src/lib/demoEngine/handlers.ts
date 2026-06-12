@@ -1,6 +1,6 @@
 import type { JourneyResponse } from "@/lib/types";
-import { DEMO_PROVIDERS, resolveProvider } from "./constants";
-import { channelStepCount, type DemoChannel } from "./playbook";
+import { DEMO_PROVIDERS, resolveLookup } from "./constants";
+import { channelStepCount, isProviderInLibrary, type DemoChannel } from "./playbook";
 import { buildDemoResponse } from "./buildResponse";
 import {
   createInitialDemoState,
@@ -17,6 +17,28 @@ function commit(state: DemoState): JourneyResponse {
 
 function pushHistory(state: DemoState): void {
   state.history = [...(state.history || []), snapshotOf(state)].slice(-24);
+}
+
+function applyLookup(state: DemoState, employer: string): void {
+  state.employer = employer.trim();
+  const { provider, uncoveredProvider } = resolveLookup(state.employer);
+  state.provider = provider;
+  state.uncoveredProvider = uncoveredProvider;
+  state.state = uncoveredProvider ? "provider_not_covered" : "provider_identified";
+  state.taxType = null;
+}
+
+function applyProviderDirect(state: DemoState, providerName: string): void {
+  if (isProviderInLibrary(providerName)) {
+    state.provider = providerName;
+    state.uncoveredProvider = null;
+    state.state = "provider_identified";
+  } else {
+    state.provider = null;
+    state.uncoveredProvider = providerName;
+    state.state = "provider_not_covered";
+  }
+  state.taxType = "pre_tax";
 }
 
 export function demoHealth() {
@@ -56,18 +78,13 @@ export function demoAction(journeyId: string, body: Record<string, unknown>): Jo
 
   if (type === "lookup" && typeof body.employer === "string") {
     pushHistory(state);
-    state.employer = body.employer.trim();
-    state.provider = resolveProvider(state.employer);
-    state.state = "provider_identified";
-    state.taxType = null;
+    applyLookup(state, body.employer);
     return commit(state);
   }
 
   if (type === "provider_direct" && typeof body.provider === "string") {
     pushHistory(state);
-    state.provider = body.provider;
-    state.state = "provider_identified";
-    state.taxType = "pre_tax";
+    applyProviderDirect(state, body.provider);
     return commit(state);
   }
 
@@ -93,9 +110,10 @@ export function demoAction(journeyId: string, body: Record<string, unknown>): Jo
   if (type === "channel" && typeof body.channel === "string") {
     pushHistory(state);
     const ch = body.channel as DemoChannel;
+    const rk = state.provider || state.uncoveredProvider;
     state.channel = ch;
     state.stepIndex = 0;
-    state.totalSteps = channelStepCount(state.provider, ch);
+    state.totalSteps = channelStepCount(rk, ch);
     state.state =
       ch === "phone" ? "phone_in_progress" : ch === "forms" ? "forms_in_progress" : "online_in_progress";
     return commit(state);
@@ -143,6 +161,7 @@ export function demoAction(journeyId: string, body: Record<string, unknown>): Jo
     state.history = state.history.slice(0, -1);
     state.state = prev.state;
     state.provider = prev.provider;
+    state.uncoveredProvider = prev.uncovered_provider ?? null;
     state.channel = prev.channel as DemoState["channel"];
     state.stepIndex = prev.step_index;
     state.taxType = prev.tax_fund_type || null;

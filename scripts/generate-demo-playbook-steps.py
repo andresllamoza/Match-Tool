@@ -49,8 +49,13 @@ def main() -> None:
     portal_menu_hints = general.get("portal_menu_aliases") or []
     destination_hints = general.get("destination_dropdown_aliases") or []
     general_online = step_texts(general.get("general_steps"))
-    general_phone = step_texts((general.get("general_call_script") or {}).get("steps"))
+    general_cs = general.get("general_call_script") or {}
+    general_phone = step_texts(general_cs.get("steps"))
     general_forms = form_steps((general.get("general_form_guidance") or {}).get("fields"))
+    general_ar = general.get("general_access_recovery") or {}
+    general_na = general.get("general_next_actions") or {}
+    general_lockout = general_ar.get("lockout_fallback") or {}
+    general_promo = general.get("promo") or {}
 
     providers: dict[str, dict] = {}
     for path in sorted(KNOWLEDGE.glob("*_Rollover_Guide.md")):
@@ -62,15 +67,25 @@ def main() -> None:
             continue
         cs = data.get("call_script") or {}
         fg = data.get("form_guidance") or {}
+        ar = data.get("access_recovery") or {}
+        lockout = ar.get("lockout_fallback") or {}
+        na = data.get("next_actions") or {}
         providers[name] = {
             "online": step_texts(data.get("steps")),
-            "phone": step_texts(cs.get("steps")),
+            "phoneSteps": step_texts(cs.get("steps")),
             "phoneIntro": str(cs.get("intro") or ""),
             "portal": str(data.get("portal") or ""),
             "preferredPath": str(data.get("preferred_path") or ""),
-            "phone": str(cs.get("phone") or ""),
+            "phoneNumber": str(cs.get("phone") or ""),
             "mechanism": str(data.get("mechanism") or ""),
             "checkDestination": str(data.get("check_destination") or ""),
+            "providerIdentifiedMessage": str(
+                (na.get("provider_identified") or {}).get("customer_message") or ""
+            ),
+            "accessPortalName": str(ar.get("portal_name") or data.get("portal") or ""),
+            "accessResetSteps": step_texts(ar.get("reset_steps")),
+            "lockoutPhone": str(lockout.get("phone") or ""),
+            "lockoutScript": str(lockout.get("what_to_say") or ""),
             "repQuestions": [
                 {"question": q.get("question", ""), "answer": q.get("answer", "")}
                 for q in cs.get("rep_questions") or []
@@ -89,8 +104,33 @@ def main() -> None:
         "destinationHints": destination_hints,
         "general": {
             "online": general_online,
-            "phone": general_phone,
+            "phoneSteps": general_phone,
             "forms": general_forms,
+            "preferredPath": "Direct rollover via portal or phone using general PensionBee instructions.",
+            "portal": str(general_ar.get("portal_name") or ""),
+            "phoneNumber": str(general_cs.get("phone") or ""),
+            "phoneIntro": str(general_cs.get("intro") or ""),
+            "mechanism": "check_to_provider",
+            "checkDestination": f"Directly to {general.get('destination_name', 'PensionBee')}",
+            "providerIdentifiedMessage": str(
+                (general_na.get("provider_identified") or {}).get("customer_message") or ""
+            ),
+            "accessPortalName": str(general_ar.get("portal_name") or ""),
+            "accessResetSteps": step_texts(general_ar.get("reset_steps")),
+            "lockoutPhone": str(general_lockout.get("phone") or ""),
+            "lockoutScript": str(general_lockout.get("what_to_say") or ""),
+            "repQuestions": [
+                {"question": q.get("question", ""), "answer": q.get("answer", "")}
+                for q in general_cs.get("rep_questions") or []
+                if q.get("question")
+            ],
+            "rolloverInitiatedMessage": str(
+                (general_na.get("rollover_initiated") or {}).get("customer_message") or ""
+            ),
+            "inFlightMessage": str((general_na.get("in_flight") or {}).get("customer_message") or ""),
+            "completeMessage": str(general_promo.get("complete_message") or ""),
+            "forwardStepRequired": False,
+            "hasReconstructed": False,
         },
         "providers": providers,
         "demoAliases": DEMO_ALIASES,

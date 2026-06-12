@@ -41,7 +41,7 @@ test.describe("Customer journey smoke", () => {
 
     await expect(page.getByText(/matched provider/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/alight/i).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/rollovercentral/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/rollovercentral/i).first()).toBeVisible({ timeout: 15_000 });
 
     await clickJourneyAction(page, page.getByRole("button", { name: /yes, i can log in/i }));
     await clickJourneyAction(

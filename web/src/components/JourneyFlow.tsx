@@ -159,7 +159,7 @@ export function JourneyFlow({
     screen.state
   );
   const decision = resolveDecisionMode(data, showProviderPicker);
-  const sourceStatus = deriveSourceStatus(screen);
+  const sourceStatus = deriveSourceStatus(screen, context);
   const channelSurface: ChannelSurface =
     channelSurfaceOverride ??
     (mode === "agent" ? "agent" : mode === "embed" ? "embed" : "customer");
@@ -325,18 +325,28 @@ export function JourneyFlow({
     }
 
     if (decision === "access") {
+      const portal = enrichment.provider_portal;
+      const yesDesc = portal
+        ? enrichment.general_path
+          ? `Head to ${portal} — we'll use our general online or phone guide for your rollover.`
+          : `We'll walk you through ${portal} step by step using your provider guide.`
+        : enrichment.preferred_path ||
+          "We'll walk you through your provider portal or by phone.";
+      const noDesc = enrichment.provider_phone
+        ? `Recover access at ${enrichment.provider_portal || "your provider's site"}, or call ${enrichment.provider_phone}.`
+        : "We'll help you recover access or connect you with a BeeKeeper.";
       return frame(
         decisionTitle(decision),
         <>
           <SelectionBlock
             label="Yes, I can log in"
-            description="We'll walk you through the rollover in your provider portal or by phone."
+            description={yesDesc}
             onClick={() => handleAccess(true)}
             disabled={disabled}
           />
           <SelectionBlock
             label="No, I'm locked out or never had access"
-            description="We'll help you recover access or connect you with a BeeKeeper."
+            description={noDesc}
             onClick={() => handleAccess(false)}
             disabled={disabled}
           />
@@ -352,15 +362,20 @@ export function JourneyFlow({
     if (decision === "channel") {
       const portal = enrichment.provider_portal;
       const providerPhone = enrichment.provider_phone;
+      const recordkeeper = screen.provider || context.uncovered_provider;
       const onlineDesc = portal
-        ? `Step-by-step in ${portal} using your provider guide.`
+        ? enrichment.general_path
+          ? `General guide for ${portal} — look for Withdrawals or Rollovers in the menu.`
+          : `Step-by-step in ${portal} using your provider guide.`
         : enrichment.preferred_path || "Fastest when you can log in to your provider's website.";
       const phoneDesc = providerPhone
-        ? `Call ${providerPhone} — we'll coach you through what to say. Forms often come up on this call.`
+        ? enrichment.general_path
+          ? `Call ${providerPhone} — we'll coach you through our general rollover script. Forms often come up on this call.`
+          : `Call ${providerPhone} — we'll coach you through what to say. Forms often come up on this call.`
         : "We'll give you the verified number and exactly what to say.";
       return frame(
-        screen.provider
-          ? `How would you like to roll over with ${screen.provider}?`
+        recordkeeper
+          ? `How would you like to roll over with ${recordkeeper}?`
           : decisionTitle(decision),
         <>
           <div className="relative">
