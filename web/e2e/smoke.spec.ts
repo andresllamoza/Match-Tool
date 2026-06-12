@@ -44,7 +44,7 @@ test.describe("Customer journey smoke", () => {
     });
     await page.getByRole("button", { name: /online/i }).first().click();
 
-    await expect(page.getByText(/log in to fidelity netbenefits/i)).toBeVisible({
+    await expect(page.getByText(/netbenefits\.com/i)).toBeVisible({
       timeout: 15_000,
     });
 

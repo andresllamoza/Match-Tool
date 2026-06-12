@@ -344,6 +344,7 @@ class ChannelContext(BaseModel):
     form_field_label: Optional[str] = None
     rep_questions: list[RepQuestionView] = Field(default_factory=list)
     step_label: Optional[str] = None
+    portal_name: Optional[str] = None
     portal_menu_hints: list[str] = Field(default_factory=list)
     destination_hints: list[str] = Field(default_factory=list)
 

@@ -1,5 +1,5 @@
 import type { ChannelContext, ScreenEnrichment } from "@/lib/types";
-import { showMailingDetails } from "@/lib/checkPayable";
+import { showMailingDetails, usesCheckMailing } from "@/lib/checkPayable";
 import { AgentCustodianNote } from "./channel/AgentCustodianNote";
 import { CallScriptCard } from "./channel/CallScriptCard";
 import { ChannelSection } from "./channel/ChannelSection";
@@ -56,6 +56,13 @@ export function ChannelWalkthrough({
   );
 }
 
+function mailingOptions(enrichment: ScreenEnrichment) {
+  return {
+    mechanism: enrichment.mechanism,
+    checkDestination: enrichment.check_destination,
+  };
+}
+
 function MailingBlock({
   ctx,
   enrichment,
@@ -71,7 +78,9 @@ function MailingBlock({
   surface: ChannelSurface;
   includeDestination?: boolean;
 }) {
-  if (!showMailingDetails(ctx.say_this, stepIndex, totalSteps)) return null;
+  if (!showMailingDetails(ctx.say_this, stepIndex, totalSteps, mailingOptions(enrichment))) {
+    return null;
+  }
 
   const payable = ctx.check_payable ?? "";
   const mail = ctx.mailing_address || enrichment.mailing_address;
@@ -105,7 +114,12 @@ function PhoneWalkthrough({
   totalSteps: number;
   surface: ChannelSurface;
 }) {
-  const showRouting = showMailingDetails(ctx.say_this, stepIndex, totalSteps);
+  const showRouting = showMailingDetails(
+    ctx.say_this,
+    stepIndex,
+    totalSteps,
+    mailingOptions(enrichment)
+  );
 
   return (
     <ChannelSection className="mb-8">
@@ -188,35 +202,39 @@ function OnlineWalkthrough({
   totalSteps: number;
   surface: ChannelSurface;
 }) {
+  const isAcatsPath = !usesCheckMailing(enrichment.mechanism, enrichment.check_destination);
+
   return (
-    <ChannelSection className="mb-8">
+    <ChannelSection className="mb-8 space-y-4">
       {enrichment.general_path && (
-        <p className="rounded-2xl border border-[#FFC72C]/35 bg-[#FFF9E6] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-[#1E242B] sm:px-8">
-          General rollover guide — look for Withdrawals / Rollovers in your provider
-          portal
+        <p className="rounded-2xl border border-[#FFC72C]/35 bg-[#FFF9E6] px-6 py-4 text-sm leading-relaxed text-[#1E242B] sm:px-8">
+          General guide — menu names vary by provider. Look for{" "}
+          <span className="font-semibold">Withdrawals</span> or{" "}
+          <span className="font-semibold">Rollovers</span> in your portal.
         </p>
       )}
 
-      <CallScriptCard channel="online" script={ctx.say_this} surface={surface} />
+      {isAcatsPath && stepIndex >= 3 && stepIndex <= 5 && (
+        <p className="rounded-2xl border border-bee-yellow/40 bg-bee-yellow-tint px-6 py-4 text-sm leading-relaxed text-bee-ink sm:px-8">
+          <span className="font-semibold">No paper check on this path.</span> Funds move
+          electronically from your Fidelity Rollover IRA into PensionBee.
+        </p>
+      )}
 
       {ctx.portal_menu_hints && ctx.portal_menu_hints.length > 0 && (
         <div className="rounded-2xl border border-[#EAE5DC] bg-[#FAF8F5] px-6 py-5 sm:px-8">
-          <p className="text-xs font-bold uppercase text-[#6B6560]">
-            Look for these menu labels
-          </p>
+          <p className="text-xs font-bold uppercase text-[#6B6560]">Menu labels to look for</p>
           <p className="mt-2 text-sm leading-relaxed text-[#1E242B] sm:text-base">
-            {ctx.portal_menu_hints.join(" · ")}
+            {ctx.portal_menu_hints.slice(0, 4).join(" · ")}
           </p>
         </div>
       )}
 
       {ctx.destination_hints && ctx.destination_hints.length > 0 && (
         <div className="rounded-2xl border border-[#EAE5DC] bg-[#FAF8F5] px-6 py-5 sm:px-8">
-          <p className="text-xs font-bold uppercase text-[#6B6560]">
-            Destination dropdown options
-          </p>
+          <p className="text-xs font-bold uppercase text-[#6B6560]">Destination dropdown</p>
           <p className="mt-2 text-sm leading-relaxed text-[#1E242B] sm:text-base">
-            {ctx.destination_hints.join(" · ")}
+            {ctx.destination_hints.slice(0, 4).join(" · ")}
           </p>
         </div>
       )}
@@ -227,7 +245,7 @@ function OnlineWalkthrough({
         stepIndex={stepIndex}
         totalSteps={totalSteps}
         surface={surface}
-        includeDestination
+        includeDestination={usesCheckMailing(enrichment.mechanism, enrichment.check_destination)}
       />
 
       {enrichment.forward_step_required && (

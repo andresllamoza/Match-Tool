@@ -37,6 +37,7 @@ export interface ChannelContext {
   form_field_label?: string | null;
   rep_questions: RepQuestionView[];
   step_label?: string | null;
+  portal_name?: string | null;
   portal_menu_hints?: string[];
   destination_hints?: string[];
 }

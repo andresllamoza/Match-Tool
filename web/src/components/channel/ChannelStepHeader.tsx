@@ -2,12 +2,14 @@ export function ChannelStepHeader({
   stepIndex,
   totalSteps,
   provider,
+  portalName,
   channelLabel,
   instruction,
 }: {
   stepIndex: number;
   totalSteps: number;
   provider: string;
+  portalName?: string | null;
   channelLabel: string;
   instruction?: string;
 }) {
@@ -16,7 +18,7 @@ export function ChannelStepHeader({
 
   const meta = [
     `Step ${stepIndex + 1} of ${totalSteps}`,
-    provider || null,
+    portalName || provider || null,
     channelLabel || null,
   ]
     .filter(Boolean)

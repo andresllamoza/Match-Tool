@@ -160,6 +160,7 @@ def _channel_context(
         check_payable=payable,
         rep_questions=[],
         step_label=f"Step {ctx.step_index + 1}",
+        portal_name=playbook.portal,
         portal_menu_hints=portal_hints,
         destination_hints=destination_hints,
     )
