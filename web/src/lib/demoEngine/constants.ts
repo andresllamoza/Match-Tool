@@ -13,7 +13,7 @@ export const MAILING = "PO Box 72, New York, NY 10272";
 export const DESTINATION = "PensionBee IRA";
 
 const EMPLOYER_HINTS: [string, string][] = [
-  ["target", "Fidelity"],
+  ["target", "Alight"],
   ["walmart", "Merrill Lynch"],
   ["amazon", "Fidelity"],
   ["google", "Fidelity"],
