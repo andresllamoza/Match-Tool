@@ -51,9 +51,7 @@ def resolve_decision_mode(
         return "employer"
     if screen.state in {JourneyState.PROVIDER_IDENTIFIED, JourneyState.PROVIDER_NOT_COVERED}:
         return "access"
-    if screen.state == JourneyState.ACCESS_RECOVERED and any(
-        "phone" in a.lower() or "form" in a.lower() for a in screen.secondary_actions
-    ):
+    if screen.state == JourneyState.ACCESS_RECOVERED and not enrichment.requires_tax_selection:
         return "channel"
     if in_channel:
         return "channel_step"

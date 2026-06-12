@@ -6,6 +6,7 @@ export interface DemoState {
   state: JourneyState;
   employer: string | null;
   provider: string | null;
+  uncoveredProvider: string | null;
   channel: "online" | "phone" | "forms" | null;
   stepIndex: number;
   totalSteps: number;
@@ -43,6 +44,7 @@ export function createInitialDemoState(): DemoState {
     state: "provider_unknown",
     employer: null,
     provider: null,
+    uncoveredProvider: null,
     channel: null,
     stepIndex: 0,
     totalSteps: 0,
@@ -57,6 +59,7 @@ export function snapshotOf(s: DemoState): HistorySnapshot {
   return {
     state: s.state,
     provider: s.provider,
+    uncovered_provider: s.uncoveredProvider,
     channel: s.channel,
     step_index: s.stepIndex,
     flags: {},

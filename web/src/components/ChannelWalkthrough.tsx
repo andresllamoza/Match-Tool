@@ -160,6 +160,15 @@ function PhoneWalkthrough({
         <PhoneRoutingPanel ctx={ctx} enrichment={enrichment} surface={surface} />
       )}
 
+      {enrichment.general_path && ctx.portal_menu_hints && ctx.portal_menu_hints.length > 0 && (
+        <div className="rounded-2xl border border-[#EAE5DC] bg-[#FAF8F5] px-6 py-5 sm:px-8">
+          <p className="text-xs font-bold uppercase text-[#6B6560]">If they mention the portal</p>
+          <p className="mt-2 text-sm leading-relaxed text-[#1E242B] sm:text-base">
+            Look for {ctx.portal_menu_hints.slice(0, 4).join(" · ")} in the online menu.
+          </p>
+        </div>
+      )}
+
       {ctx.rep_questions.length > 0 && (
         <div className="rounded-2xl border border-[#EAE5DC] bg-[#FFF9E6]/50 p-6 sm:p-8">
           <p className="mb-4 text-sm font-bold text-[#1E242B]">If the rep asks…</p>
@@ -217,7 +226,7 @@ function OnlineWalkthrough({
       {isAcatsPath && stepIndex >= 3 && stepIndex <= 5 && (
         <p className="rounded-2xl border border-bee-yellow/40 bg-bee-yellow-tint px-6 py-4 text-sm leading-relaxed text-bee-ink sm:px-8">
           <span className="font-semibold">No paper check on this path.</span> Funds move
-          electronically from your Fidelity Rollover IRA into PensionBee.
+          electronically into your PensionBee IRA once the provider-side rollover completes.
         </p>
       )}
 

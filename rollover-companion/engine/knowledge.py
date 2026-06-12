@@ -332,7 +332,7 @@ class KnowledgeBase:
             mechanism=Mechanism.CHECK_TO_PROVIDER,
             check_destination=f"Directly to {g.destination_name}",
             forward_step_required=False,
-            preferred_path="Direct rollover via portal, phone, or forms using general PensionBee instructions.",
+            preferred_path="Direct rollover via portal or phone using general PensionBee instructions.",
             portal=g.general_access_recovery.portal_name,
             sla_note=g.typical_processing_time,
             tax_routing_note=f"{tr.pre_tax} {tr.roth}",

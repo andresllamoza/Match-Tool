@@ -83,6 +83,16 @@ def test_provider_not_covered_screen(engine):
     assert "general" in screen.body.lower()
 
 
+def test_uncovered_channel_screen_names_recordkeeper(engine):
+    ctx = engine.start()
+    engine.lookup_employer(ctx, "Uncovered Demo Corp")
+    engine.submit_access(ctx, can_login=True)
+    engine.submit_tax_type(ctx, "pre_tax")
+    screen = engine.render(ctx)
+    assert "Paychex" in screen.headline
+    assert screen.provider == "Paychex"
+
+
 def test_walmart_merrill_online_journey(engine):
     ctx = engine.start()
     engine.lookup_employer(ctx, "Walmart")

@@ -63,6 +63,9 @@ export interface ScreenEnrichment {
   customer_last_name?: string;
   mechanism?: string | null;
   check_destination?: string | null;
+  preferred_path?: string | null;
+  provider_portal?: string | null;
+  provider_phone?: string | null;
   forward_step_required: boolean;
   general_path?: boolean;
   requires_tax_selection: boolean;
@@ -98,6 +101,7 @@ export interface JourneyScreen {
 export interface HistorySnapshot {
   state: JourneyState;
   provider: string | null;
+  uncovered_provider?: string | null;
   channel: string | null;
   step_index: number;
   flags: Record<string, boolean>;

@@ -28,7 +28,7 @@ export const PLAYBOOK_DATA = {
       "Mixed pre-tax and Roth \u2192 two separate checks, one per account type.",
       "Submit the request and capture the confirmation screen."
     ],
-    "phone": [
+    "phoneSteps": [
       "Confirm your identity and request a direct rollover distribution.",
       "When asked for the receiving provider, say PensionBee.",
       "When asked how to make the check payable, say: PensionBee FBO [your name].",
@@ -44,7 +44,40 @@ export const PLAYBOOK_DATA = {
         "label": "Mailing address",
         "instruction": "PO Box 72, New York, NY 10272"
       }
-    ]
+    ],
+    "preferredPath": "Direct rollover via portal or phone using general PensionBee instructions.",
+    "portal": "your provider's retirement portal",
+    "phoneNumber": "Call the number on your 401(k) statement or employer benefits site",
+    "phoneIntro": "Call and say you want a direct rollover to an external IRA at PensionBee.",
+    "mechanism": "check_to_provider",
+    "checkDestination": "Directly to PensionBee",
+    "providerIdentifiedMessage": "We don't have provider-specific steps yet, but you can still roll over using our general online or phone guide.",
+    "accessPortalName": "your provider's retirement portal",
+    "accessResetSteps": [
+      "Find the login page for your old 401(k) provider (check your statement or employer benefits site).",
+      "Use 'Forgot password' or 'First-time user' to recover access."
+    ],
+    "lockoutPhone": "the number on your 401(k) statement",
+    "lockoutScript": "I need help accessing my former employer 401(k) to request a rollover.",
+    "repQuestions": [
+      {
+        "question": "Pre-tax or Roth?",
+        "answer": "Pre-tax \u2192 Traditional IRA. Roth \u2192 Roth IRA."
+      },
+      {
+        "question": "Check payable to?",
+        "answer": "PensionBee FBO [your name]"
+      },
+      {
+        "question": "Mailing address?",
+        "answer": "PO Box 72, New York, NY 10272"
+      }
+    ],
+    "rolloverInitiatedMessage": "Your rollover request is submitted. Most providers take about 2\u20134 weeks for checks to reach PensionBee.",
+    "inFlightMessage": "We're tracking your rollover. If nothing arrives by day 28, a BeeKeeper can trace it with your provider.",
+    "completeMessage": "You earned your 1% match \u2014 welcome to PensionBee.",
+    "forwardStepRequired": false,
+    "hasReconstructed": false
   },
   "providers": {
     "Alight Solutions": {
@@ -79,15 +112,25 @@ export const PLAYBOOK_DATA = {
         "Complete MFA \u2014 Text Me a Code or Call Me With a Code, select your phone, enter the code.",
         "Capture the confirmation screen and send it to PensionBee via BeeHive chat or info@pensionbee.com (subject: Your Name + Alight + Rollover Confirmation)."
       ],
-      "phone": [
+      "phoneSteps": [
         "Confirm identity and request a direct rollover distribution to an external IRA.",
         "Say PensionBee is the receiving provider.",
         "When asked for check payable-to and mailing address, use your PensionBee rollover instructions (see copy chips or general guide)."
       ],
       "phoneIntro": "If you cannot complete the online RolloverCentral path, call and request a direct rollover to PensionBee. Use the general PensionBee payable and mailing instructions when asked.",
       "portal": "Employer benefits site (via alight.com/find-your-hr-website)",
+      "preferredPath": "Online via employer HR site \u2192 RolloverCentral \u2192 select PensionBee \u2192 direct electronic rollover.",
+      "phoneNumber": "The number on your 401(k) statement or employer benefits site",
       "mechanism": "check_to_provider",
       "checkDestination": "Electronic direct rollover to PensionBee (via UMB); check fallback possible",
+      "providerIdentifiedMessage": "Roll over via your employer's Alight benefits site and RolloverCentral. You'll link your PensionBee account with a 14-digit VAN from BeeHive, then submit a direct electronic rollover.",
+      "accessPortalName": "Employer benefits site via Alight",
+      "accessResetSteps": [
+        "Go to alight.com/find-your-hr-website and locate your employer's HR site.",
+        "Use Forgot password on your employer's benefits login page."
+      ],
+      "lockoutPhone": "Your employer benefits / Alight support number on your statement",
+      "lockoutScript": "I need help accessing my retirement account to start a rollover.",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -133,15 +176,25 @@ export const PLAYBOOK_DATA = {
         "Capture the confirmation screen. Confirm the check mails to the user's address; PensionBee sends a prepaid envelope to forward it.",
         "On receipt of the forwarded check, BeeKeeper applies it to the PensionBee IRA."
       ],
-      "phone": [
+      "phoneSteps": [
         "Verify identity and confirm the plan you are rolling over.",
         "Request a direct rollover \u2014 check will mail to your address on file.",
         "Set expectation: you will forward the check to PensionBee using the prepaid envelope."
       ],
       "phoneIntro": "Call Empower and say you want a direct rollover from your old 401(k) to an external IRA.",
       "portal": "Empower participant portal",
+      "preferredPath": "Online portal where available; phone fallback. Both produce a check to the user.",
+      "phoneNumber": "800-338-4015",
       "mechanism": "check_to_participant",
       "checkDestination": "Participant first (forwards to PensionBee via prepaid envelope)",
+      "providerIdentifiedMessage": "Start a direct rollover to your PensionBee IRA in the Empower portal. Important: Empower mails the check to your home address first \u2014 we'll send you a prepaid envelope to forward it to us.",
+      "accessPortalName": "Empower participant portal",
+      "accessResetSteps": [
+        "Go to the Empower login page and select 'Forgot username or password?'",
+        "Complete identity verification and set a new password."
+      ],
+      "lockoutPhone": "800-338-4015",
+      "lockoutScript": "I need help accessing my former employer 401(k) to request a rollover.",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -184,15 +237,25 @@ export const PLAYBOOK_DATA = {
         "In PensionBee, open Beehive chat and send your Fidelity Rollover IRA account number.",
         "PensionBee starts the electronic ACAT transfer into your PensionBee IRA \u2014 we'll notify you when it lands."
       ],
-      "phone": [
+      "phoneSteps": [
         "Confirm your identity (name, SSN, employer/plan).",
         "Request a direct rollover distribution to an external IRA.",
         "If Avenue 3 is available, prefer Express rollover to a Fidelity Rollover IRA instead of a check."
       ],
       "phoneIntro": "Call Fidelity NetBenefits and say you want to roll over your old 401(k) to an IRA.",
       "portal": "NetBenefits",
+      "preferredPath": "401(k) \u2192 Fidelity Rollover IRA \u2192 ACAT to PensionBee (no check)",
+      "phoneNumber": "800-835-5095",
       "mechanism": "two_hop_acat",
       "checkDestination": "No check (ACAT)",
+      "providerIdentifiedMessage": "Start an Express rollover in Fidelity NetBenefits \u2014 roll your 401(k) into a Fidelity Rollover IRA first. No paper check needed; we'll pull the funds over electronically.",
+      "accessPortalName": "NetBenefits",
+      "accessResetSteps": [
+        "Go to NetBenefits and click 'Forgot username or password?'",
+        "Verify identity with SSN and date of birth, then reset credentials."
+      ],
+      "lockoutPhone": "800-835-5095",
+      "lockoutScript": "I need help accessing my former employer 401(k) in NetBenefits to start a rollover.",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -241,15 +304,24 @@ export const PLAYBOOK_DATA = {
         "Under Delivery Selections, select Standard Mail and Continue.",
         "Review the 402(f) Tax Notice, enter your Benefits OnLine password, Submit, and send the confirmation screenshot to PensionBee (BeeHive or info@pensionbee.com \u2014 subject: Your Name + Merrill + Rollover Confirmation)."
       ],
-      "phone": [
+      "phoneSteps": [
         "Confirm identity and request a direct rollover to an external IRA at PensionBee.",
         "Note the check will mail to your address on file \u2014 PensionBee will send a prepaid envelope to forward it.",
         "When asked for payable and mailing details, use PensionBee rollover instructions."
       ],
       "phoneIntro": "Call Merrill and request a direct rollover to PensionBee. If portal steps fail, use general PensionBee payable and mailing instructions.",
       "portal": "benefits.ml.com",
+      "preferredPath": "Online at benefits.ml.com \u2014 rollover to external IRA at PensionBee.",
+      "phoneNumber": "800-228-4015",
       "mechanism": "check_to_participant",
       "checkDestination": "Check mailed to participant address on file; forward to PensionBee via prepaid envelope",
+      "providerIdentifiedMessage": "Start your Merrill rollover at benefits.ml.com. Important: the check is mailed to your address on file \u2014 we'll send a prepaid envelope to forward it to PensionBee.",
+      "accessPortalName": "Merrill Benefits OnLine",
+      "accessResetSteps": [
+        "Go to benefits.ml.com and use Forgot username or password."
+      ],
+      "lockoutPhone": "800-228-4015",
+      "lockoutScript": "I need help accessing my Merrill 401(k) to request a rollover.",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -297,15 +369,24 @@ export const PLAYBOOK_DATA = {
         "Enter the phone verification code and click Verify.",
         "Save your request number and send the confirmation screenshot to PensionBee (BeeHive or info@pensionbee.com \u2014 subject: Your Name + Principal + Rollover Confirmation)."
       ],
-      "phone": [
+      "phoneSteps": [
         "Confirm identity and request direct rollover to external IRA at PensionBee.",
         "Request check be mailed directly to PensionBee (financial institution).",
         "When asked for check payable-to and mailing address, use PensionBee rollover instructions."
       ],
       "phoneIntro": "Call Principal and request a direct rollover to PensionBee mailed to the financial institution. Use general PensionBee payable and mailing when asked.",
       "portal": "accounts.principal.com",
+      "preferredPath": "Online at accounts.principal.com \u2014 rollover IRA mailed to financial institution.",
+      "phoneNumber": "800-547-7754",
       "mechanism": "check_to_provider",
       "checkDestination": "Check mailed directly to PensionBee",
+      "providerIdentifiedMessage": "Start your Principal rollover at accounts.principal.com. Select rollover to an outside IRA mailed directly to PensionBee.",
+      "accessPortalName": "Principal accounts portal",
+      "accessResetSteps": [
+        "Use Forgot username or password on accounts.principal.com."
+      ],
+      "lockoutPhone": "800-547-7754",
+      "lockoutScript": "I need help accessing my Principal 401(k) to request a rollover.",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -352,15 +433,25 @@ export const PLAYBOOK_DATA = {
         "Confirm and capture the confirmation screen.",
         "On receipt of the direct check, BeeKeeper applies it to the PensionBee IRA."
       ],
-      "phone": [
+      "phoneSteps": [
         "Confirm identity and the plan being rolled over.",
         "Request direct rollover \u2014 check mailed directly to PensionBee where allowed.",
         "Capture confirmation number and expected timeline."
       ],
       "phoneIntro": "Call Vanguard and request a direct rollover from your old 401(k) to an external IRA.",
       "portal": "Vanguard participant portal",
+      "preferredPath": "Online portal; phone fallback. Check mailed directly to PensionBee.",
+      "phoneNumber": "800-523-1188",
       "mechanism": "check_to_provider",
       "checkDestination": "Directly to the IRA provider (PensionBee)",
+      "providerIdentifiedMessage": "Start a direct rollover to your PensionBee IRA in the Vanguard portal. The check can usually be mailed directly to PensionBee \u2014 no need to forward it yourself.",
+      "accessPortalName": "Vanguard participant portal",
+      "accessResetSteps": [
+        "On the Vanguard login page, click 'Forgot your username or password?'",
+        "Complete verification and reset credentials."
+      ],
+      "lockoutPhone": "800-523-1188",
+      "lockoutScript": "I need help accessing my former employer 401(k) to request a rollover.",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -399,15 +490,25 @@ export const PLAYBOOK_DATA = {
         "Capture the confirmation screen.",
         "On receipt of the direct check, BeeKeeper applies it to the PensionBee IRA."
       ],
-      "phone": [
+      "phoneSteps": [
         "Confirm identity and rollover intent (phone verification gate on some plans).",
         "Request direct rollover to PensionBee IRA \u2014 check mailed directly to PensionBee.",
         "Ask for expected check issuance timeline (Voya can be slower than peers)."
       ],
       "phoneIntro": "Call Voya to request a direct rollover \u2014 some plans require phone verification before the check releases.",
       "portal": "Voya participant portal",
+      "preferredPath": "Online portal; phone fallback. Check mailed directly to PensionBee.",
+      "phoneNumber": "800-584-6001",
       "mechanism": "check_to_provider",
       "checkDestination": "Directly to the IRA provider (PensionBee)",
+      "providerIdentifiedMessage": "Start a direct rollover to your PensionBee IRA in the Voya portal. Some plans require a quick phone call to verify your identity before the check is sent \u2014 we'll walk you through it if that comes up.",
+      "accessPortalName": "Voya participant portal",
+      "accessResetSteps": [
+        "On the Voya login page, use 'Forgot username/password'.",
+        "Verify identity and reset credentials."
+      ],
+      "lockoutPhone": "800-584-6001",
+      "lockoutScript": "I need help accessing my former employer 401(k) and may need phone verification for a rollover.",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",

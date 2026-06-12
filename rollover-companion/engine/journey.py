@@ -559,17 +559,18 @@ class JourneyEngine:
                     agent_notes=agent_notes,
                     sla_note=sla_note,
                 )
-            headline = "How would you like to do your rollover?"
-            body = playbook.check_destination
+            recordkeeper = ctx.provider or ctx.uncovered_provider
+            headline = f"How would you like to roll over with {recordkeeper}?"
+            body = playbook.preferred_path
             primary = "Online portal"
-            secondary = ["Phone", "Paper forms"]
+            secondary = ["Phone"]
             for ec in edge_cases:
                 agent_notes.append(f"Pre-empt: {ec}")
             return JourneyScreen(
                 journey_id=ctx.journey_id,
                 state=ctx.state,
                 phase=JourneyPhase.ROLLOVER,
-                provider=ctx.provider,
+                provider=recordkeeper,
                 channel=ctx.channel,
                 headline=headline,
                 body=body,
@@ -618,11 +619,12 @@ class JourneyEngine:
             has_reconstructed = any(g.reconstructed for g in guidance)
             if has_reconstructed:
                 provenance_warning = "Double-check this screen — step wording is reconstructed."
+            recordkeeper = ctx.provider or ctx.uncovered_provider
             return JourneyScreen(
                 journey_id=ctx.journey_id,
                 state=ctx.state,
                 phase=JourneyPhase.ROLLOVER,
-                provider=ctx.provider,
+                provider=recordkeeper,
                 channel=ctx.channel,
                 headline=headline,
                 body=body,
@@ -649,7 +651,7 @@ class JourneyEngine:
                 journey_id=ctx.journey_id,
                 state=ctx.state,
                 phase=JourneyPhase.TRACK,
-                provider=ctx.provider,
+                provider=ctx.provider or ctx.uncovered_provider,
                 channel=ctx.channel,
                 headline=headline,
                 body=body,
@@ -675,7 +677,7 @@ class JourneyEngine:
                 journey_id=ctx.journey_id,
                 state=ctx.state,
                 phase=JourneyPhase.TRACK,
-                provider=ctx.provider,
+                provider=ctx.provider or ctx.uncovered_provider,
                 channel=ctx.channel,
                 headline=headline,
                 body=track_body,

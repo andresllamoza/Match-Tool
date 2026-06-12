@@ -1,3 +1,5 @@
+import { isProviderInLibrary } from "./playbook";
+
 export const DEMO_PROVIDERS = [
   "Fidelity",
   "Vanguard",
@@ -13,7 +15,7 @@ export const MAILING = "PO Box 72, New York, NY 10272";
 export const DESTINATION = "PensionBee IRA";
 
 const EMPLOYER_HINTS: [string, string][] = [
-  ["target", "Fidelity"],
+  ["target", "Alight"],
   ["walmart", "Merrill Lynch"],
   ["amazon", "Fidelity"],
   ["google", "Fidelity"],
@@ -23,12 +25,32 @@ const EMPLOYER_HINTS: [string, string][] = [
   ["microsoft", "Fidelity"],
 ];
 
-export function resolveProvider(employer: string): string {
+/** Employers that match a recordkeeper not yet in the provider guide library. */
+const UNCOVERED_HINTS: [string, string][] = [
+  ["uncovered demo", "Paychex"],
+  ["five below", "Paychex"],
+];
+
+export function resolveLookup(employer: string): {
+  provider: string | null;
+  uncoveredProvider: string | null;
+} {
   const lower = employer.toLowerCase();
-  for (const [hint, provider] of EMPLOYER_HINTS) {
-    if (lower.includes(hint)) return provider;
+  for (const [hint, recordkeeper] of [...EMPLOYER_HINTS, ...UNCOVERED_HINTS]) {
+    if (lower.includes(hint)) {
+      if (isProviderInLibrary(recordkeeper)) {
+        return { provider: recordkeeper, uncoveredProvider: null };
+      }
+      return { provider: null, uncoveredProvider: recordkeeper };
+    }
   }
-  return "Fidelity";
+  return { provider: null, uncoveredProvider: "your 401(k) provider" };
+}
+
+/** @deprecated Prefer resolveLookup — returns the matched or uncovered recordkeeper label. */
+export function resolveProvider(employer: string): string {
+  const { provider, uncoveredProvider } = resolveLookup(employer);
+  return provider || uncoveredProvider || "your 401(k) provider";
 }
 
 export const PHONE_BY_PROVIDER: Record<string, string> = {
