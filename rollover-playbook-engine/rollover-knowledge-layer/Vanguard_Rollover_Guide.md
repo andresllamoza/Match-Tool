@@ -18,18 +18,22 @@ tax_routing_note: "Pre-tax → Traditional/Rollover IRA; Roth → Roth IRA. Pre-
 next_actions:
   provider_identified:
     action: "Guide the user to start a direct rollover to an external IRA in the Vanguard portal, with the check mailed directly to PensionBee."
+    customer_message: "Start a direct rollover to your PensionBee IRA in the Vanguard portal. The check can usually be mailed directly to PensionBee — no need to forward it yourself."
     owner: user
     source_status: verified
   rollover_initiated:
     action: "Confirm the check is set payable per PensionBee instructions and mailed directly to PensionBee — no forward step needed."
+    customer_message: "Your rollover request is submitted. Vanguard will mail a check directly to PensionBee — this usually takes 2–4 weeks."
     owner: user
     source_status: verified
   in_flight:
     action: "BeeKeeper tracks the direct check until it is received and applied to the PensionBee IRA."
+    customer_message: "We're waiting for your check to arrive at PensionBee. Most Vanguard rollovers complete within 2–4 weeks."
     owner: beekeeper
     source_status: verified
   completed:
     action: "Rollover complete — funds in the PensionBee IRA. No further action."
+    customer_message: "Your rollover is complete — your funds are in your PensionBee IRA."
     owner: system
     source_status: verified
 
@@ -71,6 +75,69 @@ failure_modes:
     routing_action: "Stop — confirm separation and that this is the correct old plan before initiating. Route to BeeKeeper if unclear."
     owner: beekeeper
     source_status: verified
+
+access_recovery:
+  portal_name: Vanguard participant portal
+  info_needed:
+    - "Social Security number"
+    - "Date of birth"
+    - "Vanguard account or employer plan details"
+  reset_steps:
+    - text: "On the Vanguard login page, click 'Forgot your username or password?'"
+      owner: user
+      source_status: reconstructed
+    - text: "Complete verification and reset credentials."
+      owner: user
+      source_status: reconstructed
+  first_time_setup_steps:
+    - text: "Select 'Set up online account access' on the Vanguard login page."
+      owner: user
+      source_status: reconstructed
+    - text: "Provide employer/plan info from your statement."
+      owner: user
+      source_status: reconstructed
+  lockout_fallback:
+    # phone verified 2026-06-10 — https://corporate.vanguard.com/content/corporatesite/us/en/corp/contact-us.html (retirement plan participants: 800-523-1188)
+    phone: "800-523-1188"
+    what_to_say: "I need help accessing my former employer 401(k) to request a rollover."
+    owner: user
+    source_status: verified
+
+call_script:
+  # phone verified 2026-06-10 — https://corporate.vanguard.com/content/corporatesite/us/en/corp/contact-us.html (retirement plan participants: 800-523-1188)
+  phone: "800-523-1188"
+  intro: "Call Vanguard and request a direct rollover from your old 401(k) to an external IRA."
+  steps:
+    - text: "Confirm identity and the plan being rolled over."
+      owner: user
+      source_status: verified
+    - text: "Request direct rollover — check mailed directly to PensionBee where allowed."
+      owner: user
+      source_status: verified
+    - text: "Capture confirmation number and expected timeline."
+      owner: user
+      source_status: verified
+  rep_questions:
+    - question: "Pre-tax or Roth?"
+      answer: "Pre-tax → Traditional IRA. Roth → Roth IRA."
+      source_status: verified
+    - question: "Mailing address for the check?"
+      answer: "PO Box 72, New York, NY 10272 — payable per PensionBee instructions."
+      source_status: verified
+  check_payable: "PensionBee FBO [your name]"
+  mailing_address: "PO Box 72, New York, NY 10272"
+
+form_guidance:
+  fields:
+    - label: "Navigation"
+      instruction: "Access my money → Options if I leave my employer → direct rollover to external IRA."
+      source_status: reconstructed
+    - label: "Receiving provider"
+      instruction: "Enter PensionBee destination details."
+      source_status: verified
+    - label: "Mailing address"
+      instruction: "PO Box 72, New York, NY 10272"
+      source_status: verified
 ---
 
 # Vanguard Rollover Guide (Internal Reference)

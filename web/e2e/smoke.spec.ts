@@ -44,7 +44,11 @@ test.describe("Customer journey smoke", () => {
     });
     await page.getByRole("button", { name: /online/i }).first().click();
 
-    for (let i = 0; i < 3; i += 1) {
+    await expect(page.getByText(/log in to fidelity netbenefits/i)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    for (let i = 0; i < 8; i += 1) {
       const done = page.getByRole("button", { name: /done|completed this rollover/i });
       await expect(done).toBeVisible({ timeout: 15_000 });
       await done.click();

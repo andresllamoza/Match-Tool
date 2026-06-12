@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "vercel-build": "next build",
+    "sync:playbooks": "python3 ../scripts/generate-demo-playbook-steps.py",
+    "build": "npm run sync:playbooks && next build",
+    "vercel-build": "npm run sync:playbooks && next build",
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
