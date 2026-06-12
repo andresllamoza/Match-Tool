@@ -12,13 +12,23 @@ def kb() -> KnowledgeBase:
 
 
 def test_loads_all_providers(kb: KnowledgeBase):
-    assert set(kb.list_providers()) == {"Empower", "Fidelity", "Vanguard", "Voya"}
+    assert set(kb.list_providers()) == {
+        "Alight Solutions",
+        "Empower",
+        "Fidelity",
+        "Merrill Lynch",
+        "Principal",
+        "Vanguard",
+        "Voya",
+    }
 
 
 def test_alias_resolution(kb: KnowledgeBase):
     assert kb.resolve_provider("NetBenefits") == "Fidelity"
     assert kb.resolve_provider("Great-West") == "Empower"
     assert kb.resolve_provider("ING") == "Voya"
+    assert kb.resolve_provider("Alight") == "Alight Solutions"
+    assert kb.resolve_provider("Merrill") == "Merrill Lynch"
 
 
 def test_unknown_provider_raises(kb: KnowledgeBase):

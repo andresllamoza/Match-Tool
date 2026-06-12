@@ -6,6 +6,7 @@ import {
   PHONE_BY_PROVIDER,
   resolveProvider,
 } from "./constants";
+import { channelStepContent } from "./playbook";
 import type { DemoState } from "./state";
 
 function phaseFor(state: DemoState): JourneyResponse["screen"]["phase"] {
@@ -99,20 +100,33 @@ function screenFor(state: DemoState): JourneyScreen {
         primary_action: "Online portal",
         secondary_actions: ["Phone", "Paper forms"],
       };
-    case "online_in_progress":
+    case "online_in_progress": {
+      const onlineStep = channelStepContent(state.provider, "online", state.stepIndex);
       return {
         ...base,
         headline: `Roll over online with ${provider}`,
         body: "Complete each step in your provider portal, then tap done.",
         primary_action: state.stepIndex >= state.totalSteps - 1 ? "I've completed this rollover" : "Done with this step",
         secondary_actions: [],
-        has_reconstructed_content: false,
+        has_reconstructed_content: onlineStep.hasReconstructed,
+        provenance_warning: onlineStep.hasReconstructed
+          ? "Some portal step wording is reconstructed — spot-check against the live Scribe."
+          : null,
       };
+    }
     case "phone_in_progress":
       return {
         ...base,
         headline: `Roll over by phone with ${provider}`,
         body: "Call your provider and use the script below. Tap done when finished.",
+        primary_action: state.stepIndex >= state.totalSteps - 1 ? "I've completed this rollover" : "Done with this step",
+        secondary_actions: [],
+      };
+    case "forms_in_progress":
+      return {
+        ...base,
+        headline: `Paper forms with ${provider}`,
+        body: "Complete each field on your distribution form, then tap done.",
         primary_action: state.stepIndex >= state.totalSteps - 1 ? "I've completed this rollover" : "Done with this step",
         secondary_actions: [],
       };
@@ -158,27 +172,18 @@ export function buildDemoResponse(state: DemoState): JourneyResponse {
   const provider = state.provider || resolveProvider(state.employer || "");
   const phone = PHONE_BY_PROVIDER[provider] || "800-555-0100";
 
-  const channelSteps = [
-    {
-      say: `I'd like to roll over my 401(k) from ${state.employer || "my former employer"} to PensionBee.`,
-      label: "Step 1",
-    },
-    {
-      say: "This is a direct rollover to another retirement account — not a withdrawal to me personally.",
-      label: "Step 2",
-    },
-    {
-      say: `Please make the check payable to: ${PAYEE_TEMPLATE}, mailed to ${MAILING}.`,
-      label: "Step 3",
-    },
-  ];
-
-  const step = channelSteps[Math.min(state.stepIndex, channelSteps.length - 1)];
+  const inChannel =
+    state.channel &&
+    ["online_in_progress", "phone_in_progress", "forms_in_progress"].includes(state.state);
+  const stepContent =
+    inChannel && state.channel
+      ? channelStepContent(state.provider, state.channel, state.stepIndex)
+      : null;
 
   const enrichment: JourneyResponse["enrichment"] = {
     mailing_address: MAILING,
     destination_name: DESTINATION,
-    forward_step_required: false,
+    forward_step_required: stepContent?.forwardStepRequired ?? false,
     general_path: false,
     requires_tax_selection: state.state === "access_recovered" && !state.taxType,
     tax_options: state.state === "access_recovered" && !state.taxType
@@ -193,27 +198,20 @@ export function buildDemoResponse(state: DemoState): JourneyResponse {
       state.employer && state.provider
         ? { employer_query: state.employer, matched_provider: state.provider }
         : null,
-    channel_context:
-      state.channel &&
-      ["online_in_progress", "phone_in_progress", "forms_in_progress"].includes(state.state)
-        ? {
-            channel: state.channel,
-            say_this: state.channel === "phone" ? step.say : channelSteps[state.stepIndex]?.say || step.say,
-            phone: state.channel === "phone" ? phone : null,
-            intro: state.channel === "phone" ? "When the representative answers, say:" : null,
-            check_payable: PAYEE_TEMPLATE,
-            mailing_address: MAILING,
-            rep_questions: [
-              {
-                question: "Is this a direct rollover?",
-                answer: "Yes — direct rollover to PensionBee, not a distribution to me.",
-              },
-            ],
-            step_label: step.label,
-            portal_menu_hints: state.channel === "online" ? ["Withdrawals", "Rollovers", "Distributions"] : [],
-            destination_hints: [],
-          }
-        : null,
+    channel_context: stepContent
+      ? {
+          channel: state.channel!,
+          say_this: stepContent.sayThis,
+          phone: state.channel === "phone" ? phone : null,
+          intro: stepContent.phoneIntro,
+          check_payable: PAYEE_TEMPLATE,
+          mailing_address: MAILING,
+          rep_questions: stepContent.repQuestions,
+          step_label: stepContent.stepLabel,
+          portal_menu_hints: stepContent.portalMenuHints,
+          destination_hints: stepContent.destinationHints,
+        }
+      : null,
     track:
       ["initiated", "in_flight"].includes(state.state)
         ? {

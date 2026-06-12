@@ -1,5 +1,6 @@
 import type { JourneyResponse } from "@/lib/types";
 import { DEMO_PROVIDERS, resolveProvider } from "./constants";
+import { channelStepCount, type DemoChannel } from "./playbook";
 import { buildDemoResponse } from "./buildResponse";
 import {
   createInitialDemoState,
@@ -91,10 +92,10 @@ export function demoAction(journeyId: string, body: Record<string, unknown>): Jo
 
   if (type === "channel" && typeof body.channel === "string") {
     pushHistory(state);
-    const ch = body.channel as DemoState["channel"];
+    const ch = body.channel as DemoChannel;
     state.channel = ch;
     state.stepIndex = 0;
-    state.totalSteps = 3;
+    state.totalSteps = channelStepCount(state.provider, ch);
     state.state =
       ch === "phone" ? "phone_in_progress" : ch === "forms" ? "forms_in_progress" : "online_in_progress";
     return commit(state);
@@ -127,7 +128,12 @@ export function demoAction(journeyId: string, body: Record<string, unknown>): Jo
 
   if (type === "resume") {
     if (state.state === "stuck") {
-      state.state = state.channel === "phone" ? "phone_in_progress" : "online_in_progress";
+      state.state =
+        state.channel === "phone"
+          ? "phone_in_progress"
+          : state.channel === "forms"
+            ? "forms_in_progress"
+            : "online_in_progress";
     }
     return commit(state);
   }
