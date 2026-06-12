@@ -1,6 +1,6 @@
 # 5500 Recordkeeper Lookup
 
-Internal PensionBee tool to find the **401(k) recordkeeper** for a US employer using public **DOL Form 5500** filings (Schedule C, recordkeeper-related service codes and relations).
+Internal tool to find the **401(k) recordkeeper** for a US employer using public **DOL Form 5500** filings (Schedule C, recordkeeper-related service codes and relations).
 
 | | |
 |---|---|
