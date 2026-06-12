@@ -104,8 +104,8 @@ function screenFor(state: DemoState): JourneyScreen {
       const onlineStep = channelStepContent(state.provider, "online", state.stepIndex);
       return {
         ...base,
-        headline: `Roll over online with ${provider}`,
-        body: "Complete each step in your provider portal, then tap done.",
+        headline: `Step ${state.stepIndex + 1} of ${state.totalSteps}`,
+        body: onlineStep.sayThis,
         primary_action: state.stepIndex >= state.totalSteps - 1 ? "I've completed this rollover" : "Done with this step",
         secondary_actions: [],
         has_reconstructed_content: onlineStep.hasReconstructed,
@@ -114,22 +114,26 @@ function screenFor(state: DemoState): JourneyScreen {
           : null,
       };
     }
-    case "phone_in_progress":
+    case "phone_in_progress": {
+      const phoneStep = channelStepContent(state.provider, "phone", state.stepIndex);
       return {
         ...base,
-        headline: `Roll over by phone with ${provider}`,
-        body: "Call your provider and use the script below. Tap done when finished.",
+        headline: `Step ${state.stepIndex + 1} of ${state.totalSteps}`,
+        body: phoneStep.sayThis,
         primary_action: state.stepIndex >= state.totalSteps - 1 ? "I've completed this rollover" : "Done with this step",
         secondary_actions: [],
       };
-    case "forms_in_progress":
+    }
+    case "forms_in_progress": {
+      const formStep = channelStepContent(state.provider, "forms", state.stepIndex);
       return {
         ...base,
-        headline: `Paper forms with ${provider}`,
-        body: "Complete each field on your distribution form, then tap done.",
+        headline: formStep.stepLabel,
+        body: formStep.sayThis,
         primary_action: state.stepIndex >= state.totalSteps - 1 ? "I've completed this rollover" : "Done with this step",
         secondary_actions: [],
       };
+    }
     case "initiated":
       return {
         ...base,
@@ -193,7 +197,8 @@ export function buildDemoResponse(state: DemoState): JourneyResponse {
           { id: "both", label: "Both pre-tax and Roth", hint: "Split across two IRA types" },
         ]
       : [],
-    check_destination: "PensionBee IRA",
+    mechanism: stepContent?.mechanism ?? null,
+    check_destination: stepContent?.checkDestination ?? "PensionBee IRA",
     lookup:
       state.employer && state.provider
         ? { employer_query: state.employer, matched_provider: state.provider }
@@ -208,6 +213,7 @@ export function buildDemoResponse(state: DemoState): JourneyResponse {
           mailing_address: MAILING,
           rep_questions: stepContent.repQuestions,
           step_label: stepContent.stepLabel,
+          portal_name: stepContent.portalName,
           portal_menu_hints: stepContent.portalMenuHints,
           destination_hints: stepContent.destinationHints,
         }

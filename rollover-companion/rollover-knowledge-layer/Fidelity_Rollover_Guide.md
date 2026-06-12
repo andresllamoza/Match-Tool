@@ -46,28 +46,28 @@ next_actions:
     source_status: verified
 
 steps:
-  - text: "Log in to Fidelity NetBenefits."
+  - text: "Go to netbenefits.com and log in with your username and password."
     owner: user
     source_status: verified
-  - text: "Locate the old 401(k) plan to roll over."
+  - text: "On the home screen, select your former employer's 401(k) plan (not your personal Fidelity brokerage accounts)."
     owner: user
     source_status: verified
-  - text: "Enter the rollover/withdrawal flow (under the withdrawals/loans area of the employer plan, not the retail account view)."
+  - text: "Click Withdrawals, Loans & Rollovers in the left menu."
     owner: user
     source_status: verified
-  - text: "Select 'Express rollover to Fidelity' to route funds into a Fidelity Rollover IRA."
+  - text: "Choose Rollover, then select Express rollover to a Fidelity IRA."
     owner: user
     source_status: verified
-  - text: "Open the Fidelity Rollover IRA if one does not exist (pre-tax → Rollover/Traditional; Roth → Roth)."
+  - text: "If prompted, open a Fidelity Rollover IRA — Traditional/Rollover for pre-tax; Roth IRA for Roth funds."
     owner: user
     source_status: verified
-  - text: "Confirm the amount and complete the rollover into the Rollover IRA."
+  - text: "Enter the rollover amount and submit — funds move into your Fidelity Rollover IRA (no paper check)."
     owner: user
     source_status: verified
-  - text: "Provide PensionBee the Fidelity Rollover IRA account info via Beehive chat to trigger the ACAT."
+  - text: "In PensionBee, open Beehive chat and send your Fidelity Rollover IRA account number."
     owner: user
     source_status: verified
-  - text: "PensionBee initiates the ACAT into the PensionBee IRA; BeeKeeper monitors until funds land."
+  - text: "PensionBee starts the electronic ACAT transfer into your PensionBee IRA — we'll notify you when it lands."
     owner: beekeeper
     source_status: verified
 

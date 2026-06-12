@@ -544,8 +544,9 @@ export function JourneyFlow({
           stepIndex={step_index}
           totalSteps={total_steps}
           provider={screen.provider || context.uncovered_provider || ""}
+          portalName={enrichment.channel_context?.portal_name}
           channelLabel={channelLabel}
-          instruction={screen.headline}
+          instruction={enrichment.channel_context?.say_this || screen.body || screen.headline}
         />
       )}
 

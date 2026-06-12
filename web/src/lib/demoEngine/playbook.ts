@@ -20,7 +20,11 @@ function providerPlaybook(provider: string | null | undefined): ProviderPlaybook
   );
 }
 
-function hintsForStep(text: string): { portal: string[]; destination: string[] } {
+/** Portal menu hints only for uncovered providers — matches live API general_path behavior. */
+function hintsForStep(text: string, useGeneralHints: boolean): { portal: string[]; destination: string[] } {
+  if (!useGeneralHints) {
+    return { portal: [], destination: [] };
+  }
   const lower = text.toLowerCase();
   const portal =
     ["withdrawal", "rollover", "distribution", "transfer"].some((w) => lower.includes(w))
@@ -40,6 +44,19 @@ export function channelStepCount(provider: string | null | undefined, channel: D
   return pb.forms.length || PLAYBOOK_DATA.general.forms.length;
 }
 
+export function providerPortalName(provider: string | null | undefined): string | null {
+  const portal = providerPlaybook(provider).portal?.trim();
+  return portal || null;
+}
+
+export function providerMechanism(provider: string | null | undefined): string | null {
+  return providerPlaybook(provider).mechanism || null;
+}
+
+export function providerCheckDestination(provider: string | null | undefined): string | null {
+  return providerPlaybook(provider).checkDestination || null;
+}
+
 export function channelStepContent(
   provider: string | null | undefined,
   channel: DemoChannel,
@@ -53,14 +70,18 @@ export function channelStepContent(
   destinationHints: string[];
   forwardStepRequired: boolean;
   hasReconstructed: boolean;
+  portalName: string | null;
+  mechanism: string | null;
+  checkDestination: string | null;
 } {
   const pb = providerPlaybook(provider);
   const general = PLAYBOOK_DATA.general;
+  const useGeneralHints = !pb.online.length;
 
   if (channel === "online") {
     const steps = pb.online.length ? pb.online : general.online;
     const sayThis = steps[Math.min(stepIndex, steps.length - 1)] ?? steps[0] ?? "";
-    const hints = hintsForStep(sayThis);
+    const hints = hintsForStep(sayThis, useGeneralHints);
     return {
       sayThis,
       stepLabel: `Step ${stepIndex + 1}`,
@@ -70,6 +91,9 @@ export function channelStepContent(
       destinationHints: hints.destination,
       forwardStepRequired: pb.forwardStepRequired,
       hasReconstructed: pb.hasReconstructed,
+      portalName: pb.portal || null,
+      mechanism: pb.mechanism || null,
+      checkDestination: pb.checkDestination || null,
     };
   }
 
@@ -85,6 +109,9 @@ export function channelStepContent(
       destinationHints: [],
       forwardStepRequired: pb.forwardStepRequired,
       hasReconstructed: false,
+      portalName: pb.portal || null,
+      mechanism: pb.mechanism || null,
+      checkDestination: pb.checkDestination || null,
     };
   }
 
@@ -99,5 +126,8 @@ export function channelStepContent(
     destinationHints: [],
     forwardStepRequired: pb.forwardStepRequired,
     hasReconstructed: false,
+    portalName: pb.portal || null,
+    mechanism: pb.mechanism || null,
+    checkDestination: pb.checkDestination || null,
   };
 }

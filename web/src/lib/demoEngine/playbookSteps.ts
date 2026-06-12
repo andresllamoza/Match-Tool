@@ -85,6 +85,9 @@ export const PLAYBOOK_DATA = {
         "When asked for check payable-to and mailing address, use your PensionBee rollover instructions (see copy chips or general guide)."
       ],
       "phoneIntro": "If you cannot complete the online RolloverCentral path, call and request a direct rollover to PensionBee. Use the general PensionBee payable and mailing instructions when asked.",
+      "portal": "Employer benefits site (via alight.com/find-your-hr-website)",
+      "mechanism": "check_to_provider",
+      "checkDestination": "Electronic direct rollover to PensionBee (via UMB); check fallback possible",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -136,6 +139,9 @@ export const PLAYBOOK_DATA = {
         "Set expectation: you will forward the check to PensionBee using the prepaid envelope."
       ],
       "phoneIntro": "Call Empower and say you want a direct rollover from your old 401(k) to an external IRA.",
+      "portal": "Empower participant portal",
+      "mechanism": "check_to_participant",
+      "checkDestination": "Participant first (forwards to PensionBee via prepaid envelope)",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -169,14 +175,14 @@ export const PLAYBOOK_DATA = {
     },
     "Fidelity": {
       "online": [
-        "Log in to Fidelity NetBenefits.",
-        "Locate the old 401(k) plan to roll over.",
-        "Enter the rollover/withdrawal flow (under the withdrawals/loans area of the employer plan, not the retail account view).",
-        "Select 'Express rollover to Fidelity' to route funds into a Fidelity Rollover IRA.",
-        "Open the Fidelity Rollover IRA if one does not exist (pre-tax \u2192 Rollover/Traditional; Roth \u2192 Roth).",
-        "Confirm the amount and complete the rollover into the Rollover IRA.",
-        "Provide PensionBee the Fidelity Rollover IRA account info via Beehive chat to trigger the ACAT.",
-        "PensionBee initiates the ACAT into the PensionBee IRA; BeeKeeper monitors until funds land."
+        "Go to netbenefits.com and log in with your username and password.",
+        "On the home screen, select your former employer's 401(k) plan (not your personal Fidelity brokerage accounts).",
+        "Click Withdrawals, Loans & Rollovers in the left menu.",
+        "Choose Rollover, then select Express rollover to a Fidelity IRA.",
+        "If prompted, open a Fidelity Rollover IRA \u2014 Traditional/Rollover for pre-tax; Roth IRA for Roth funds.",
+        "Enter the rollover amount and submit \u2014 funds move into your Fidelity Rollover IRA (no paper check).",
+        "In PensionBee, open Beehive chat and send your Fidelity Rollover IRA account number.",
+        "PensionBee starts the electronic ACAT transfer into your PensionBee IRA \u2014 we'll notify you when it lands."
       ],
       "phone": [
         "Confirm your identity (name, SSN, employer/plan).",
@@ -184,6 +190,9 @@ export const PLAYBOOK_DATA = {
         "If Avenue 3 is available, prefer Express rollover to a Fidelity Rollover IRA instead of a check."
       ],
       "phoneIntro": "Call Fidelity NetBenefits and say you want to roll over your old 401(k) to an IRA.",
+      "portal": "NetBenefits",
+      "mechanism": "two_hop_acat",
+      "checkDestination": "No check (ACAT)",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -238,6 +247,9 @@ export const PLAYBOOK_DATA = {
         "When asked for payable and mailing details, use PensionBee rollover instructions."
       ],
       "phoneIntro": "Call Merrill and request a direct rollover to PensionBee. If portal steps fail, use general PensionBee payable and mailing instructions.",
+      "portal": "benefits.ml.com",
+      "mechanism": "check_to_participant",
+      "checkDestination": "Check mailed to participant address on file; forward to PensionBee via prepaid envelope",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -291,6 +303,9 @@ export const PLAYBOOK_DATA = {
         "When asked for check payable-to and mailing address, use PensionBee rollover instructions."
       ],
       "phoneIntro": "Call Principal and request a direct rollover to PensionBee mailed to the financial institution. Use general PensionBee payable and mailing when asked.",
+      "portal": "accounts.principal.com",
+      "mechanism": "check_to_provider",
+      "checkDestination": "Check mailed directly to PensionBee",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -343,6 +358,9 @@ export const PLAYBOOK_DATA = {
         "Capture confirmation number and expected timeline."
       ],
       "phoneIntro": "Call Vanguard and request a direct rollover from your old 401(k) to an external IRA.",
+      "portal": "Vanguard participant portal",
+      "mechanism": "check_to_provider",
+      "checkDestination": "Directly to the IRA provider (PensionBee)",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",
@@ -387,6 +405,9 @@ export const PLAYBOOK_DATA = {
         "Ask for expected check issuance timeline (Voya can be slower than peers)."
       ],
       "phoneIntro": "Call Voya to request a direct rollover \u2014 some plans require phone verification before the check releases.",
+      "portal": "Voya participant portal",
+      "mechanism": "check_to_provider",
+      "checkDestination": "Directly to the IRA provider (PensionBee)",
       "repQuestions": [
         {
           "question": "Pre-tax or Roth?",

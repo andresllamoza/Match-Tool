@@ -66,6 +66,9 @@ def main() -> None:
             "online": step_texts(data.get("steps")),
             "phone": step_texts(cs.get("steps")),
             "phoneIntro": str(cs.get("intro") or ""),
+            "portal": str(data.get("portal") or ""),
+            "mechanism": str(data.get("mechanism") or ""),
+            "checkDestination": str(data.get("check_destination") or ""),
             "repQuestions": [
                 {"question": q.get("question", ""), "answer": q.get("answer", "")}
                 for q in cs.get("rep_questions") or []
